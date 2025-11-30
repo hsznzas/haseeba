@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Habit, HabitLog, LogStatus, HabitType } from '../../types';
+import { Habit, HabitLog } from '../../types';
 import { format, addDays, isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
-import { LineChart, Line, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { Trophy, Flame, Calendar, TrendingUp, Sparkles } from 'lucide-react';
+import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
+import { Flame, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface Props {

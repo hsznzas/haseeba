@@ -42,13 +42,13 @@ export function getDailyHadith(prayerId: string): Hadith {
   
   const index = dayOfYear % hadithList.length;
   
-  return hadithList[index];
+  return hadithList[index] ?? hadithList[0]!;
 }
 
 export function getHadithForPrayer(prayerName: string): Hadith {
   const normalizedName = prayerName.toLowerCase();
   
-  for (const [id, category] of Object.entries(prayerIdToCategory)) {
+  for (const [id, _category] of Object.entries(prayerIdToCategory)) {
     if (normalizedName.includes(id) || id.includes(normalizedName)) {
       return getDailyHadith(id);
     }

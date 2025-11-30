@@ -2,55 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Database, Moon, Loader2, Hourglass, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar } from 'lucide-react';
+import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar } from 'lucide-react';
 import { clsx } from 'clsx';
-import { Habit } from '../../types';
 import { translateCustomHabits } from '../services/geminiService';
-import { addYears, differenceInMilliseconds } from 'date-fns';
 import DobModal from '../components/DobModal';
 import { useAuth } from '../context/AuthContext';
-
-// Helper to parse YYYY-MM-DD strings locally
-const parseLocalISO = (dateStr: string) => {
-    if (!dateStr) return new Date();
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return new Date(dateStr);
-    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-};
-
-const AnimatedCounter = ({ value, className, decimals = 0 }: { value: number, className?: string, decimals?: number }) => {
-    return (
-        <span className={className}>
-            {value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
-        </span>
-    );
-};
-
-const LifetimeProgress = ({ dobStr }: { dobStr: string }) => {
-    try {
-        const dob = parseLocalISO(dobStr);
-        const now = new Date();
-        const target = addYears(dob, 75);
-        const totalLifeMs = differenceInMilliseconds(target, dob);
-        const livedMs = differenceInMilliseconds(now, dob);
-        const percentage = Math.min(Math.max((livedMs / totalLifeMs) * 100, 0), 100);
-
-        return (
-            <div className="mb-8">
-                <div className="flex justify-between items-end mb-2">
-                   <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Life Progress</span>
-                   <span className="text-lg font-mono font-bold text-primary">{percentage.toFixed(5)}%</span>
-                </div>
-                <div className="w-full h-5 bg-slate-900 rounded-full overflow-hidden relative border border-slate-800 shadow-inner">
-                    <div 
-                        className="h-full bg-gradient-to-r from-blue-500 via-primary to-emerald-400 relative"
-                        style={{ width: `${percentage}%` }}
-                    />
-                </div>
-            </div>
-        );
-    } catch (e) { return null; }
-};
 
 const Profile: React.FC = () => {
   const { preferences, setPreferences } = usePreferences();

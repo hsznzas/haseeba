@@ -165,7 +165,7 @@ export async function suggestIcon(habitName: string): Promise<string> {
     const suggestion = (response.text || 'Activity').trim();
     
     // Validate the suggestion is in our available icons
-    if (AVAILABLE_ICONS.includes(suggestion)) {
+    if ((AVAILABLE_ICONS as string[]).includes(suggestion)) {
       console.log(`✨ AI suggested icon "${suggestion}" for habit "${habitName}"`);
       return suggestion;
     } else {

@@ -56,7 +56,7 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
     onDelete();
   };
 
-  const handleTextAreaClick = (e: React.MouseEvent) => {
+  const handleTextAreaClick = (_e: React.MouseEvent) => {
     if (isSortMode) return;
     if (onEdit) {
       onEdit(habit);

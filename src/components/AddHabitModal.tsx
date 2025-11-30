@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext';
 import { TRANSLATIONS } from '../../constants';
 import { HabitType, Habit } from '../../types';
 import { X, Minus, Plus, Loader2 } from 'lucide-react';
-import { ICON_MAP, AVAILABLE_ICONS } from '../utils/iconMap';
+import { ICON_MAP, AVAILABLE_ICONS, getIcon } from '../utils/iconMap';
 import { suggestIcon } from '../services/geminiService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -20,18 +20,19 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
   const { preferences } = usePreferences();
   const { habits, handleSaveHabit, handleDeleteHabit } = useData();
   const t = TRANSLATIONS[preferences.language];
+  const isArabic = preferences.language === 'ar';
   
   const [name, setName] = useState('');
   const [type, setType] = useState<HabitType>(HabitType.REGULAR);
   const [target, setTarget] = useState(1);
-  const [selectedIcon, setSelectedIcon] = useState('Activity');
+  const [selectedIcon, setSelectedIcon] = useState<string>('Activity');
   const [isLoadingIcon, setIsLoadingIcon] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       if (habitToEdit) {
-        setName(preferences.language === 'ar' ? habitToEdit.nameAr : habitToEdit.name);
+        setName(isArabic ? habitToEdit.nameAr : habitToEdit.name);
         setType(habitToEdit.type);
         setTarget(habitToEdit.dailyTarget || 1);
         setSelectedIcon(habitToEdit.icon || 'Activity');
@@ -42,7 +43,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
         setSelectedIcon('Activity');
       }
     }
-  }, [isOpen, habitToEdit, preferences.language]);
+  }, [isOpen, habitToEdit, isArabic]);
 
   const handleNameBlur = async () => {
     if (!name.trim() || habitToEdit) return;
@@ -68,8 +69,6 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
     let updatedHabit: Habit;
 
     if (habitToEdit) {
-      const isArabic = preferences.language === 'ar';
-      
       updatedHabit = {
         ...habitToEdit,
         name: isArabic ? (habitToEdit.name || name) : name,
@@ -113,11 +112,12 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
     e.preventDefault();
     if (!habitToEdit) return;
     
-    const confirmDelete = window.confirm(
-      preferences.language === 'en' 
-        ? `Are you sure you want to delete "${preferences.language === 'ar' ? habitToEdit.nameAr : habitToEdit.name}"? This will also delete all associated logs.`
-        : `هل أنت متأكد من حذف "${preferences.language === 'ar' ? habitToEdit.nameAr : habitToEdit.name}"؟ سيتم حذف جميع السجلات المرتبطة أيضاً.`
-    );
+    const habitDisplayName = isArabic ? habitToEdit.nameAr : habitToEdit.name;
+    const confirmMessage = isArabic
+      ? `هل أنت متأكد من حذف "${habitDisplayName}"؟ سيتم حذف جميع السجلات المرتبطة أيضاً.`
+      : `Are you sure you want to delete "${habitDisplayName}"? This will also delete all associated logs.`;
+    
+    const confirmDelete = window.confirm(confirmMessage);
     
     if (!confirmDelete) return;
     
@@ -130,11 +130,12 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
 
   if (!isOpen) return null;
 
-  const langName = preferences.language === 'en' ? 'English' : 'العربية';
+  const langName = isArabic ? 'العربية' : 'English';
   const title = habitToEdit ? t.editHabit : t.createHabit;
   const submitText = habitToEdit ? t.update : t.create;
 
-  const SelectedIconComponent = ICON_MAP[selectedIcon] || ICON_MAP['Activity'];
+  // Safe icon lookup with fallback
+  const SelectedIconComponent = getIcon(selectedIcon);
 
   return (
     <AnimatePresence>
@@ -175,20 +176,20 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
                   onChange={(e) => setName(e.target.value)}
                   onBlur={handleNameBlur}
                   className="w-full bg-white/50 dark:bg-black/30 backdrop-blur-md border border-white/40 dark:border-white/20 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                  placeholder={t.enterInCurrentLang + " " + langName}
+                  placeholder={`${t.enterInCurrentLang} ${langName}`}
                   required
                 />
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">
-                  {preferences.language === 'en' 
-                    ? "AI will suggest an icon when you finish typing" 
-                    : "سيقترح الذكاء الاصطناعي أيقونة عند الانتهاء من الكتابة"}
+                  {isArabic 
+                    ? "سيقترح الذكاء الاصطناعي أيقونة عند الانتهاء من الكتابة"
+                    : "AI will suggest an icon when you finish typing"}
                 </p>
               </div>
 
               {/* Icon Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {preferences.language === 'en' ? 'Icon' : 'الأيقونة'}
+                  {isArabic ? 'الأيقونة' : 'Icon'}
                 </label>
                 <div className="flex gap-3 items-center">
                   <div className="relative">
@@ -206,9 +207,9 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
                   </div>
                   <div className="flex-1 text-sm text-gray-600 dark:text-gray-400">
                     {isLoadingIcon ? (
-                      <span className="text-primary">AI is suggesting...</span>
+                      <span className="text-primary">{isArabic ? 'الذكاء الاصطناعي يقترح...' : 'AI is suggesting...'}</span>
                     ) : (
-                      <span>Tap to change icon</span>
+                      <span>{isArabic ? 'اضغط لتغيير الأيقونة' : 'Tap to change icon'}</span>
                     )}
                   </div>
                 </div>
@@ -224,7 +225,6 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
                     <div className="grid grid-cols-8 gap-2">
                       {AVAILABLE_ICONS.map((iconName) => {
                         const IconComponent = ICON_MAP[iconName];
-                        if (!IconComponent) return null;
                         return (
                           <button
                             key={iconName}
@@ -299,7 +299,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
                     <div className="flex-1 text-center">
                       <div className="text-5xl font-bold text-slate-900 dark:text-white">{target}</div>
                       <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {preferences.language === 'en' ? 'per day' : 'في اليوم'}
+                        {isArabic ? 'في اليوم' : 'per day'}
                       </div>
                     </div>
                     <button
@@ -320,7 +320,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
                     type="button" 
                     onClick={handleDelete} 
                     className="px-4 py-3 rounded-xl bg-red-500/20 hover:bg-red-500 hover:text-white text-red-600 dark:text-red-400 border border-red-500/30 hover:border-red-500 font-medium transition-all active:scale-95"
-                    title={preferences.language === 'en' ? 'Delete Habit' : 'حذف العادة'}
+                    title={isArabic ? 'حذف العادة' : 'Delete Habit'}
                   >
                     🗑️
                   </button>

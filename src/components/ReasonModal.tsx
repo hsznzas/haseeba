@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Briefcase, Utensils, Plane, Thermometer, HelpCircle, Armchair, Users, Bed } from 'lucide-react';
 import { usePreferences } from '../App';
-import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
 
 interface ReasonModalProps {
@@ -26,7 +25,6 @@ const DEFAULT_REASONS = [
 const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm }) => {
   const { preferences } = usePreferences();
   const { customReasons, handleAddCustomReason } = useData();
-  const t = TRANSLATIONS[preferences.language];
   const isArabic = preferences.language === 'ar';
   
   const [isCustom, setIsCustom] = useState(false);

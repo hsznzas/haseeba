@@ -4,7 +4,7 @@ import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
 import { generateSpiritualInsights } from '../services/geminiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, LineChart, Line } from 'recharts';
-import { Sparkles, TrendingUp, Activity, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Minus, Trophy, Flame, BarChart2, Info } from 'lucide-react';
+import { Sparkles, TrendingUp, Activity, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, BarChart2 } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog } from '../../types';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, 
@@ -196,8 +196,8 @@ const Analytics: React.FC = () => {
         currentStreak = 1; bestStreak = 1;
 
         for (let i = 1; i < dates.length; i++) {
-            const prev = parseLocalISO(dates[i-1]);
-            const curr = parseLocalISO(dates[i]);
+            const prev = parseLocalISO(dates[i-1]!);
+            const curr = parseLocalISO(dates[i]!);
             if (differenceInDays(curr, prev) === 1) currentStreak++;
             else currentStreak = 1;
             if (currentStreak > bestStreak) bestStreak = currentStreak;
@@ -213,8 +213,8 @@ const Analytics: React.FC = () => {
         currentStreak = 1; bestStreak = 1;
 
         for (let i = 1; i < perfectDates.length; i++) {
-            const prev = parseLocalISO(perfectDates[i-1]);
-            const curr = parseLocalISO(perfectDates[i]);
+            const prev = parseLocalISO(perfectDates[i-1]!);
+            const curr = parseLocalISO(perfectDates[i]!);
             if (differenceInDays(curr, prev) === 1) currentStreak++;
             else currentStreak = 1;
             if (currentStreak > bestStreak) bestStreak = currentStreak;

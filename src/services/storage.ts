@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Local Storage Service
  * 

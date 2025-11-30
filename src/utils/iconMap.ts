@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   Activity, 
   Dumbbell, 
@@ -20,6 +19,9 @@ import {
   Smartphone, 
   Code, 
   PenTool,
+  Footprints,
+  Leaf,
+  Search,
   Book,
   Brain,
   Bike,
@@ -31,7 +33,6 @@ import {
   Flame,
   Glasses,
   Headphones,
-  Leaf,
   Lightbulb,
   Mail,
   Mountain,
@@ -45,7 +46,6 @@ import {
   Smile,
   Sparkles,
   Target,
-  Trash,
   Trophy,
   Umbrella,
   Video,
@@ -58,7 +58,6 @@ import {
   Award,
   Battery,
   Bell,
-  Bone,
   Calculator,
   Calendar,
   CheckCircle,
@@ -95,7 +94,6 @@ import {
   Radio,
   RefreshCw,
   Save,
-  Search,
   Send,
   Settings,
   Share,
@@ -114,10 +112,11 @@ import {
   Volume2,
   Wifi,
   X,
-  Zap as Lightning
+  type LucideIcon
 } from 'lucide-react';
 
-export const ICON_MAP: Record<string, React.ComponentType<any>> = {
+// Type-safe icon map using `as const`
+export const ICON_MAP = {
   Activity,
   Dumbbell,
   Droplets,
@@ -138,6 +137,9 @@ export const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Smartphone,
   Code,
   PenTool,
+  Footprints,
+  Leaf,
+  Search,
   Book,
   Brain,
   Bike,
@@ -149,7 +151,6 @@ export const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Flame,
   Glasses,
   Headphones,
-  Leaf,
   Lightbulb,
   Mail,
   Mountain,
@@ -175,7 +176,6 @@ export const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Award,
   Battery,
   Bell,
-  Bone,
   Calculator,
   Calendar,
   CheckCircle,
@@ -212,7 +212,6 @@ export const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Radio,
   RefreshCw,
   Save,
-  Search,
   Send,
   Settings,
   Share,
@@ -231,44 +230,18 @@ export const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Volume2,
   Wifi,
   X,
-  Lightning
-};
+} as const;
 
-// Available icons for AI to choose from (sorted by category for better context)
-export const AVAILABLE_ICONS = [
-  // Fitness & Health
-  'Activity', 'Dumbbell', 'Heart', 'Apple', 'Droplets', 'Battery', 'Flame',
-  
-  // Reading & Learning
-  'BookOpen', 'Book', 'Brain', 'Glasses', 'Pencil', 'PenTool', 'Feather', 'Edit',
-  
-  // Time & Productivity
-  'Clock', 'AlarmClock', 'Calendar', 'Watch', 'Target', 'CheckCircle', 'Trophy', 'Award',
-  
-  // Spiritual & Nature
-  'Star', 'Sun', 'Moon', 'Sparkles', 'Leaf', 'Mountain', 'Cloud', 'CloudRain', 'Wind', 'Compass',
-  
-  // Food & Drink
-  'Coffee', 'Utensils', 'Pizza',
-  
-  // Lifestyle
-  'BedDouble', 'Music', 'Headphones', 'Camera', 'Film', 'Video', 'Tv', 'Radio', 'Podcast',
-  
-  // Social & Communication
-  'Users', 'User', 'Phone', 'Smartphone', 'Mail', 'MessageCircle', 'Mic', 'Speaker',
-  
-  // Work & Business
-  'Briefcase', 'DollarSign', 'Wallet', 'CreditCard', 'ShoppingBag', 'ShoppingCart', 'Package', 'Calculator',
-  
-  // Home & Travel
-  'Home', 'Bike', 'Navigation', 'MapPin', 'Umbrella', 'Globe',
-  
-  // Creative
-  'Palette', 'Lightbulb', 'Rocket', 'Smile',
-  
-  // Tech & Code
-  'Code', 'Monitor', 'Database', 'Wifi', 'Settings', 'Wrench', 'Sliders',
-  
-  // General
-  'List', 'Folder', 'Clipboard', 'Flag', 'Gift', 'Tag', 'Bell', 'Circle', 'Zap', 'Lightning'
-];
+// Type for valid icon names
+export type IconName = keyof typeof ICON_MAP;
+
+// Array of available icon names for iteration
+export const AVAILABLE_ICONS: IconName[] = Object.keys(ICON_MAP) as IconName[];
+
+// Helper function to safely get an icon (returns Activity as fallback)
+export function getIcon(name: string): LucideIcon {
+  if (name in ICON_MAP) {
+    return ICON_MAP[name as IconName];
+  }
+  return Activity;
+}

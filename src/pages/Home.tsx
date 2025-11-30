@@ -9,7 +9,6 @@ import { useData } from '../context/DataContext';
 import { HabitLog, LogStatus, HabitType, PrayerQuality, Habit } from '../../types';
 import { format, addDays, getDay } from 'date-fns';
 import { Plus, User, RotateCw, ArrowUpDown } from 'lucide-react';
-import { TRANSLATIONS } from '../../constants';
 import { AnimatePresence, motion, Reorder } from 'framer-motion';
 import AddHabitModal from '../components/AddHabitModal';
 import ReasonModal from '../components/ReasonModal';
@@ -18,15 +17,13 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const { preferences } = usePreferences();
   const { user } = useAuth();
-  const { habits, logs, handleSaveLog, handleDeleteLog, handleSaveHabit, refreshData, setHabits, handleReorderHabits } = useData();
+  const { habits, logs, handleSaveLog, handleDeleteLog, refreshData, handleReorderHabits } = useData();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [reasoningState, setReasoningState] = useState<{ id: string, val: number, status: LogStatus } | null>(null);
   const [isSortMode, setIsSortMode] = useState(false);
   
-  const t = TRANSLATIONS[preferences.language];
-
   const yesterdayStats = useMemo(() => {
     const yesterday = addDays(new Date(), -1);
     const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
@@ -229,7 +226,7 @@ const Home: React.FC = () => {
       
       logs.forEach(l => {
           if (!logsByDate[l.date]) logsByDate[l.date] = [];
-          logsByDate[l.date].push(l);
+          logsByDate[l.date]!.push(l);
       });
       
       const datesToCheck = new Set([...Object.keys(logsByDate), dateStr]);

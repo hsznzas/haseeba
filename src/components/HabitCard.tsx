@@ -98,7 +98,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onR
         log={log} 
         streak={streak}
         onUpdate={(val, reason) => onUpdate(val, LogStatus.DONE, reason)}
-        onReasonNeeded={onReasonNeeded}
+        onReasonNeeded={(val) => onReasonNeeded(val, LogStatus.FAIL)}
         onDelete={onDeleteLog}
         onEdit={onEdit}
         isSortMode={isSortMode}
@@ -115,8 +115,8 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onR
     const size = 24;
     const props = { size, strokeWidth: 1.5 };
     
-    if (habit.icon && ICON_MAP[habit.icon]) {
-      const IconComponent = ICON_MAP[habit.icon];
+    if (habit.icon && ICON_MAP[habit.icon as keyof typeof ICON_MAP]) {
+      const IconComponent = ICON_MAP[habit.icon as keyof typeof ICON_MAP];
       return <IconComponent {...props} className="text-primary" />;
     }
     
@@ -186,7 +186,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onR
     onDeleteLog();
   };
 
-  const handleTextAreaClick = (e: React.MouseEvent) => {
+  const handleTextAreaClick = (_e: React.MouseEvent) => {
     if (isSortMode) return;
     if (onEdit) {
       onEdit(habit);
@@ -383,7 +383,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onR
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  const CounterIcon = habit.icon && ICON_MAP[habit.icon] ? ICON_MAP[habit.icon] : List;
+  const CounterIcon = habit.icon && ICON_MAP[habit.icon as keyof typeof ICON_MAP] ? ICON_MAP[habit.icon as keyof typeof ICON_MAP] : List;
 
   return (
     <motion.div 

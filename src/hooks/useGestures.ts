@@ -81,7 +81,7 @@ export function useSwipe(config: SwipeConfig = {}) {
   const [swipeOffset, setSwipeOffset] = useState(0);
 
   const bind = useDrag(
-    ({ movement: [mx], direction: [dx], velocity: [vx], active, cancel }) => {
+    ({ movement: [mx], direction: [dx], velocity: [vx], active, cancel: _cancel }) => {
       if (active) {
         setSwipeState("swiping");
         setSwipeOffset(mx);

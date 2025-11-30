@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { TRANSLATIONS } from "../../constants";
 import { Globe, Loader2, Sparkles } from "lucide-react";
 import { DemoPersona } from "../services/storage";
 
@@ -12,8 +11,6 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const t = TRANSLATIONS[language];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
