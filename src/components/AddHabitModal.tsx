@@ -3,8 +3,8 @@ import { usePreferences } from '../App';
 import { useData } from '../context/DataContext';
 import { TRANSLATIONS } from '../../constants';
 import { HabitType, Habit } from '../../types';
-import { X, Minus, Plus, Loader2 } from 'lucide-react';
-import { ICON_MAP, AVAILABLE_ICONS, getIcon } from '../utils/iconMap';
+import { X, Minus, Plus, Loader2, Activity } from 'lucide-react';
+import { ICON_MAP, AVAILABLE_ICONS, type IconName } from '../utils/iconMap';
 import { suggestIcon } from '../services/geminiService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -19,8 +19,11 @@ interface Props {
 const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit }) => {
   const { preferences } = usePreferences();
   const { habits, handleSaveHabit, handleDeleteHabit } = useData();
+  
+  // Cast language to string to bypass strict type narrowing
+  const currentLang = preferences.language as string;
+  const isArabic = currentLang === 'ar';
   const t = TRANSLATIONS[preferences.language];
-  const isArabic = preferences.language === 'ar';
   
   const [name, setName] = useState('');
   const [type, setType] = useState<HabitType>(HabitType.REGULAR);
@@ -134,8 +137,8 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
   const title = habitToEdit ? t.editHabit : t.createHabit;
   const submitText = habitToEdit ? t.update : t.create;
 
-  // Safe icon lookup with fallback
-  const SelectedIconComponent = getIcon(selectedIcon);
+  // Safe icon lookup with proper casting and fallback
+  const SelectedIconComponent = (ICON_MAP[selectedIcon as IconName] || Activity) as React.ElementType;
 
   return (
     <AnimatePresence>
@@ -224,7 +227,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
                   >
                     <div className="grid grid-cols-8 gap-2">
                       {AVAILABLE_ICONS.map((iconName) => {
-                        const IconComponent = ICON_MAP[iconName];
+                        const IconComponent = ICON_MAP[iconName] as React.ElementType;
                         return (
                           <button
                             key={iconName}
