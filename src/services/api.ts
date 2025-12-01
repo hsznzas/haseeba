@@ -100,6 +100,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
     if (!data || data.length === 0) {
       // First-time user: seed with INITIAL_HABITS
       console.log('🌱 New user detected (0 habits). Seeding INITIAL_HABITS...');
+      const today = new Date().toISOString().split('T')[0]; // Seed habits start from today
       const habitsToInsert = INITIAL_HABITS.map(h => ({
         user_id: userId,
         id: h.id, // Pass preset IDs as-is (e.g., 'fajr', 'dhuhr')
@@ -111,6 +112,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
         preset_id: h.id, // Mark as preset using the habit ID
         is_active: h.isActive !== undefined ? h.isActive : true, // Default to true if not specified
         order_index: h.order, // Frontend 'order' -> DB 'order_index'
+        start_date: today, // Preset habits start from today for new users
       }));
 
       console.log(`🌱 Inserting ${habitsToInsert.length} initial habits...`);
@@ -135,6 +137,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
         presetId: dbHabit.preset_id,
         isActive: dbHabit.is_active,
         order: dbHabit.order_index, // DB 'order_index' -> Frontend 'order'
+        startDate: dbHabit.start_date, // When habit tracking began
       }));
     }
 
@@ -149,6 +152,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
       presetId: dbHabit.preset_id,
       isActive: dbHabit.is_active,
       order: dbHabit.order_index, // DB 'order_index' -> Frontend 'order'
+      startDate: dbHabit.start_date, // When habit tracking began
     }));
   } catch (err) {
     console.error('❌ Unexpected error in fetchHabits:', err);
@@ -158,7 +162,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
 
 export const supabaseSaveHabit = async (userId: string, habit: Habit): Promise<void> => {
   try {
-    console.log('💾 Upserting habit to Supabase:', { id: habit.id, name: habit.name, isActive: habit.isActive });
+    console.log('💾 Upserting habit to Supabase:', { id: habit.id, name: habit.name, isActive: habit.isActive, startDate: habit.startDate });
     const { error } = await supabase
       .from('habits')
       .upsert({
@@ -172,6 +176,7 @@ export const supabaseSaveHabit = async (userId: string, habit: Habit): Promise<v
         preset_id: habit.presetId,
         is_active: habit.isActive,
         order_index: habit.order, // Frontend 'order' -> DB 'order_index'
+        start_date: habit.startDate, // When the habit tracking began
       }, {
         onConflict: 'user_id,id' // Composite primary key
       });
@@ -425,6 +430,7 @@ export const updateHabitOrder = async (habits: Habit[]): Promise<void> => {
       preset_id: habit.presetId,
       is_active: habit.isActive,
       order_index: index, // New order based on array position
+      start_date: habit.startDate, // Preserve startDate
     }));
 
     const { error } = await supabase

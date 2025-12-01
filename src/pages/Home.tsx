@@ -342,15 +342,23 @@ const Home: React.FC = () => {
                   </button>
                   <div 
                     onClick={() => navigate('/profile')}
-                    className="min-w-[160px] px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 cursor-pointer active:scale-95 transition-transform text-right"
+                    className="min-w-[180px] px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 cursor-pointer active:scale-95 transition-transform text-right"
                   >
                     <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                       {preferences.language === 'ar' ? `مرحبًا، ${userName}` : `Welcome, ${userName}`}
                     </p>
-                    <p className="text-[10px] text-slate-500 dark:text-gray-400">
+                    <p className="text-[10px] text-slate-500 dark:text-gray-400 leading-relaxed">
                       {preferences.language === 'ar' 
-                        ? `${headerStats.selectedDayName}: ${headerStats.selected.done} ✓ | ${headerStats.dayBeforeName}: ${headerStats.dayBefore.done} ✓`
-                        : `${headerStats.selectedDayName}: ${headerStats.selected.done} Done | ${headerStats.dayBeforeName}: ${headerStats.dayBefore.done} Done`
+                        ? <>
+                            <span className="text-emerald-500">{headerStats.selectedDayName}</span>: {headerStats.selected.done}✓ {headerStats.selected.missed}✗
+                            <br />
+                            <span className="text-gray-500">{headerStats.dayBeforeName}</span>: {headerStats.dayBefore.done}✓ {headerStats.dayBefore.missed}✗
+                          </>
+                        : <>
+                            <span className="text-emerald-500">{headerStats.selectedDayName}</span>: {headerStats.selected.done}✓ {headerStats.selected.missed}✗
+                            <br />
+                            <span className="text-gray-500">{headerStats.dayBeforeName}</span>: {headerStats.dayBefore.done}✓ {headerStats.dayBefore.missed}✗
+                          </>
                       }
                     </p>
                   </div>

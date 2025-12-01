@@ -66,6 +66,14 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
     const nameEn = currentLang === 'en' ? name : (habitToEdit?.name || name);
     const nameAr = currentLang === 'ar' ? name : (habitToEdit?.nameAr || name);
 
+    // For new habits, use the selected date from navbar (or today if not available)
+    // For existing habits being edited, preserve their original startDate
+    const habitStartDate = habitToEdit?.startDate 
+      ? habitToEdit.startDate 
+      : format(selectedDate || new Date(), 'yyyy-MM-dd');
+    
+    console.log('📅 Creating/editing habit with startDate:', habitStartDate, 'selectedDate:', selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'none');
+
     const updatedHabit: Habit = {
       id: habitToEdit ? habitToEdit.id : `custom_${Date.now()}`,
       name: nameEn,
@@ -75,7 +83,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
       emoji: selectedIcon,
       isActive: true,
       order: habitToEdit ? habitToEdit.order : 999,
-      startDate: habitToEdit?.startDate || format(selectedDate || new Date(), 'yyyy-MM-dd'),
+      startDate: habitStartDate,
       presetId: habitToEdit?.presetId
     };
 

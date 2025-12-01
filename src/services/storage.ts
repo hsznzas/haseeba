@@ -636,20 +636,45 @@ export function importData(data: ReturnType<typeof exportAllData>): boolean {
 
 // --- Legacy Wrappers for Web Compatibility ---
 export const getLogs = (): HabitLog[] => {
-  const completions = getHabitCompletions(); // Assuming this function exists in your file
-  // Convert 'HabitCompletion' to 'HabitLog' format if needed
+  const completions = getHabitCompletions();
   return completions.map(c => ({
     id: c.id,
     habitId: c.habitId,
     date: c.date,
     value: c.count,
-    status: LogStatus.DONE, // Defaulting for now
+    status: (c as any).status || LogStatus.DONE,
+    reason: c.note,
     timestamp: new Date(c.completedAt).getTime()
   }));
 };
 
 export const saveLog = (log: HabitLog): HabitLog[] => {
-  logCompletion(log.habitId, 'local-user', log.value);
+  const completions = getHabitCompletions();
+  
+  // Find existing completion for this habit and date
+  const existingIndex = completions.findIndex(
+    (c) => c.habitId === log.habitId && c.date === log.date
+  );
+  
+  // Store status alongside the completion data
+  const completion = {
+    id: log.id || `${log.habitId}-${log.date}`,
+    habitId: log.habitId,
+    userId: 'local-user',
+    date: log.date, // Use the log's date, not today
+    count: log.value,
+    note: log.reason,
+    status: log.status, // Preserve the status (DONE, SKIPPED, etc.)
+    completedAt: new Date().toISOString(),
+  };
+  
+  if (existingIndex !== -1) {
+    completions[existingIndex] = completion as HabitCompletion;
+  } else {
+    completions.push(completion as HabitCompletion);
+  }
+  
+  safeSetItem(STORAGE_KEYS.COMPLETIONS, completions);
   return getLogs();
 };
 
