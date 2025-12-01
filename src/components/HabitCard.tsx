@@ -197,6 +197,15 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
       );
   }
 
+  // Status icon to show after title when logged
+  const getStatusIcon = () => {
+    if (!isLogged) return null;
+    if (isDone) return <Check size={12} className="text-emerald-500 shrink-0" />;
+    if (isFailed) return <X size={12} className="text-red-500 shrink-0" />;
+    if (log?.status === LogStatus.SKIP) return <Minus size={12} className="text-gray-500 shrink-0" />;
+    return null;
+  };
+
   // --- REGULAR HABIT UI ---
   return (
     <motion.div 
@@ -215,10 +224,12 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
 
       {/* Text & Streak */}
       <div className="flex-1 min-w-0 flex flex-col justify-center mr-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
             <h3 className={clsx("font-bold leading-tight truncate", titleSizeClass, isLogged ? "text-gray-500" : "text-white")}>
             {displayTitle}
             </h3>
+            {/* Status indicator icon after title */}
+            {getStatusIcon()}
             {streak > 0 && (
                 <div className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20">
                     <Flame size={10} fill="currentColor" /> {streak}
@@ -240,10 +251,11 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
         </div>
       ) : (
         <div className="grid grid-cols-3 h-full w-40 ml-auto">
+             {/* GREEN Check-in button */}
              <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleDoneClick}
-                className="flex items-center justify-center bg-primary/10 hover:bg-primary/20 text-primary border-l border-white/10 transition-colors"
+                className="flex items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border-l border-white/10 transition-colors"
             >
                 <Check size={20} />
             </motion.button>

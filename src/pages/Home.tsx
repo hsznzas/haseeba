@@ -303,13 +303,15 @@ const Home: React.FC = () => {
 
   return (
     <div className="pb-32 relative min-h-screen">
-        <div className="sticky top-0 z-40 bg-slate-50/80 dark:bg-background/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 pt-[env(safe-area-inset-top)] pb-3 shadow-sm">
-            <div className="px-4 pt-4 flex justify-between items-center">
+        <div className="sticky top-0 z-40 bg-slate-50/80 dark:bg-background/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 pt-[env(safe-area-inset-top)] shadow-sm">
+            {/* Row 1: Avatar, Welcome, Actions */}
+            <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+                {/* Left: Avatar + Welcome */}
                 <div 
                   onClick={() => navigate('/profile')}
-                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                  <div className="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center shrink-0 overflow-hidden">
+                  <div className="w-9 h-9 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center shrink-0 overflow-hidden">
                     {user?.user_metadata?.avatar_url ? (
                       <img 
                         src={user.user_metadata.avatar_url} 
@@ -317,10 +319,15 @@ const Home: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User size={20} className="text-primary" />
+                      <User size={18} className="text-primary" />
                     )}
                   </div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {preferences.language === 'ar' ? `مرحبًا، ${userName}` : `Hi, ${userName}`}
+                  </p>
                 </div>
+                
+                {/* Right: Action buttons */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={toggleSortMode}
@@ -340,20 +347,24 @@ const Home: React.FC = () => {
                   >
                     <RotateCw size={16} className="text-slate-500 dark:text-gray-400" />
                   </button>
-                  <div 
-                    onClick={() => navigate('/profile')}
-                    className="min-w-[180px] px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 cursor-pointer active:scale-95 transition-transform text-right"
-                  >
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                      {preferences.language === 'ar' ? `مرحبًا، ${userName}` : `Welcome, ${userName}`}
-                    </p>
-                    <p className="text-[10px] text-slate-500 dark:text-gray-400 leading-relaxed" dir="ltr">
-                      <span className="text-emerald-500 font-medium">{headerStats.selectedDayName}</span>: <span className="text-emerald-400">{headerStats.selected.done}✓</span> <span className="text-red-400">{headerStats.selected.missed}✗</span>
-                      <br />
-                      <span className="text-gray-500">{headerStats.dayBeforeName}</span>: <span className="text-emerald-400/70">{headerStats.dayBefore.done}✓</span> <span className="text-red-400/70">{headerStats.dayBefore.missed}✗</span>
-                    </p>
-                  </div>
                 </div>
+            </div>
+            
+            {/* Row 2: Stats bar */}
+            <div className="px-4 pb-2">
+              <div className="flex items-center justify-center gap-4 py-1.5 px-3 bg-slate-100/50 dark:bg-white/[0.03] rounded-lg" dir="ltr">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-emerald-500 font-semibold">{headerStats.selectedDayName}</span>
+                  <span className="text-emerald-500">{headerStats.selected.done}✓</span>
+                  <span className="text-red-400">{headerStats.selected.missed}✗</span>
+                </div>
+                <div className="w-px h-4 bg-slate-300 dark:bg-white/10" />
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-gray-500">{headerStats.dayBeforeName}</span>
+                  <span className="text-emerald-500/60">{headerStats.dayBefore.done}✓</span>
+                  <span className="text-red-400/60">{headerStats.dayBefore.missed}✗</span>
+                </div>
+              </div>
             </div>
         </div>
 

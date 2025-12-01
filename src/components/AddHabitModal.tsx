@@ -3,7 +3,7 @@ import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { HabitType, Habit } from '../../types';
 import { useData } from '../context/DataContext';
-import { X, Activity } from 'lucide-react';
+import { X, Activity, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { suggestIcon } from '../services/geminiService';
 import { ICON_MAP, IconName, AVAILABLE_ICONS } from '../utils/iconMap';
@@ -18,8 +18,9 @@ interface Props {
 
 const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit, selectedDate }) => {
   const { preferences } = usePreferences();
-  const { handleSaveHabit } = useData();
+  const { handleSaveHabit, handleDeleteHabit } = useData();
   const t = TRANSLATIONS[preferences.language];
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const [name, setName] = useState('');
   const [type, setType] = useState<HabitType>(HabitType.REGULAR);
@@ -41,8 +42,20 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
         setSelectedIcon('Activity');
       }
       setShowIconPicker(false);
+      setShowDeleteConfirm(false);
     }
   }, [isOpen, habitToEdit, preferences.language]);
+
+  const handleDelete = async () => {
+    if (!habitToEdit) return;
+    try {
+      await handleDeleteHabit(habitToEdit.id);
+      onClose();
+      onAdded(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+    }
+  };
 
   const handleNameBlur = async () => {
     if (name.trim() && !habitToEdit) {
@@ -212,8 +225,46 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
             </div>
           )}
 
+          {/* Delete Habit (only for existing custom habits) */}
+          {habitToEdit && !habitToEdit.presetId && (
+            <div className="pt-4 border-t border-slate-800">
+              {showDeleteConfirm ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-red-400 text-center">
+                    {preferences.language === 'ar' ? 'هل أنت متأكد؟ سيتم حذف جميع السجلات.' : 'Are you sure? All logs will be deleted.'}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 py-2.5 rounded-lg bg-slate-800 text-gray-400 text-sm font-medium hover:bg-slate-700 transition-all"
+                    >
+                      {t.cancel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      className="flex-1 py-2.5 rounded-lg bg-red-500/20 border border-red-500/50 text-red-500 text-sm font-bold hover:bg-red-500/30 transition-all"
+                    >
+                      {preferences.language === 'ar' ? 'نعم، احذف' : 'Yes, Delete'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full py-2.5 rounded-lg flex items-center justify-center gap-2 text-red-400 hover:bg-red-500/10 transition-all text-sm"
+                >
+                  <Trash2 size={16} />
+                  {preferences.language === 'ar' ? 'حذف هذه العادة' : 'Delete this habit'}
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex gap-3 mt-8">
+          <div className="flex gap-3 mt-4">
             <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl bg-slate-950 border border-slate-800 text-gray-400 font-medium hover:bg-slate-900 hover:text-white transition-all">
               {t.cancel}
             </button>
