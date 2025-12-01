@@ -690,24 +690,136 @@ export const deleteLog = (habitId: string, date: string): HabitLog[] => {
 
 export type DemoPersona = 'devout' | 'struggler' | 'beginner' | 'intermediate' | 'advanced';
 
-// Common reasons for not praying at Takbirah level
-const PRAYER_OBSTACLES = [
-  'Sleep', 'Work', 'Travel', 'Laziness', 'Forgot', 'Traffic', 
-  'Meeting', 'Family', 'Illness', 'No Mosque Nearby'
-];
-
-const PRAYER_OBSTACLES_AR = [
-  'نوم', 'عمل', 'سفر', 'كسل', 'نسيان', 'ازدحام',
-  'اجتماع', 'عائلة', 'مرض', 'لا يوجد مسجد قريب'
-];
-
-const getRandomObstacle = () => {
-  const idx = Math.floor(Math.random() * PRAYER_OBSTACLES.length);
-  return PRAYER_OBSTACLES[idx];
+// ============================================
+// REASON LISTS (for obstacles/excuses)
+// ============================================
+const REASONS = {
+  // Reasons more common for Devout users (rare failures)
+  devout: ['Sick', 'Travel'],
+  // Reasons for Struggler users
+  struggler: ['Work/Money', 'Family', 'Sleep', 'Travel', 'Other'],
+  // Reasons for Beginner users  
+  beginner: ['Sleep', 'Food', 'Other', 'Forgot', 'Lazy'],
+  // All reasons combined
+  all: ['Sleep', 'Work/Money', 'Family', 'Food', 'Travel', 'Sick', 'Forgot', 'Lazy', 'Other'],
 };
 
+// Pick a random reason based on persona
+const getReasonForPersona = (persona: DemoPersona): string => {
+  const list = REASONS[persona] || REASONS.all;
+  return list[Math.floor(Math.random() * list.length)];
+};
+
+// ============================================
+// 12 ADDITIONAL DEMO HABITS
+// ============================================
+const DEMO_EXTRA_HABITS: Partial<Habit>[] = [
+  { id: 'demo_walk', name: 'Walk 5k Steps', nameAr: 'المشي ٥٠٠٠ خطوة', emoji: '🚶', type: HabitType.REGULAR },
+  { id: 'demo_water', name: 'Drink 3L Water', nameAr: 'شرب ٣ لتر ماء', emoji: '💧', type: HabitType.COUNTER, dailyTarget: 8 },
+  { id: 'demo_no_social', name: 'No Social Media', nameAr: 'بدون تواصل اجتماعي', emoji: '📵', type: HabitType.REGULAR },
+  { id: 'demo_read', name: 'Read 30 min', nameAr: 'قراءة ٣٠ دقيقة', emoji: '📚', type: HabitType.REGULAR },
+  { id: 'demo_parents', name: 'Call Parents', nameAr: 'الاتصال بالوالدين', emoji: '📞', type: HabitType.REGULAR },
+  { id: 'demo_charity', name: 'Give Charity', nameAr: 'صدقة', emoji: '🤲', type: HabitType.REGULAR },
+  { id: 'demo_study', name: 'Study 1 hour', nameAr: 'دراسة ساعة', emoji: '📖', type: HabitType.REGULAR },
+  { id: 'demo_sleep', name: 'Sleep by 11 PM', nameAr: 'النوم قبل ١١', emoji: '🌙', type: HabitType.REGULAR },
+  { id: 'demo_stretch', name: 'Morning Stretch', nameAr: 'تمارين الصباح', emoji: '🧘', type: HabitType.REGULAR },
+  { id: 'demo_floss', name: 'Floss Teeth', nameAr: 'تنظيف الأسنان', emoji: '🦷', type: HabitType.REGULAR },
+  { id: 'demo_breakfast', name: 'Healthy Breakfast', nameAr: 'فطور صحي', emoji: '🥗', type: HabitType.REGULAR },
+  { id: 'demo_journal', name: 'Journal', nameAr: 'كتابة المذكرات', emoji: '📝', type: HabitType.REGULAR },
+];
+
+// ============================================
+// PERSONA CONFIGURATION
+// ============================================
+interface PersonaConfig {
+  successRate: number;           // Overall success rate for habits
+  prayerQualityDistribution: {   // Distribution of prayer quality levels
+    takbirah: number;            // Probability of Takbirah (best)
+    jamaa: number;               // Probability of Jamaa
+    onTime: number;              // Probability of On Time
+    missed: number;              // Probability of Missed
+  };
+}
+
+const PERSONA_CONFIGS: Record<DemoPersona, PersonaConfig> = {
+  devout: {
+    successRate: 0.95,
+    prayerQualityDistribution: {
+      takbirah: 0.75,  // 75% Takbirah
+      jamaa: 0.20,     // 20% Jamaa
+      onTime: 0.04,    // 4% On Time
+      missed: 0.01,    // 1% Missed
+    },
+  },
+  struggler: {
+    successRate: 0.60,
+    prayerQualityDistribution: {
+      takbirah: 0.15,  // 15% Takbirah
+      jamaa: 0.25,     // 25% Jamaa
+      onTime: 0.35,    // 35% On Time
+      missed: 0.25,    // 25% Missed
+    },
+  },
+  beginner: {
+    successRate: 0.30,
+    prayerQualityDistribution: {
+      takbirah: 0.05,  // 5% Takbirah
+      jamaa: 0.10,     // 10% Jamaa
+      onTime: 0.35,    // 35% On Time
+      missed: 0.50,    // 50% Missed
+    },
+  },
+  intermediate: {
+    successRate: 0.75,
+    prayerQualityDistribution: {
+      takbirah: 0.40,
+      jamaa: 0.30,
+      onTime: 0.20,
+      missed: 0.10,
+    },
+  },
+  advanced: {
+    successRate: 0.85,
+    prayerQualityDistribution: {
+      takbirah: 0.60,
+      jamaa: 0.25,
+      onTime: 0.10,
+      missed: 0.05,
+    },
+  },
+};
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+// Format date as YYYY-MM-DD
+const formatDate = (d: Date): string => d.toISOString().split('T')[0];
+
+// Get prayer quality based on persona distribution
+const getPrayerQuality = (persona: DemoPersona): PrayerQuality => {
+  const config = PERSONA_CONFIGS[persona];
+  const rand = Math.random();
+  const { takbirah, jamaa, onTime } = config.prayerQualityDistribution;
+  
+  if (rand < takbirah) return PrayerQuality.TAKBIRAH;
+  if (rand < takbirah + jamaa) return PrayerQuality.JAMAA;
+  if (rand < takbirah + jamaa + onTime) return PrayerQuality.ON_TIME;
+  return PrayerQuality.MISSED;
+};
+
+// Check if habit succeeded based on persona
+const didHabitSucceed = (persona: DemoPersona): boolean => {
+  const config = PERSONA_CONFIGS[persona];
+  return Math.random() < config.successRate;
+};
+
+// ============================================
+// MAIN SEEDING FUNCTION
+// ============================================
+
 export const seedDemoData = (persona: DemoPersona = 'struggler') => {
-  console.log(`[Storage] Seeding demo data for persona: ${persona}`);
+  console.log(`[Storage] 🌱 Seeding demo data for persona: ${persona.toUpperCase()}`);
   
   // 1. Clear existing data to start fresh
   clearAllData();
@@ -715,130 +827,148 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   // 2. Create Demo User
   createDemoUser();
 
-  // 3. Use ALL habits from INITIAL_HABITS (including 5 Prayers and Rawatib)
+  // 3. Calculate date range (6 months = 180 days)
   const today = new Date();
-  // 6 months of data (180 days)
   const daysBack = 180;
-  const startDateStr = new Date(today.getTime() - daysBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  
-  // Save all initial habits with proper startDate
-  const createdHabits: Habit[] = INITIAL_HABITS.map(h => {
-    const habit: Habit = {
+  const startDate = new Date(today.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  const startDateStr = formatDate(startDate);
+
+  // 4. Build habit list: INITIAL_HABITS + 12 Demo Extras
+  const allHabits: Habit[] = [
+    // Include all initial habits
+    ...INITIAL_HABITS.map((h, idx) => ({
       ...h,
+      isActive: true, // Activate all for demo richness
       startDate: startDateStr,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
-    return habit;
-  });
+      order: h.order || idx * 10,
+    })),
+    // Add 12 demo extra habits
+    ...DEMO_EXTRA_HABITS.map((h, idx) => ({
+      id: h.id!,
+      name: h.name!,
+      nameAr: h.nameAr!,
+      emoji: h.emoji,
+      type: h.type || HabitType.REGULAR,
+      isActive: true,
+      dailyTarget: h.dailyTarget || 1,
+      startDate: startDateStr,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      order: 1000 + idx * 10,
+    } as Habit)),
+  ];
   
-  safeSetItem(STORAGE_KEYS.HABITS, createdHabits);
+  safeSetItem(STORAGE_KEYS.HABITS, allHabits);
 
-  // 4. Generate Logs - Always 6 months (180 days) of data
-  const successRate = persona === 'devout' ? 0.95 : persona === 'struggler' ? 0.6 : 0.3;
-  const takbirahRate = persona === 'devout' ? 0.7 : persona === 'struggler' ? 0.35 : 0.15;
-
-  // Helper to format date as YYYY-MM-DD
-  const fmtDate = (d: Date) => d.toISOString().split('T')[0];
-  
-  // Build logs array
-  const allLogs: HabitLog[] = [];
+  // 5. Identify prayer habits
   const prayerIds = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
-
+  const prayerHabits = allHabits.filter(h => prayerIds.includes(h.id));
+  const nonPrayerHabits = allHabits.filter(h => !prayerIds.includes(h.id));
+  
+  // 6. Generate logs - NO GAPS! Every habit gets a log for every day
+  const allLogs: HabitLog[] = [];
+  
   for (let i = 0; i < daysBack; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    const dateStr = fmtDate(date);
+    const dateStr = formatDate(date);
+    const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    
+    // Force perfect week for last 7 days (visual appeal)
+    const isRecentWeek = i < 7;
 
-    // Forced "Perfect Week" for the last 7 days (so green dots appear)
-    const isRecent = i < 7;
-    const isSuccess = isRecent || Math.random() < successRate;
-
-    if (isSuccess) {
-      // Log Prayers with quality values and REASONS for non-Takbirah
-      prayerIds.forEach(prayerId => {
-        const isTakbirah = Math.random() < takbirahRate;
-        let quality: number;
-        let reason: string | undefined;
-        
-        if (isTakbirah) {
-          quality = PrayerQuality.TAKBIRAH;
-        } else {
-          // Distribute among other levels
-          const rand = Math.random();
-          if (rand < 0.5) {
-            quality = PrayerQuality.JAMAA;
-          } else if (rand < 0.8) {
-            quality = PrayerQuality.ON_TIME;
-          } else {
-            quality = PrayerQuality.MISSED;
-          }
-          // Add a reason for non-perfect prayers (70% chance)
-          if (Math.random() < 0.7) {
-            reason = getRandomObstacle();
-          }
-        }
-        
-        allLogs.push({
-          id: `${prayerId}-${dateStr}`,
-          habitId: prayerId,
-          date: dateStr,
-          value: quality,
-          status: LogStatus.DONE,
-          reason: reason,
-          timestamp: date.getTime(),
-        });
+    // ===== PRAYERS: Always log all 5 prayers =====
+    prayerHabits.forEach(prayer => {
+      let quality: PrayerQuality;
+      let reason: string | undefined;
+      
+      if (isRecentWeek) {
+        // Perfect week: All Takbirah, no reason needed
+        quality = PrayerQuality.TAKBIRAH;
+      } else {
+        // Use persona-based quality distribution
+        quality = getPrayerQuality(persona);
+      }
+      
+      // MANDATORY REASONING: If quality < TAKBIRAH, MUST have a reason
+      if (quality < PrayerQuality.TAKBIRAH) {
+        reason = getReasonForPersona(persona);
+      }
+      
+      allLogs.push({
+        id: `${prayer.id}-${dateStr}`,
+        habitId: prayer.id,
+        date: dateStr,
+        value: quality,
+        status: LogStatus.DONE, // Prayers are always "logged", quality indicates performance
+        reason: reason,
+        timestamp: date.getTime(),
       });
+    });
 
-      // Log Regular/Counter habits (non-prayer, active ones)
-      createdHabits
-        .filter(h => h.isActive && h.type !== HabitType.PRAYER)
-        .forEach(habit => {
-          // Skip conditional habits (fasting) unless it's the right day
-          if (habit.id === 'fasting_monday' && date.getDay() !== 1) return;
-          if (habit.id === 'fasting_thursday' && date.getDay() !== 4) return;
-          if (habit.id.includes('fasting_white')) return; // Skip white days for simplicity
-          
-          const value = habit.dailyTarget || 1;
-          allLogs.push({
-            id: `${habit.id}-${dateStr}`,
-            habitId: habit.id,
-            date: dateStr,
-            value: value,
-            status: LogStatus.DONE,
-            timestamp: date.getTime(),
-          });
-        });
-    } else {
-      // Even on "miss" days, log some prayers as missed or late with reasons
-      prayerIds.forEach(prayerId => {
-        if (Math.random() > 0.5) {
-          const quality = Math.random() > 0.5 ? PrayerQuality.ON_TIME : PrayerQuality.MISSED;
-          allLogs.push({
-            id: `${prayerId}-${dateStr}`,
-            habitId: prayerId,
-            date: dateStr,
-            value: quality,
-            status: LogStatus.DONE,
-            reason: getRandomObstacle(), // Always add reason for missed days
-            timestamp: date.getTime(),
-          });
+    // ===== NON-PRAYER HABITS: Always log (DONE or FAIL) =====
+    nonPrayerHabits.forEach(habit => {
+      // Skip fasting habits on wrong days
+      if (habit.id === 'fasting_monday' && dayOfWeek !== 1) return;
+      if (habit.id === 'fasting_thursday' && dayOfWeek !== 4) return;
+      if (habit.id === 'fasting_white_days') return; // Skip for simplicity
+      
+      let status: LogStatus;
+      let value: number;
+      let reason: string | undefined;
+      
+      if (isRecentWeek) {
+        // Perfect week: All success
+        status = LogStatus.DONE;
+        value = habit.dailyTarget || 1;
+      } else {
+        // Use persona success rate
+        const succeeded = didHabitSucceed(persona);
+        status = succeeded ? LogStatus.DONE : LogStatus.SKIPPED;
+        value = succeeded ? (habit.dailyTarget || 1) : 0;
+        
+        // MANDATORY REASONING: If failed (SKIPPED), MUST have a reason
+        if (status === LogStatus.SKIPPED) {
+          reason = getReasonForPersona(persona);
         }
+      }
+      
+      allLogs.push({
+        id: `${habit.id}-${dateStr}`,
+        habitId: habit.id,
+        date: dateStr,
+        value: value,
+        status: status,
+        reason: reason,
+        timestamp: date.getTime(),
       });
-    }
+    });
   }
   
-  // Convert to HabitCompletion format for storage
+  // 7. Convert to HabitCompletion format for storage (with reason preserved)
   const completions: HabitCompletion[] = allLogs.map(log => ({
     id: log.id,
     habitId: log.habitId,
     userId: 'demo-user-id',
     date: log.date,
     count: log.value,
+    note: log.reason, // Store reason in 'note' field
+    status: log.status,
     completedAt: new Date(log.timestamp).toISOString(),
-  }));
+  } as HabitCompletion));
   
   safeSetItem(STORAGE_KEYS.COMPLETIONS, completions);
   
-  console.log(`[Storage] Seeding complete. Created ${createdHabits.length} habits with ${allLogs.length} logs over ${daysBack} days.`);
+  // 8. Log summary stats
+  const prayerLogs = allLogs.filter(l => prayerIds.includes(l.habitId));
+  const habitLogs = allLogs.filter(l => !prayerIds.includes(l.habitId));
+  const logsWithReasons = allLogs.filter(l => l.reason);
+  
+  console.log(`[Storage] ✅ Seeding complete!`);
+  console.log(`  📋 Habits: ${allHabits.length} (${prayerHabits.length} prayers + ${nonPrayerHabits.length} others)`);
+  console.log(`  📊 Logs: ${allLogs.length} total (${prayerLogs.length} prayers, ${habitLogs.length} habits)`);
+  console.log(`  💬 Reasons: ${logsWithReasons.length} logs have reasoning`);
+  console.log(`  📅 Period: ${daysBack} days (${startDateStr} to ${formatDate(today)})`);
 };
