@@ -704,6 +704,73 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
+      {/* Top 5 Habit Streaks (Non-Prayer) */}
+      <div className="space-y-3">
+        <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide flex items-center gap-2">
+          <TrendingUp size={14} className="text-emerald-500" />
+          {preferences.language === 'ar' ? 'أفضل 5 عادات (غير الصلوات)' : 'Top 5 Habits (Non-Prayer)'}
+        </h2>
+        <div className="bg-card rounded-xl border border-slate-800 overflow-hidden">
+          {(() => {
+            // Calculate best streaks for non-prayer habits only
+            const nonPrayerStreaks = habits
+              .filter(h => h.isActive && h.type !== HabitType.PRAYER)
+              .map(h => ({
+                id: h.id,
+                name: preferences.language === 'ar' ? h.nameAr : h.name,
+                type: h.type,
+                emoji: h.emoji,
+                streak: calculateBestStreak(h.id),
+              }))
+              .filter(s => s.streak > 0)
+              .sort((a, b) => b.streak - a.streak)
+              .slice(0, 5);
+
+            if (nonPrayerStreaks.length === 0) {
+              return (
+                <div className="p-6 text-center">
+                  <TrendingUp size={32} className="text-gray-700 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">
+                    {preferences.language === 'ar' ? 'لا توجد تتابعات للعادات بعد' : 'No habit streaks yet'}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="divide-y divide-slate-800">
+                {nonPrayerStreaks.map((s, idx) => (
+                  <div key={s.id} className="flex items-center gap-3 p-3 hover:bg-slate-900/50 transition-colors">
+                    <div className={clsx(
+                      "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm",
+                      idx === 0 ? "bg-emerald-500/20 text-emerald-400" :
+                      idx === 1 ? "bg-blue-500/20 text-blue-400" :
+                      idx === 2 ? "bg-purple-500/20 text-purple-400" :
+                      "bg-slate-800 text-gray-500"
+                    )}>
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{s.name}</p>
+                      <p className="text-[10px] text-gray-500 uppercase">
+                        {s.type === HabitType.COUNTER ? (preferences.language === 'ar' ? 'عداد' : 'Counter') :
+                         (preferences.language === 'ar' ? 'عادة' : 'Regular')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
+                      <span className="text-emerald-400 font-bold">{s.streak}</span>
+                      <span className="text-[10px] text-emerald-400/70">
+                        {preferences.language === 'ar' ? 'يوم' : 'days'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
       {/* AI Insights */}
       <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 p-5 rounded-lg border border-indigo-500/30 relative overflow-hidden mt-8 shadow-lg">
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-500/20 blur-3xl rounded-full"></div>
