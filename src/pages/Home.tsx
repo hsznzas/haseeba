@@ -347,19 +347,10 @@ const Home: React.FC = () => {
                     <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                       {preferences.language === 'ar' ? `مرحبًا، ${userName}` : `Welcome, ${userName}`}
                     </p>
-                    <p className="text-[10px] text-slate-500 dark:text-gray-400 leading-relaxed">
-                      {preferences.language === 'ar' 
-                        ? <>
-                            <span className="text-emerald-500">{headerStats.selectedDayName}</span>: {headerStats.selected.done}✓ {headerStats.selected.missed}✗
-                            <br />
-                            <span className="text-gray-500">{headerStats.dayBeforeName}</span>: {headerStats.dayBefore.done}✓ {headerStats.dayBefore.missed}✗
-                          </>
-                        : <>
-                            <span className="text-emerald-500">{headerStats.selectedDayName}</span>: {headerStats.selected.done}✓ {headerStats.selected.missed}✗
-                            <br />
-                            <span className="text-gray-500">{headerStats.dayBeforeName}</span>: {headerStats.dayBefore.done}✓ {headerStats.dayBefore.missed}✗
-                          </>
-                      }
+                    <p className="text-[10px] text-slate-500 dark:text-gray-400 leading-relaxed" dir="ltr">
+                      <span className="text-emerald-500 font-medium">{headerStats.selectedDayName}</span>: <span className="text-emerald-400">{headerStats.selected.done}✓</span> <span className="text-red-400">{headerStats.selected.missed}✗</span>
+                      <br />
+                      <span className="text-gray-500">{headerStats.dayBeforeName}</span>: <span className="text-emerald-400/70">{headerStats.dayBefore.done}✓</span> <span className="text-red-400/70">{headerStats.dayBefore.missed}✗</span>
                     </p>
                   </div>
                 </div>
