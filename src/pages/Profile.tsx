@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, Settings2, MessageSquareOff, Eye } from 'lucide-react';
+import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import DobModal from '../components/DobModal';
@@ -184,115 +184,122 @@ const Profile: React.FC = () => {
           />
        </div>
 
-       {/* Islamic Presets */}
+       {/* Habits Settings - All habits with Activity and Reason toggles */}
        <div className="glass-card p-5 rounded-2xl">
          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-white flex items-center gap-2"><Moon size={18} className="text-yellow-500" /> Islamic Habits</h3>
+            <h3 className="font-bold text-white flex items-center gap-2">
+              <Moon size={18} className="text-yellow-500" /> 
+              {preferences.language === 'ar' ? 'إعدادات العادات' : 'Habits Settings'}
+            </h3>
             <div className="flex gap-2">
-                <button onClick={() => toggleAllHabits(true)} className="text-[10px] font-bold bg-green-500/10 text-green-500 px-3 py-1.5 rounded-lg border border-green-500/30 flex items-center gap-1"><PlayCircle size={12} /> {t.activateAll}</button>
-                <button onClick={() => toggleAllHabits(false)} className="text-[10px] font-bold bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg border border-red-500/30 flex items-center gap-1"><StopCircle size={12} /> {t.deactivateAll}</button>
-            </div>
-         </div>
-         
-         <div className="space-y-2">
-            <div className="flex items-center justify-between p-4 bg-slate-900 rounded-xl border border-slate-800">
-                <div>
-                    <h4 className="font-bold text-sm text-white">Rawatib (Sunnah Prayers)</h4>
-                    <p className="text-xs text-gray-400">Activates all 6 confirmed Sunnahs</p>
-                </div>
-                <button onClick={() => toggleHabit('rawatib_master')} className={clsx("w-12 h-7 rounded-full transition-colors relative", isRawatibActive ? "bg-primary" : "bg-slate-700")}>
-                    <div className={clsx("w-5 h-5 bg-white rounded-full absolute top-1 shadow-sm transition-all", isRawatibActive ? "right-1" : "left-1")} />
+                <button onClick={() => toggleAllHabits(true)} className="text-[10px] font-bold bg-green-500/10 text-green-500 px-2 py-1 rounded-lg border border-green-500/30 flex items-center gap-1">
+                  <PlayCircle size={10} /> {t.activateAll}
+                </button>
+                <button onClick={() => toggleAllHabits(false)} className="text-[10px] font-bold bg-red-500/10 text-red-500 px-2 py-1 rounded-lg border border-red-500/30 flex items-center gap-1">
+                  <StopCircle size={10} /> {t.deactivateAll}
                 </button>
             </div>
-            {habits.filter(h => h.type === 'REGULAR' && h.id !== 'rawatib_master' && !h.id.startsWith('custom_') && h.presetId !== 'rawatib').map(habit => (
-                <div key={habit.id} className="flex items-center justify-between p-3 hover:bg-slate-900/50 rounded-xl transition-colors">
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl">{habit.emoji || '🔹'}</span>
-                        <span className="text-sm font-medium text-gray-200">{preferences.language === 'ar' ? habit.nameAr : habit.name}</span>
-                    </div>
-                    <button onClick={() => toggleHabit(habit.id)} className={clsx("w-10 h-5 rounded-full transition-colors relative flex-shrink-0", habit.isActive ? "bg-primary/80" : "bg-slate-700")}>
-                        <div className={clsx("w-3 h-3 bg-white rounded-full absolute top-1 transition-all", habit.isActive ? "right-1" : "left-1")} />
-                    </button>
-                </div>
-            ))}
          </div>
-       </div>
-
-       {/* Habits Settings - Non-5KP habits with visibility and reason toggles */}
-       <div className="glass-card p-5 rounded-2xl">
-         <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-           <Settings2 size={18} className="text-cyan-500" /> 
-           {preferences.language === 'ar' ? 'إعدادات العادات' : 'Habits Settings'}
-         </h3>
-         <p className="text-xs text-gray-500 mb-4">
-           {preferences.language === 'ar' 
-             ? 'تحكم في إظهار العادات وطلب السبب عند الفشل'
-             : 'Control visibility and whether to ask for reason on fail'}
-         </p>
          
-         {/* Header Row */}
-         <div className="flex items-center gap-2 mb-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">
+         {/* Column Headers */}
+         <div className="flex items-center gap-2 mb-2 px-3 text-[9px] text-gray-500 uppercase tracking-wider border-b border-slate-800 pb-2">
            <div className="flex-1">{preferences.language === 'ar' ? 'العادة' : 'Habit'}</div>
-           <div className="w-16 text-center flex items-center justify-center gap-1">
-             <Eye size={10} />
-             {preferences.language === 'ar' ? 'إظهار' : 'Show'}
-           </div>
-           <div className="w-16 text-center flex items-center justify-center gap-1">
-             <MessageSquareOff size={10} />
+           <div className="w-14 text-center">{preferences.language === 'ar' ? 'نشط' : 'Active'}</div>
+           <div className="w-14 text-center flex items-center justify-center gap-0.5">
+             <MessageSquare size={8} />
              {preferences.language === 'ar' ? 'سبب' : 'Reason'}
            </div>
          </div>
          
-         <div className="space-y-1 max-h-64 overflow-y-auto">
+         <div className="space-y-1">
+           {/* Rawatib Master Toggle */}
+           <div className="flex items-center gap-2 p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+             <div className="flex-1 min-w-0">
+               <h4 className="text-sm font-bold text-white">Rawatib</h4>
+               <p className="text-[10px] text-gray-500">{preferences.language === 'ar' ? '٦ سنن مؤكدة' : '6 confirmed Sunnahs'}</p>
+             </div>
+             {/* Activity Toggle */}
+             <div className="w-14 flex justify-center">
+               <button 
+                 onClick={() => toggleHabit('rawatib_master')} 
+                 className={clsx("w-9 h-5 rounded-full transition-colors relative", isRawatibActive ? "bg-emerald-500" : "bg-slate-700")}
+               >
+                 <div className={clsx("w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all", isRawatibActive ? "right-[3px]" : "left-[3px]")} />
+               </button>
+             </div>
+             {/* Reason Toggle - affects all rawatib */}
+             <div className="w-14 flex justify-center">
+               <button 
+                 onClick={() => {
+                   const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
+                   const allRequireReason = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.requireReason !== false);
+                   habits.filter(h => rawatibIds.includes(h.id)).forEach(h => {
+                     handleSaveHabit({ ...h, requireReason: !allRequireReason });
+                   });
+                 }}
+                 className={clsx(
+                   "w-9 h-5 rounded-full transition-colors relative",
+                   habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "bg-cyan-500" : "bg-slate-700"
+                 )}
+               >
+                 <div className={clsx(
+                   "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all",
+                   habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "right-[3px]" : "left-[3px]"
+                 )} />
+               </button>
+             </div>
+           </div>
+
+           {/* All Non-Prayer Habits (excluding rawatib which are handled above) */}
            {habits
-             .filter(h => h.type !== HabitType.PRAYER) // Exclude 5KPs
+             .filter(h => h.type !== HabitType.PRAYER && h.presetId !== 'rawatib')
              .sort((a, b) => a.order - b.order)
              .map(habit => {
                const displayName = preferences.language === 'ar' ? (habit.nameAr || habit.name) : habit.name;
                return (
                  <div 
                    key={habit.id} 
-                   className="flex items-center gap-2 p-2 hover:bg-slate-900/50 rounded-lg transition-colors"
+                   className="flex items-center gap-2 p-2.5 hover:bg-slate-900/50 rounded-xl transition-colors"
                  >
-                   {/* Habit Name */}
+                   {/* Habit Name with Emoji */}
                    <div className="flex-1 min-w-0 flex items-center gap-2">
                      <span className="text-lg shrink-0">{habit.emoji || '🔹'}</span>
                      <span className={clsx(
-                       "text-xs font-medium truncate",
+                       "text-sm font-medium truncate",
                        habit.isActive ? "text-gray-200" : "text-gray-500"
                      )}>
                        {displayName}
                      </span>
                    </div>
                    
-                   {/* Visibility Toggle */}
-                   <div className="w-16 flex justify-center">
+                   {/* Activity Toggle */}
+                   <div className="w-14 flex justify-center">
                      <button 
                        onClick={() => handleSaveHabit({ ...habit, isActive: !habit.isActive })}
                        className={clsx(
-                         "w-8 h-5 rounded-full transition-colors relative",
+                         "w-9 h-5 rounded-full transition-colors relative",
                          habit.isActive ? "bg-emerald-500" : "bg-slate-700"
                        )}
                      >
                        <div className={clsx(
-                         "w-3 h-3 bg-white rounded-full absolute top-1 transition-all",
-                         habit.isActive ? "right-1" : "left-1"
+                         "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all",
+                         habit.isActive ? "right-[3px]" : "left-[3px]"
                        )} />
                      </button>
                    </div>
                    
                    {/* Reason Toggle */}
-                   <div className="w-16 flex justify-center">
+                   <div className="w-14 flex justify-center">
                      <button 
                        onClick={() => handleSaveHabit({ ...habit, requireReason: habit.requireReason === false ? true : false })}
                        className={clsx(
-                         "w-8 h-5 rounded-full transition-colors relative",
+                         "w-9 h-5 rounded-full transition-colors relative",
                          habit.requireReason !== false ? "bg-cyan-500" : "bg-slate-700"
                        )}
                      >
                        <div className={clsx(
-                         "w-3 h-3 bg-white rounded-full absolute top-1 transition-all",
-                         habit.requireReason !== false ? "right-1" : "left-1"
+                         "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all",
+                         habit.requireReason !== false ? "right-[3px]" : "left-[3px]"
                        )} />
                      </button>
                    </div>
