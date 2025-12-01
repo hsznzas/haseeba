@@ -8,6 +8,7 @@ interface ReasonModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (reason: string) => void;
+  allowSkip?: boolean; // If true, show "Skip reason" option (for non-5KP habits)
 }
 
 // Default reasons with Lucide icons (moved outside component for stability)
@@ -22,10 +23,14 @@ const DEFAULT_REASONS = [
   { id: 'other', labelEn: 'Other', labelAr: 'آخر', icon: HelpCircle },
 ];
 
-const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm }) => {
+const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm, allowSkip = false }) => {
   const { preferences } = usePreferences();
   const { customReasons, handleAddCustomReason } = useData();
   const isArabic = preferences.language === 'ar';
+  
+  const handleSkipReason = () => {
+    onConfirm(''); // Submit with empty reason
+  };
   
   const [isCustom, setIsCustom] = useState(false);
   const [customText, setCustomText] = useState('');
@@ -156,6 +161,17 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
                       ? 'اختر السبب لتتبع أسباب التراجع الروحي'
                       : 'Select a reason to track spiritual dips'}
                   </p>
+
+                  {/* Skip Reason Option (for non-5KP habits) */}
+                  {allowSkip && (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleSkipReason}
+                      className="w-full mt-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all text-sm font-medium"
+                    >
+                      {isArabic ? 'تخطي بدون سبب' : 'Skip without reason'}
+                    </motion.button>
+                  )}
                 </>
               ) : (
                 <>

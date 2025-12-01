@@ -876,21 +876,12 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
     const dateStr = formatDate(date);
     const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
     
-    // Force perfect week for last 7 days (visual appeal)
-    const isRecentWeek = i < 7;
-
     // ===== PRAYERS: Always log all 5 prayers =====
+    // Performance is ALWAYS based on persona (no forced perfect weeks)
     prayerHabits.forEach(prayer => {
-      let quality: PrayerQuality;
+      // Use persona-based quality distribution consistently
+      const quality = getPrayerQuality(persona);
       let reason: string | undefined;
-      
-      if (isRecentWeek) {
-        // Perfect week: All Takbirah, no reason needed
-        quality = PrayerQuality.TAKBIRAH;
-      } else {
-        // Use persona-based quality distribution
-        quality = getPrayerQuality(persona);
-      }
       
       // MANDATORY REASONING: If quality < TAKBIRAH, MUST have a reason
       if (quality < PrayerQuality.TAKBIRAH) {
@@ -915,24 +906,15 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
       if (habit.id === 'fasting_thursday' && dayOfWeek !== 4) return;
       if (habit.id === 'fasting_white_days') return; // Skip for simplicity
       
-      let status: LogStatus;
-      let value: number;
+      // Use persona success rate consistently (no forced perfect weeks)
+      const succeeded = didHabitSucceed(persona);
+      const status = succeeded ? LogStatus.DONE : LogStatus.SKIPPED;
+      const value = succeeded ? (habit.dailyTarget || 1) : 0;
       let reason: string | undefined;
       
-      if (isRecentWeek) {
-        // Perfect week: All success
-        status = LogStatus.DONE;
-        value = habit.dailyTarget || 1;
-      } else {
-        // Use persona success rate
-        const succeeded = didHabitSucceed(persona);
-        status = succeeded ? LogStatus.DONE : LogStatus.SKIPPED;
-        value = succeeded ? (habit.dailyTarget || 1) : 0;
-        
-        // MANDATORY REASONING: If failed (SKIPPED), MUST have a reason
-        if (status === LogStatus.SKIPPED) {
-          reason = getReasonForPersona(persona);
-        }
+      // MANDATORY REASONING: If failed (SKIPPED), MUST have a reason
+      if (status === LogStatus.SKIPPED) {
+        reason = getReasonForPersona(persona);
       }
       
       allLogs.push({
