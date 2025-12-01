@@ -870,17 +870,23 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   // 6. Generate logs - NO GAPS! Every habit gets a log for every day
   const allLogs: HabitLog[] = [];
   
+  // Perfect day probability based on persona
+  // For "All Prayers Perfect" streak to show, we need consecutive days with ALL 5 at TAKBIRAH
+  const perfectDayChance = persona === 'advanced' ? 0.6 : persona === 'intermediate' ? 0.2 : 0.05;
+  
   for (let i = 0; i < daysBack; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     const dateStr = formatDate(date);
     const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    
+    // Determine if this is a "perfect day" (all prayers at TAKBIRAH)
+    const isPerfectDay = Math.random() < perfectDayChance;
 
     // ===== PRAYERS: Always log all 5 prayers =====
-    // Performance is ALWAYS based on persona (no forced perfect weeks)
     prayerHabits.forEach(prayer => {
-      // Use persona-based quality distribution consistently
-      const quality = getPrayerQuality(persona);
+      // Use persona-based quality, BUT on perfect days, force TAKBIRAH
+      const quality = isPerfectDay ? PrayerQuality.TAKBIRAH : getPrayerQuality(persona);
       let reason: string | undefined;
       
       // MANDATORY REASONING: If quality < TAKBIRAH, MUST have a reason
