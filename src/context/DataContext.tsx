@@ -1,9 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Habit, HabitLog } from '../../types';
 import { useAuth } from './AuthContext';
+import { INITIAL_HABITS } from '../../constants';
 
 import * as storage from '../services/storage';
 import * as api from '../services/api';
+
+// Helper to enrich loaded habits with icon/color from INITIAL_HABITS
+const enrichHabitsWithIcons = (loadedHabits: Habit[]): Habit[] => {
+  return loadedHabits.map(habit => {
+    // Find matching preset habit by ID
+    const presetHabit = INITIAL_HABITS.find(h => h.id === habit.id);
+    if (presetHabit) {
+      return {
+        ...habit,
+        icon: habit.icon || presetHabit.icon,
+        color: habit.color || presetHabit.color,
+      };
+    }
+    return habit;
+  });
+};
 
 // ============================================
 // NOTIFICATION STATE & COMPONENT
@@ -96,7 +113,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const loadedLogs = storage.getLogs();
         const loadedReasons = storage.getCustomReasons();
         console.log(`✅ Demo Mode: Loaded ${loadedHabits.length} habits, ${loadedLogs.length} logs, ${loadedReasons.length} custom reasons from LocalStorage`);
-        setHabits(loadedHabits);
+        // Enrich habits with icons/colors from INITIAL_HABITS
+        setHabits(enrichHabitsWithIcons(loadedHabits));
         setLogs(loadedLogs);
         setCustomReasons(loadedReasons);
       } else {
@@ -107,7 +125,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           api.getCustomReasons()
         ]);
         console.log(`✅ Cloud Mode: Loaded ${fetchedHabits.length} habits, ${fetchedLogs.length} logs, ${fetchedReasons.length} custom reasons from Supabase`);
-        setHabits(fetchedHabits);
+        // Enrich habits with icons/colors from INITIAL_HABITS
+        setHabits(enrichHabitsWithIcons(fetchedHabits));
         setLogs(fetchedLogs);
         setCustomReasons(fetchedReasons);
       }
