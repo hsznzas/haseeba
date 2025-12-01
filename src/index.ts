@@ -96,6 +96,13 @@ export enum LogStatus {
   FAIL = 'FAIL',
 }
 
+export enum PrayerQuality {
+  MISSED = 0,
+  ON_TIME = 1,
+  JAMAA = 2,
+  TAKBIRAH = 3,
+}
+
 export interface HabitLog {
   id: string;
   habitId: string;

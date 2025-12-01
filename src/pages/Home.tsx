@@ -7,7 +7,7 @@ import HabitCard from '../components/HabitCard';
 import BottomNav from '../components/BottomNav';
 import { useData } from '../context/DataContext';
 import { HabitLog, LogStatus, HabitType, PrayerQuality, Habit } from '../../types';
-import { format, addDays, getDay } from 'date-fns';
+import { format, subDays, getDay } from 'date-fns';
 import { Plus, User, RotateCw, ArrowUpDown } from 'lucide-react';
 import { AnimatePresence, motion, Reorder } from 'framer-motion';
 import AddHabitModal from '../components/AddHabitModal';
@@ -24,17 +24,26 @@ const Home: React.FC = () => {
   const [reasoningState, setReasoningState] = useState<{ id: string, val: number, status: LogStatus } | null>(null);
   const [isSortMode, setIsSortMode] = useState(false);
   
-  const yesterdayStats = useMemo(() => {
-    const yesterday = addDays(new Date(), -1);
-    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
-    
-    const yesterdayLogs = logs.filter(l => l.date === yesterdayStr);
+  // Dynamic stats calculation helper
+  const calculateDayStats = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dayLogs = logs.filter(l => l.date === dateStr);
     let done = 0;
     let missed = 0;
     
-    yesterdayLogs.forEach(log => {
-      const habit = habits.find(h => h.id === log.habitId);
-      if (!habit) return;
+    // Get habits that existed on this date
+    const habitsForDate = habits.filter(h => {
+      if (!h.isActive) return false;
+      if (h.startDate && dateStr < h.startDate) return false;
+      return shouldShowHabit(h, date, dateStr);
+    });
+    
+    habitsForDate.forEach(habit => {
+      const log = dayLogs.find(l => l.habitId === habit.id);
+      if (!log) {
+        missed++;
+        return;
+      }
       
       if (habit.type === HabitType.PRAYER) {
         if (log.value >= PrayerQuality.ON_TIME) done++;
@@ -49,7 +58,24 @@ const Home: React.FC = () => {
     });
     
     return { done, missed };
-  }, [logs, habits]);
+  };
+
+  // Stats for selectedDate and day before
+  const headerStats = useMemo(() => {
+    const selectedStats = calculateDayStats(selectedDate);
+    const dayBefore = subDays(selectedDate, 1);
+    const dayBeforeStats = calculateDayStats(dayBefore);
+    
+    const selectedDayName = format(selectedDate, 'EEE');
+    const dayBeforeName = format(dayBefore, 'EEE');
+    
+    return {
+      selected: selectedStats,
+      dayBefore: dayBeforeStats,
+      selectedDayName,
+      dayBeforeName
+    };
+  }, [logs, habits, selectedDate]);
 
   const userName = useMemo(() => {
     if (!user) return preferences.language === 'ar' ? 'ضيف' : 'Guest';
@@ -155,22 +181,22 @@ const Home: React.FC = () => {
   };
 
   // ==========================================
-  // STREAK CALCULATION
+  // STREAK CALCULATION (Point-in-Time based on selectedDate)
   // ==========================================
   const streaks = useMemo(() => {
     const habitStreaks: Record<string, number> = {};
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const yesterdayStr = format(addDays(today, -1), 'yyyy-MM-dd');
+    const viewDate = selectedDate;
+    const viewDateStr = format(viewDate, 'yyyy-MM-dd');
+    const dayBeforeStr = format(subDays(viewDate, 1), 'yyyy-MM-dd');
 
     habits.forEach(habit => {
       const habitLogs = logs.filter(l => l.habitId === habit.id);
       let currentStreak = 0;
-      let checkDate = new Date();
+      let checkDate = new Date(viewDate);
       let isStreakActive = false;
       
       const startDate = habit.startDate ? new Date(habit.startDate) : new Date('2000-01-01');
-      const todayLog = habitLogs.find(l => l.date === todayStr);
+      const viewDateLog = habitLogs.find(l => l.date === viewDateStr);
 
       const isSuccessful = (log: HabitLog) => {
         if (habit.type === HabitType.PRAYER) return log.value === PrayerQuality.TAKBIRAH;
@@ -178,20 +204,23 @@ const Home: React.FC = () => {
         return log.status === LogStatus.DONE;
       };
 
-      if (todayLog) {
-         if (isSuccessful(todayLog)) {
+      // Calculate streak as of the selected date
+      if (viewDateLog) {
+         if (isSuccessful(viewDateLog)) {
             currentStreak = 1;
-            checkDate = addDays(today, -1);
+            checkDate = subDays(viewDate, 1);
             isStreakActive = true;
          } else {
+            // Habit was logged but not successful on selected date - streak is broken
             currentStreak = 0;
             isStreakActive = false;
          }
       } else {
-         const yesterdayLog = habitLogs.find(l => l.date === yesterdayStr);
-         if (yesterdayLog && isSuccessful(yesterdayLog)) {
+         // No log on selected date - check if day before had a successful log
+         const dayBeforeLog = habitLogs.find(l => l.date === dayBeforeStr);
+         if (dayBeforeLog && isSuccessful(dayBeforeLog)) {
             currentStreak = 1;
-            checkDate = addDays(today, -2);
+            checkDate = subDays(viewDate, 2);
             isStreakActive = true;
          } else {
             currentStreak = 0;
@@ -206,7 +235,7 @@ const Home: React.FC = () => {
            const log = habitLogs.find(l => l.date === dateToCheckStr);
            if (log && isSuccessful(log)) {
              currentStreak++;
-             checkDate = addDays(checkDate, -1);
+             checkDate = subDays(checkDate, 1);
            } else {
              break;
            }
@@ -215,10 +244,10 @@ const Home: React.FC = () => {
       habitStreaks[habit.id] = currentStreak;
     });
     return habitStreaks;
-  }, [habits, logs]);
+  }, [habits, logs, selectedDate]);
 
   // ==========================================
-  // DATE COMPLETION STATUS
+  // DATE COMPLETION STATUS (Fixed: Only count habits that existed on that date)
   // ==========================================
   const completedDates = useMemo(() => {
       const dates = new Set<string>();
@@ -235,7 +264,13 @@ const Home: React.FC = () => {
           const dayLogs = logsByDate[d] || [];
           const dateObj = new Date(d);
           
-          const requiredHabits = habits.filter(h => shouldShowHabit(h, dateObj, d));
+          // Only check habits that existed on this date (startDate <= d)
+          const requiredHabits = habits.filter(h => {
+            if (!h.isActive) return false;
+            // Habit must have started on or before this date
+            if (h.startDate && d < h.startDate) return false;
+            return shouldShowHabit(h, dateObj, d);
+          });
           
           if (requiredHabits.length === 0) return; 
           
@@ -267,8 +302,8 @@ const Home: React.FC = () => {
 
   return (
     <div className="pb-32 relative min-h-screen">
-        <div className="sticky top-0 z-40 bg-slate-50/80 dark:bg-background/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 pt-4 pb-3 shadow-sm">
-            <div className="px-4 flex justify-between items-center">
+        <div className="sticky top-0 z-40 bg-slate-50/80 dark:bg-background/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 pt-[env(safe-area-inset-top)] pb-3 shadow-sm">
+            <div className="px-4 pt-4 flex justify-between items-center">
                 <div 
                   onClick={() => navigate('/profile')}
                   className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -306,15 +341,15 @@ const Home: React.FC = () => {
                   </button>
                   <div 
                     onClick={() => navigate('/profile')}
-                    className="min-w-[140px] px-6 py-2 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 cursor-pointer active:scale-95 transition-transform text-right"
+                    className="min-w-[160px] px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 cursor-pointer active:scale-95 transition-transform text-right"
                   >
                     <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                       {preferences.language === 'ar' ? `مرحبًا، ${userName}` : `Welcome, ${userName}`}
                     </p>
-                    <p className="text-[11px] text-slate-500 dark:text-gray-400">
+                    <p className="text-[10px] text-slate-500 dark:text-gray-400">
                       {preferences.language === 'ar' 
-                        ? `الأمس: ${yesterdayStats.done} مكتمل، ${yesterdayStats.missed} فائت`
-                        : `Yesterday: ${yesterdayStats.done} Done, ${yesterdayStats.missed} Missed`
+                        ? `${headerStats.selectedDayName}: ${headerStats.selected.done} ✓ | ${headerStats.dayBeforeName}: ${headerStats.dayBefore.done} ✓`
+                        : `${headerStats.selectedDayName}: ${headerStats.selected.done} Done | ${headerStats.dayBeforeName}: ${headerStats.dayBefore.done} Done`
                       }
                     </p>
                   </div>
@@ -403,6 +438,7 @@ const Home: React.FC = () => {
             onClose={handleCloseModal} 
             onAdded={handleAdded}
             habitToEdit={editingHabit}
+            selectedDate={selectedDate}
         />
 
         <ReasonModal 

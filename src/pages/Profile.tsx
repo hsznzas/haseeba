@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar } from 'lucide-react';
+import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import DobModal from '../components/DobModal';
 import { useAuth } from '../context/AuthContext';
+import { differenceInDays, differenceInMonths, differenceInYears, addYears } from 'date-fns';
 
 const Profile: React.FC = () => {
+  const navigate = useNavigate();
   const { preferences, setPreferences } = usePreferences();
   const { user, signOut } = useAuth();
   const { habits, handleSaveHabit, handleSeedData } = useData();
@@ -18,6 +21,44 @@ const Profile: React.FC = () => {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isDobModalOpen, setIsDobModalOpen] = useState(false);
   const [apiKey, setApiKey] = useState('');
+
+  // Lifetime Countdown calculation
+  const lifetimeStats = useMemo(() => {
+    if (!preferences.dateOfBirth) return null;
+    
+    try {
+      const dob = new Date(preferences.dateOfBirth);
+      const targetAge = 75;
+      const targetDate = addYears(dob, targetAge);
+      const now = new Date();
+      
+      if (targetDate <= now) return null;
+      
+      const daysLeft = differenceInDays(targetDate, now);
+      const monthsLeft = differenceInMonths(targetDate, now);
+      const yearsLeft = differenceInYears(targetDate, now);
+      
+      // Islamic calculations
+      const prayersLeft = daysLeft * 5;
+      const fridaysLeft = Math.floor(daysLeft / 7);
+      const ramadansLeft = yearsLeft;
+      const hajjsLeft = yearsLeft;
+      const monThuLeft = Math.floor(daysLeft / 7) * 2; // Approx Mon + Thu fasting days
+      
+      return {
+        daysLeft,
+        monthsLeft,
+        yearsLeft,
+        prayersLeft,
+        fridaysLeft,
+        ramadansLeft,
+        hajjsLeft,
+        monThuLeft,
+      };
+    } catch (e) {
+      return null;
+    }
+  }, [preferences.dateOfBirth]);
 
   // Load API Key from LocalStorage on mount
   useEffect(() => {
@@ -176,6 +217,62 @@ const Profile: React.FC = () => {
          </div>
        </div>
 
+       {/* Lifetime Countdown */}
+       {lifetimeStats && (
+         <div className="glass-card p-5 rounded-2xl">
+           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+             <Hourglass size={18} className="text-amber-500" /> {t.lifeCountdown}
+           </h3>
+           <div className="grid grid-cols-3 gap-3">
+             <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
+               <p className="text-2xl font-bold text-white">{lifetimeStats.yearsLeft}</p>
+               <p className="text-[10px] text-gray-400 uppercase">{t.years}</p>
+             </div>
+             <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
+               <p className="text-2xl font-bold text-white">{lifetimeStats.monthsLeft}</p>
+               <p className="text-[10px] text-gray-400 uppercase">{t.months}</p>
+             </div>
+             <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
+               <p className="text-2xl font-bold text-white">{lifetimeStats.daysLeft.toLocaleString()}</p>
+               <p className="text-[10px] text-gray-400 uppercase">{t.days}</p>
+             </div>
+           </div>
+           <div className="grid grid-cols-2 gap-3 mt-3">
+             <div className="bg-emerald-500/10 rounded-xl p-3 text-center border border-emerald-500/20">
+               <p className="text-xl font-bold text-emerald-400">{lifetimeStats.prayersLeft.toLocaleString()}</p>
+               <p className="text-[10px] text-emerald-400/70 uppercase">Prayers Left</p>
+             </div>
+             <div className="bg-amber-500/10 rounded-xl p-3 text-center border border-amber-500/20">
+               <p className="text-xl font-bold text-amber-400">{lifetimeStats.fridaysLeft.toLocaleString()}</p>
+               <p className="text-[10px] text-amber-400/70 uppercase">{t.fridays}</p>
+             </div>
+             <div className="bg-purple-500/10 rounded-xl p-3 text-center border border-purple-500/20">
+               <p className="text-xl font-bold text-purple-400">{lifetimeStats.ramadansLeft}</p>
+               <p className="text-[10px] text-purple-400/70 uppercase">{t.ramadans}</p>
+             </div>
+             <div className="bg-blue-500/10 rounded-xl p-3 text-center border border-blue-500/20">
+               <p className="text-xl font-bold text-blue-400">{lifetimeStats.hajjsLeft}</p>
+               <p className="text-[10px] text-blue-400/70 uppercase">{t.hajjs}</p>
+             </div>
+           </div>
+         </div>
+       )}
+       
+       {!lifetimeStats && (
+         <div className="glass-card p-5 rounded-2xl">
+           <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+             <Hourglass size={18} className="text-amber-500" /> {t.lifeCountdown}
+           </h3>
+           <p className="text-sm text-gray-400 mb-3">{t.dobDesc}</p>
+           <button 
+             onClick={() => setIsDobModalOpen(true)}
+             className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-sm font-bold text-amber-500 transition-colors"
+           >
+             {t.setDob}
+           </button>
+         </div>
+       )}
+
        {/* Developer Tools */}
        <div className="glass-card p-5 rounded-2xl">
          <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Database size={18} className="text-yellow-500" /> Developer Tools</h3>
@@ -191,6 +288,15 @@ const Profile: React.FC = () => {
          </div>
          {message && <p className="text-green-500 text-xs mt-2 text-center">{message}</p>}
        </div>
+
+       {/* Home Button */}
+       <button 
+         onClick={() => navigate('/')}
+         className="w-full py-4 bg-primary hover:bg-primary/90 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-primary/20 transition-all active:scale-95"
+       >
+         <Home size={24} />
+         {t.home}
+       </button>
        
        <DobModal isOpen={isDobModalOpen} onClose={() => setIsDobModalOpen(false)} />
     </div>

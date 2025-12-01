@@ -12,12 +12,15 @@ import {
   HabitLog,
   LogStatus,
   PrayerCompletion,
+  PrayerQuality,
   QuranProgress,
   User,
   UserPreferences,
   STORAGE_KEYS,
   StorageKey,
+  HabitType,
 } from "@/index";
+import { INITIAL_HABITS } from "../../constants";
 import { generateId, getTodayString } from "@/lib/utils";
 
 // ============================================
@@ -671,31 +674,33 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   // 2. Create Demo User
   createDemoUser();
 
-  // 3. Define Initial Habits (Simplified for Demo)
-  const habits = [
-    { name: 'Fajr Sunnah', type: 'REGULAR', emoji: '🌅', order: 1 },
-    { name: 'Morning Athkar', type: 'REGULAR', emoji: '☀️', order: 2 },
-    { name: 'Read Quran', type: 'REGULAR', emoji: '📖', order: 3 },
-    { name: 'Drink Water', type: 'COUNTER', emoji: '💧', dailyTarget: 8, order: 4 },
-  ];
-
-  // 4. Save Habits
-  const createdHabits = habits.map(h => createHabit({
-    name: h.name,
-    type: h.type as any, // Cast if types differ slightly
-    emoji: h.emoji,
-    isActive: true,
-    order: h.order,
-    dailyTarget: h.dailyTarget
-  }));
-
-  // 5. Generate Logs based on Persona
+  // 3. Use ALL habits from INITIAL_HABITS (including 5 Prayers and Rawatib)
   const today = new Date();
+  const startDateStr = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  
+  // Save all initial habits with proper startDate
+  const createdHabits: Habit[] = INITIAL_HABITS.map(h => {
+    const habit: Habit = {
+      ...h,
+      startDate: startDateStr,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    return habit;
+  });
+  
+  safeSetItem(STORAGE_KEYS.HABITS, createdHabits);
+
+  // 4. Generate Logs based on Persona
   const daysBack = persona === 'devout' ? 365 : persona === 'struggler' ? 90 : 14;
   const successRate = persona === 'devout' ? 0.95 : persona === 'struggler' ? 0.6 : 0.3;
 
   // Helper to format date as YYYY-MM-DD
   const fmtDate = (d: Date) => d.toISOString().split('T')[0];
+  
+  // Build logs array
+  const allLogs: HabitLog[] = [];
+  const prayerIds = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
   for (let i = 0; i < daysBack; i++) {
     const date = new Date(today);
@@ -707,20 +712,71 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
     const isSuccess = isRecent || Math.random() < successRate;
 
     if (isSuccess) {
-      // Log Prayers
-      ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].forEach(prayer => {
-        logPrayer('demo-user-id', prayer as any, { 
-          isOnTime: Math.random() > 0.2, 
-          isJamaat: Math.random() > 0.5 
+      // Log Prayers with quality values
+      prayerIds.forEach(prayerId => {
+        const quality = Math.random() > 0.3 
+          ? PrayerQuality.TAKBIRAH 
+          : Math.random() > 0.5 
+            ? PrayerQuality.JAMAA 
+            : PrayerQuality.ON_TIME;
+        
+        allLogs.push({
+          id: `${prayerId}-${dateStr}`,
+          habitId: prayerId,
+          date: dateStr,
+          value: quality,
+          status: LogStatus.DONE,
+          timestamp: date.getTime(),
         });
       });
 
-      // Log Habits
-      createdHabits.forEach(habit => {
-        logCompletion(habit.id, 'demo-user-id', habit.dailyTarget || 1);
+      // Log Regular/Counter habits (non-prayer, active ones)
+      createdHabits
+        .filter(h => h.isActive && h.type !== HabitType.PRAYER)
+        .forEach(habit => {
+          // Skip conditional habits (fasting) unless it's the right day
+          if (habit.id === 'fasting_monday' && date.getDay() !== 1) return;
+          if (habit.id === 'fasting_thursday' && date.getDay() !== 4) return;
+          if (habit.id.includes('fasting_white')) return; // Skip white days for simplicity
+          
+          const value = habit.dailyTarget || 1;
+          allLogs.push({
+            id: `${habit.id}-${dateStr}`,
+            habitId: habit.id,
+            date: dateStr,
+            value: value,
+            status: LogStatus.DONE,
+            timestamp: date.getTime(),
+          });
+        });
+    } else {
+      // Even on "miss" days, log some prayers as missed or late
+      prayerIds.forEach(prayerId => {
+        if (Math.random() > 0.5) {
+          allLogs.push({
+            id: `${prayerId}-${dateStr}`,
+            habitId: prayerId,
+            date: dateStr,
+            value: Math.random() > 0.5 ? PrayerQuality.ON_TIME : PrayerQuality.MISSED,
+            status: LogStatus.DONE,
+            timestamp: date.getTime(),
+          });
+        }
       });
     }
   }
   
-  console.log(`[Storage] Seeding complete. Generated ${daysBack} days of history.`);
+  // Convert to HabitCompletion format for storage
+  const completions: HabitCompletion[] = allLogs.map(log => ({
+    id: log.id,
+    habitId: log.habitId,
+    userId: 'demo-user-id',
+    date: log.date,
+    count: log.value,
+    completedAt: new Date(log.timestamp).toISOString(),
+  }));
+  
+  safeSetItem(STORAGE_KEYS.COMPLETIONS, completions);
+  
+  console.log(`[Storage] Seeding complete. Created ${createdHabits.length} habits with ${allLogs.length} logs over ${daysBack} days.`);
 };

@@ -13,9 +13,10 @@ interface Props {
   onClose: () => void;
   onAdded: () => void;
   habitToEdit?: Habit | null;
+  selectedDate?: Date;
 }
 
-const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit }) => {
+const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit, selectedDate }) => {
   const { preferences } = usePreferences();
   const { handleSaveHabit } = useData();
   const t = TRANSLATIONS[preferences.language];
@@ -74,7 +75,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit 
       emoji: selectedIcon,
       isActive: true,
       order: habitToEdit ? habitToEdit.order : 999,
-      startDate: habitToEdit?.startDate || format(new Date(), 'yyyy-MM-dd'),
+      startDate: habitToEdit?.startDate || format(selectedDate || new Date(), 'yyyy-MM-dd'),
       presetId: habitToEdit?.presetId
     };
 
