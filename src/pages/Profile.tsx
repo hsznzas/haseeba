@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, Settings2, MessageSquareOff, Eye, EyeOff } from 'lucide-react';
+import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, Settings2, MessageSquareOff, Eye } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import DobModal from '../components/DobModal';
