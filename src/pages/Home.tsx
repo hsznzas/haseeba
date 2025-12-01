@@ -24,18 +24,60 @@ const Home: React.FC = () => {
   const [reasoningState, setReasoningState] = useState<{ id: string, val: number, status: LogStatus } | null>(null);
   const [isSortMode, setIsSortMode] = useState(false);
   
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // ==========================================
+  // ISLAMIC CALENDAR HELPER FUNCTION
+  // ==========================================
+  const isHijriWhiteDay = (date: Date): boolean => {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
+        day: 'numeric'
+      });
+      const hijriDay = parseInt(formatter.format(date), 10);
+      return hijriDay === 13 || hijriDay === 14 || hijriDay === 15;
+    } catch (e) {
+      console.error('Error checking Hijri date:', e);
+      return false;
+    }
+  };
+
+  // ==========================================
+  // HABIT VISIBILITY FILTER
+  // ==========================================
+  const shouldShowHabit = (habit: Habit, date: Date, dateStr: string): boolean => {
+    if (!habit.isActive) return false;
+    if (habit.startDate && dateStr < habit.startDate) return false;
+    
+    const dayOfWeek = getDay(date);
+    
+    if (habit.id === 'fasting_white_days') {
+      return isHijriWhiteDay(date);
+    }
+    
+    if (habit.id === 'fasting_monday') {
+      return dayOfWeek === 1;
+    }
+    
+    if (habit.id === 'fasting_thursday') {
+      return dayOfWeek === 4;
+    }
+    
+    return true;
+  };
+
   // Dynamic stats calculation helper
   const calculateDayStats = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayLogs = logs.filter(l => l.date === dateStr);
+    const dateStrLocal = format(date, 'yyyy-MM-dd');
+    const dayLogs = logs.filter(l => l.date === dateStrLocal);
     let done = 0;
     let missed = 0;
     
     // Get habits that existed on this date
     const habitsForDate = habits.filter(h => {
       if (!h.isActive) return false;
-      if (h.startDate && dateStr < h.startDate) return false;
-      return shouldShowHabit(h, date, dateStr);
+      if (h.startDate && dateStrLocal < h.startDate) return false;
+      return shouldShowHabit(h, date, dateStrLocal);
     });
     
     habitsForDate.forEach(habit => {
@@ -83,47 +125,6 @@ const Home: React.FC = () => {
     const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
     return name;
   }, [user, preferences.language]);
-  const dateStr = format(selectedDate, 'yyyy-MM-dd');
-
-  // ==========================================
-  // ISLAMIC CALENDAR HELPER FUNCTION
-  // ==========================================
-  const isHijriWhiteDay = (date: Date): boolean => {
-    try {
-      const formatter = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
-        day: 'numeric'
-      });
-      const hijriDay = parseInt(formatter.format(date), 10);
-      return hijriDay === 13 || hijriDay === 14 || hijriDay === 15;
-    } catch (e) {
-      console.error('Error checking Hijri date:', e);
-      return false;
-    }
-  };
-
-  // ==========================================
-  // HABIT VISIBILITY FILTER
-  // ==========================================
-  const shouldShowHabit = (habit: Habit, date: Date, dateStr: string): boolean => {
-    if (!habit.isActive) return false;
-    if (habit.startDate && dateStr < habit.startDate) return false;
-    
-    const dayOfWeek = getDay(date);
-    
-    if (habit.id === 'fasting_white_days') {
-      return isHijriWhiteDay(date);
-    }
-    
-    if (habit.id === 'fasting_monday') {
-      return dayOfWeek === 1;
-    }
-    
-    if (habit.id === 'fasting_thursday') {
-      return dayOfWeek === 4;
-    }
-    
-    return true;
-  };
 
   // ==========================================
   // EVENT HANDLERS
