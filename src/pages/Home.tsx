@@ -455,8 +455,7 @@ const Home: React.FC = () => {
         <ReasonModal 
           isOpen={!!reasoningState} 
           onClose={() => setReasoningState(null)} 
-          onConfirm={handleReasonConfirm}
-          allowSkip={reasoningState ? habits.find(h => h.id === reasoningState.id)?.type !== HabitType.PRAYER : false}
+          onConfirm={handleReasonConfirm} 
         />
     </div>
   );

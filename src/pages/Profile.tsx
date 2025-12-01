@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass } from 'lucide-react';
+import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, Settings2, MessageSquareOff, Eye, EyeOff } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import DobModal from '../components/DobModal';
 import { useAuth } from '../context/AuthContext';
 import { differenceInDays, differenceInMonths, differenceInYears, addYears } from 'date-fns';
+import { HabitType } from '../../types';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -215,6 +216,96 @@ const Profile: React.FC = () => {
                 </div>
             ))}
          </div>
+       </div>
+
+       {/* Habits Settings - Non-5KP habits with visibility and reason toggles */}
+       <div className="glass-card p-5 rounded-2xl">
+         <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+           <Settings2 size={18} className="text-cyan-500" /> 
+           {preferences.language === 'ar' ? 'إعدادات العادات' : 'Habits Settings'}
+         </h3>
+         <p className="text-xs text-gray-500 mb-4">
+           {preferences.language === 'ar' 
+             ? 'تحكم في إظهار العادات وطلب السبب عند الفشل'
+             : 'Control visibility and whether to ask for reason on fail'}
+         </p>
+         
+         {/* Header Row */}
+         <div className="flex items-center gap-2 mb-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">
+           <div className="flex-1">{preferences.language === 'ar' ? 'العادة' : 'Habit'}</div>
+           <div className="w-16 text-center flex items-center justify-center gap-1">
+             <Eye size={10} />
+             {preferences.language === 'ar' ? 'إظهار' : 'Show'}
+           </div>
+           <div className="w-16 text-center flex items-center justify-center gap-1">
+             <MessageSquareOff size={10} />
+             {preferences.language === 'ar' ? 'سبب' : 'Reason'}
+           </div>
+         </div>
+         
+         <div className="space-y-1 max-h-64 overflow-y-auto">
+           {habits
+             .filter(h => h.type !== HabitType.PRAYER) // Exclude 5KPs
+             .sort((a, b) => a.order - b.order)
+             .map(habit => {
+               const displayName = preferences.language === 'ar' ? (habit.nameAr || habit.name) : habit.name;
+               return (
+                 <div 
+                   key={habit.id} 
+                   className="flex items-center gap-2 p-2 hover:bg-slate-900/50 rounded-lg transition-colors"
+                 >
+                   {/* Habit Name */}
+                   <div className="flex-1 min-w-0 flex items-center gap-2">
+                     <span className="text-lg shrink-0">{habit.emoji || '🔹'}</span>
+                     <span className={clsx(
+                       "text-xs font-medium truncate",
+                       habit.isActive ? "text-gray-200" : "text-gray-500"
+                     )}>
+                       {displayName}
+                     </span>
+                   </div>
+                   
+                   {/* Visibility Toggle */}
+                   <div className="w-16 flex justify-center">
+                     <button 
+                       onClick={() => handleSaveHabit({ ...habit, isActive: !habit.isActive })}
+                       className={clsx(
+                         "w-8 h-5 rounded-full transition-colors relative",
+                         habit.isActive ? "bg-emerald-500" : "bg-slate-700"
+                       )}
+                     >
+                       <div className={clsx(
+                         "w-3 h-3 bg-white rounded-full absolute top-1 transition-all",
+                         habit.isActive ? "right-1" : "left-1"
+                       )} />
+                     </button>
+                   </div>
+                   
+                   {/* Reason Toggle */}
+                   <div className="w-16 flex justify-center">
+                     <button 
+                       onClick={() => handleSaveHabit({ ...habit, requireReason: habit.requireReason === false ? true : false })}
+                       className={clsx(
+                         "w-8 h-5 rounded-full transition-colors relative",
+                         habit.requireReason !== false ? "bg-cyan-500" : "bg-slate-700"
+                       )}
+                     >
+                       <div className={clsx(
+                         "w-3 h-3 bg-white rounded-full absolute top-1 transition-all",
+                         habit.requireReason !== false ? "right-1" : "left-1"
+                       )} />
+                     </button>
+                   </div>
+                 </div>
+               );
+             })}
+         </div>
+         
+         {habits.filter(h => h.type !== HabitType.PRAYER).length === 0 && (
+           <p className="text-xs text-gray-500 text-center py-4">
+             {preferences.language === 'ar' ? 'لا توجد عادات حتى الآن' : 'No habits yet'}
+           </p>
+         )}
        </div>
 
        {/* Lifetime Countdown */}

@@ -6,13 +6,7 @@ import { Check, X, Minus, RotateCcw, Flame, Plus, CheckCircle2, Activity } from 
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { ICON_MAP, IconName } from '../utils/iconMap';
-
-// Mock party-js to avoid build issues
-const party = {
-  confetti: (_el: HTMLElement, _opts?: unknown) => {},
-  sparkles: (_el: HTMLElement, _opts?: unknown) => {},
-  Color: { fromHex: (_hex: string) => ({}) }
-};
+import party from 'party-js';
 
 interface HabitCardProps {
   habit: Habit;
@@ -65,15 +59,33 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
   const handleDoneClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     forcePartyVisible();
-    party.confetti(e.currentTarget as HTMLElement, { count: 40, spread: 30, size: 2 });
+    try {
+      party.confetti(e.currentTarget as HTMLElement, { 
+        count: party.variation.range(30, 50),
+        spread: party.variation.range(20, 40),
+        size: party.variation.range(0.8, 1.2),
+      });
+    } catch (err) {
+      console.log('Party.js confetti error:', err);
+    }
     onUpdate(1, LogStatus.DONE);
   };
 
   const handleFailClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     forcePartyVisible();
-    party.sparkles(e.currentTarget as HTMLElement, { count: 30, speed: 300, size: 2, color: party.Color.fromHex("#ef4444") });
-    if (onReasonNeeded) {
+    try {
+      party.sparkles(e.currentTarget as HTMLElement, { 
+        count: party.variation.range(20, 35),
+        speed: party.variation.range(200, 400),
+        size: party.variation.range(0.6, 1.0),
+        color: party.Color.fromHex("#ef4444"),
+      });
+    } catch (err) {
+      console.log('Party.js sparkles error:', err);
+    }
+    // Only ask for reason if requireReason is true (default) and onReasonNeeded is provided
+    if (onReasonNeeded && habit.requireReason !== false) {
         onReasonNeeded(0, LogStatus.FAIL);
     } else {
         onUpdate(0, LogStatus.FAIL);

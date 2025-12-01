@@ -37,6 +37,7 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.400.0",
+    "party-js": "^2.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0",

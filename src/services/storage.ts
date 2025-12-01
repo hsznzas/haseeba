@@ -875,7 +875,7 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
     date.setDate(date.getDate() - i);
     const dateStr = formatDate(date);
     const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    
+
     // ===== PRAYERS: Always log all 5 prayers =====
     // Performance is ALWAYS based on persona (no forced perfect weeks)
     prayerHabits.forEach(prayer => {

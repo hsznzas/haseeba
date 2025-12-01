@@ -8,9 +8,20 @@ import Login from './pages/Login';
 import { UserPreferences } from '@/index';
 import { getPreferences, savePreferences } from './services/storage';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, NotificationBar, useData } from './context/DataContext';
 import { ToastProvider } from './context/ToastContext'; // Restored
 import { Loader2 } from 'lucide-react';
+
+// Notification Wrapper Component
+const NotificationWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { notification, hideNotification } = useData();
+  return (
+    <>
+      <NotificationBar notification={notification} onHide={hideNotification} />
+      {children}
+    </>
+  );
+};
 
 // --- Preferences Context ---
 interface AppContextType {
@@ -77,10 +88,12 @@ const App: React.FC = () => {
     <AuthProvider>
       <AppContext.Provider value={{ preferences, setPreferences }}>
         <DataProvider>
-          <ToastProvider> {/* Restored Toast Provider */}
-             <Router>
-               <AppRoutes />
-             </Router>
+          <ToastProvider>
+            <NotificationWrapper>
+              <Router>
+                <AppRoutes />
+              </Router>
+            </NotificationWrapper>
           </ToastProvider>
         </DataProvider>
       </AppContext.Provider>

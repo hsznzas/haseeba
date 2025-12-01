@@ -32,6 +32,7 @@ export interface Habit {
   order: number;
   startDate?: string;
   isArchived?: boolean;
+  requireReason?: boolean; // If true, ask for reason when habit is failed
   createdAt?: string;
   updatedAt?: string;
 }

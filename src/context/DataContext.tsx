@@ -5,11 +5,53 @@ import { useAuth } from './AuthContext';
 import * as storage from '../services/storage';
 import * as api from '../services/api';
 
+// ============================================
+// NOTIFICATION STATE & COMPONENT
+// ============================================
+interface NotificationState {
+  show: boolean;
+  message: string;
+  type: 'success' | 'error';
+}
+
+// Notification Bar Component (will be rendered in App)
+export const NotificationBar: React.FC<{ notification: NotificationState; onHide: () => void }> = ({ notification, onHide }) => {
+  useEffect(() => {
+    if (notification.show) {
+      const timer = setTimeout(onHide, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification.show, onHide]);
+
+  if (!notification.show) return null;
+
+  return (
+    <div 
+      className={`fixed top-0 left-0 right-0 z-[9999] transition-transform duration-300 ease-out ${
+        notification.show ? 'translate-y-0' : '-translate-y-full'
+      }`}
+    >
+      <div className={`py-2 px-4 text-center text-xs font-medium ${
+        notification.type === 'success' 
+          ? 'bg-emerald-500/90 text-white' 
+          : 'bg-red-500/90 text-white'
+      }`}>
+        {notification.message}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// CONTEXT TYPE
+// ============================================
 interface DataContextType {
   habits: Habit[];
   logs: HabitLog[];
   customReasons: string[];
   loading: boolean;
+  notification: NotificationState;
+  hideNotification: () => void;
   refreshData: () => Promise<void>;
   handleSaveLog: (log: HabitLog) => Promise<void>;
   handleDeleteLog: (habitId: string, date: string) => Promise<void>;
@@ -29,6 +71,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [logs, setLogs] = useState<HabitLog[]>([]);
   const [customReasons, setCustomReasons] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState<NotificationState>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ show: true, message, type });
+  };
+
+  const hideNotification = useCallback(() => {
+    setNotification(prev => ({ ...prev, show: false }));
+  }, []);
 
   const refreshData = useCallback(async () => {
     if (authLoading || !user) return;
@@ -67,132 +122,145 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshData();
   }, [refreshData]);
 
+  // ============================================
+  // OPTIMISTIC UI: handleSaveLog
+  // ============================================
   const handleSaveLog = async (log: HabitLog) => {
-    console.log('🔄 Attempting to save log...', {
-      log,
-      userExists: !!user,
-      isDemo: user?.isDemo,
-      userId: user?.id
-    });
-
     if (!user) {
       console.error('❌ Cannot save log: No user found');
       return;
     }
+
+    // 1. Store previous state for potential rollback
+    const previousLogs = [...logs];
     
+    // 2. OPTIMISTIC UPDATE - Update UI immediately
+    setLogs(prevLogs => {
+      const existingIndex = prevLogs.findIndex(
+        l => l.habitId === log.habitId && l.date === log.date
+      );
+      if (existingIndex >= 0) {
+        // Update existing log
+        const updated = [...prevLogs];
+        updated[existingIndex] = log;
+        return updated;
+      } else {
+        // Add new log
+        return [...prevLogs, log];
+      }
+    });
+
+    // 3. Persist to storage in background
     try {
       if (user.isDemo) {
-        console.log('💾 Saving to LocalStorage (Demo Mode)');
-        const newLogs = storage.saveLog(log);
-        setLogs(newLogs);
-        console.log('✅ Log saved to LocalStorage');
+        storage.saveLog(log);
+        showNotification('✓ Saved', 'success');
       } else {
-        console.log('☁️ Saving to Supabase (Cloud Mode)');
-        const newLogs = await api.saveLog(log);
-        setLogs(newLogs);
-        console.log('✅ Log saved to Supabase');
+        await api.saveLog(log);
+        showNotification('✓ Synced', 'success');
       }
     } catch (error) {
       console.error('❌ Error saving log:', error);
+      // Rollback on error
+      setLogs(previousLogs);
+      showNotification('Failed to save', 'error');
     }
   };
 
+  // ============================================
+  // OPTIMISTIC UI: handleDeleteLog
+  // ============================================
   const handleDeleteLog = async (habitId: string, date: string) => {
-    console.log('🗑️ Attempting to delete log...', {
-      habitId,
-      date,
-      userExists: !!user,
-      isDemo: user?.isDemo,
-      userId: user?.id
-    });
-
     if (!user) {
       console.error('❌ Cannot delete log: No user found');
       return;
     }
+
+    // 1. Store previous state for rollback
+    const previousLogs = [...logs];
     
+    // 2. OPTIMISTIC UPDATE - Remove from UI immediately
+    setLogs(prevLogs => prevLogs.filter(
+      l => !(l.habitId === habitId && l.date === date)
+    ));
+
+    // 3. Persist deletion in background
     try {
       if (user.isDemo) {
-        console.log('💾 Deleting from LocalStorage (Demo Mode)');
-        const newLogs = storage.deleteLog(habitId, date);
-        setLogs(newLogs);
-        console.log('✅ Log deleted from LocalStorage');
+        storage.deleteLog(habitId, date);
+        showNotification('✓ Removed', 'success');
       } else {
-        console.log('☁️ Deleting from Supabase (Cloud Mode)');
-        const newLogs = await api.deleteLog(habitId, date);
-        setLogs(newLogs);
-        console.log('✅ Log deleted from Supabase');
+        await api.deleteLog(habitId, date);
+        showNotification('✓ Removed', 'success');
       }
     } catch (error) {
       console.error('❌ Error deleting log:', error);
+      // Rollback on error
+      setLogs(previousLogs);
+      showNotification('Failed to delete', 'error');
     }
   };
 
   const handleSaveHabit = async (habit: Habit) => {
     console.log('💾 Attempting to save HABIT:', habit.name);
-    console.log('💾 Habit details:', {
-      id: habit.id,
-      isActive: habit.isActive,
-      order: habit.order,
-      type: habit.type,
-      userExists: !!user,
-      isDemo: user?.isDemo,
-      userId: user?.id
-    });
 
     if (!user) {
       console.error('❌ Cannot save habit: No user found');
       return;
     }
     
+    // Optimistic update
+    const previousHabits = [...habits];
+    setHabits(prevHabits => {
+      const existingIndex = prevHabits.findIndex(h => h.id === habit.id);
+      if (existingIndex >= 0) {
+        const updated = [...prevHabits];
+        updated[existingIndex] = habit;
+        return updated;
+      }
+      return [...prevHabits, habit];
+    });
+
     try {
       if (user.isDemo) {
-        console.log('💾 Routing to LocalStorage (Demo Mode)');
-        const newHabits = storage.saveHabit(habit);
-        setHabits(newHabits);
-        console.log('✅ Habit saved to LocalStorage, total habits:', newHabits.length);
+        storage.saveHabit(habit);
+        showNotification('✓ Habit saved', 'success');
       } else {
-        console.log('☁️ Routing to Supabase (Cloud Mode)');
-        const newHabits = await api.saveHabit(habit);
-        console.log('☁️ Received updated habits from API:', newHabits.length);
-        setHabits(newHabits);
-        console.log('✅ Habit saved to Supabase and state updated');
+        await api.saveHabit(habit);
+        showNotification('✓ Habit synced', 'success');
       }
     } catch (error) {
       console.error('❌ Error saving habit:', error);
-      throw error; // Propagate error so AddHabitModal knows it failed
+      setHabits(previousHabits);
+      showNotification('Failed to save habit', 'error');
+      throw error;
     }
   };
 
   const handleDeleteHabit = async (id: string) => {
     console.log('🗑️ Attempting to delete HABIT:', id);
-    console.log('🗑️ User details:', {
-      userExists: !!user,
-      isDemo: user?.isDemo,
-      userId: user?.id
-    });
 
     if (!user) {
       console.error('❌ Cannot delete habit: No user found');
       return;
     }
     
+    // Optimistic update
+    const previousHabits = [...habits];
+    setHabits(prevHabits => prevHabits.filter(h => h.id !== id));
+
     try {
       if (user.isDemo) {
-        console.log('💾 Deleting from LocalStorage (Demo Mode)');
-        const newHabits = storage.deleteHabit(id);
-        setHabits(newHabits);
-        console.log('✅ Habit deleted from LocalStorage, total habits:', newHabits.length);
+        storage.deleteHabit(id);
+        showNotification('✓ Habit deleted', 'success');
       } else {
-        console.log('☁️ Deleting from Supabase (Cloud Mode)');
-        const newHabits = await api.deleteHabit(id);
-        setHabits(newHabits);
-        console.log('✅ Habit deleted from Supabase, total habits:', newHabits.length);
+        await api.deleteHabit(id);
+        showNotification('✓ Habit deleted', 'success');
       }
-      // Refresh logs to ensure any orphaned logs are cleaned up
-      await refreshData();
     } catch (error) {
       console.error('❌ Error deleting habit:', error);
+      setHabits(previousHabits);
+      showNotification('Failed to delete habit', 'error');
       throw error;
     }
   };
@@ -205,28 +273,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     
+    // Optimistic update
+    const previousReasons = [...customReasons];
+    if (!customReasons.includes(reason)) {
+      setCustomReasons(prev => [...prev, reason]);
+    }
+
     try {
       if (user.isDemo) {
-        console.log('💾 Saving to LocalStorage (Demo Mode)');
         storage.saveCustomReason(reason);
-        const updatedReasons = storage.getCustomReasons();
-        setCustomReasons(updatedReasons);
-        console.log('✅ Custom reason saved to LocalStorage');
       } else {
-        console.log('☁️ Saving to Supabase (Cloud Mode)');
         await api.saveCustomReason(reason);
-        const updatedReasons = await api.getCustomReasons();
-        setCustomReasons(updatedReasons);
-        console.log('✅ Custom reason saved to Supabase');
       }
     } catch (error) {
       console.error('❌ Error saving custom reason:', error);
+      setCustomReasons(previousReasons);
     }
   };
 
   const handleSeedData = () => {
     storage.seedDemoData();
     refreshData();
+    showNotification('✓ Demo data seeded', 'success');
   };
 
   const handleReorderHabits = async (newOrder: Habit[]) => {
@@ -252,20 +320,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       if (user.isDemo) {
-        console.log('💾 Saving reordered habits to LocalStorage (Demo Mode)');
-        // Save each habit with updated order
         for (const habit of updatedHabits) {
           storage.saveHabit(habit);
         }
-        console.log('✅ Habit order saved to LocalStorage');
       } else {
-        console.log('☁️ Saving reordered habits to Supabase (Cloud Mode)');
         await api.updateHabitOrder(updatedHabits);
-        console.log('✅ Habit order saved to Supabase');
       }
     } catch (error) {
       console.error('❌ Error reordering habits:', error);
-      // Rollback on error by refreshing data
       await refreshData();
     }
   };
@@ -275,7 +337,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       habits, 
       logs, 
       customReasons,
-      loading, 
+      loading,
+      notification,
+      hideNotification,
       refreshData, 
       handleSaveLog, 
       handleDeleteLog, 
