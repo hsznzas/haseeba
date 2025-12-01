@@ -571,70 +571,83 @@ const Analytics: React.FC = () => {
               .sort((a, b) => b.streak - a.streak)
               .slice(0, 5);
 
-            const hasData = allPrayersPerfectStreak > 0 || prayerStreaks.length > 0;
-
-            if (!hasData) {
-              return (
-                <div className="p-6 text-center">
-                  <Trophy size={32} className="text-gray-700 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">
-                    {preferences.language === 'ar' ? 'لا توجد تتابعات بعد' : 'No streaks yet'}
-                  </p>
-                </div>
-              );
-            }
-
             return (
               <div className="divide-y divide-slate-800">
-                {/* All Prayers Perfect Streak - Always first if exists */}
-                {allPrayersPerfectStreak > 0 && (
-                  <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-emerald-900/30 to-transparent hover:from-emerald-900/40 transition-colors">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm bg-emerald-500/20 text-emerald-400">
+                {/* All Prayers Perfect Streak - ALWAYS SHOWN at top with special styling */}
+                <div className="relative overflow-hidden">
+                  {/* Animated gradient background */}
+                  <div 
+                    className="absolute inset-0 opacity-30"
+                    style={{
+                      background: 'linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #10b981)',
+                      backgroundSize: '200% 100%',
+                      animation: 'gradientShift 4s ease infinite',
+                    }}
+                  />
+                  <style>{`
+                    @keyframes gradientShift {
+                      0% { background-position: 0% 50%; }
+                      50% { background-position: 100% 50%; }
+                      100% { background-position: 0% 50%; }
+                    }
+                  `}</style>
+                  
+                  <div className="relative flex items-center gap-3 p-4">
+                    {/* Animated checkmark badge */}
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30">
                       ✓
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
+                      <p className="text-base font-bold text-white truncate">
                         {preferences.language === 'ar' ? 'جميع الصلوات كاملة' : 'All Prayers Perfect'}
                       </p>
-                      <p className="text-[10px] text-emerald-400 uppercase">
-                        {preferences.language === 'ar' ? 'الخمس صلوات بتكبيرة الإحرام' : 'All 5 prayers at Takbirah'}
+                      <p className="text-[11px] text-emerald-300/80">
+                        {preferences.language === 'ar' ? 'الخمس صلوات بتكبيرة الإحرام' : 'All 5 prayers at Takbirah level'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 bg-emerald-500/20 px-3 py-1.5 rounded-lg border border-emerald-500/30">
-                      <span className="text-emerald-400 font-bold">{allPrayersPerfectStreak}</span>
-                      <span className="text-[10px] text-emerald-400/70">
+                    <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/20">
+                      <span className="text-white font-bold text-lg">{allPrayersPerfectStreak}</span>
+                      <span className="text-[11px] text-white/70">
                         {preferences.language === 'ar' ? 'يوم' : 'days'}
                       </span>
                     </div>
                   </div>
-                )}
+                </div>
 
                 {/* Individual Prayer Streaks */}
-                {prayerStreaks.map((s, idx) => (
-                  <div key={s.id} className="flex items-center gap-3 p-3 hover:bg-slate-900/50 transition-colors">
-                    <div className={clsx(
-                      "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm",
-                      idx === 0 ? "bg-amber-500/20 text-amber-400" :
-                      idx === 1 ? "bg-gray-400/20 text-gray-300" :
-                      idx === 2 ? "bg-orange-700/20 text-orange-500" :
-                      "bg-slate-800 text-gray-500"
-                    )}>
-                      {idx + 1}
+                {prayerStreaks.length > 0 ? (
+                  prayerStreaks.map((s, idx) => (
+                    <div key={s.id} className="flex items-center gap-3 p-3 hover:bg-slate-900/50 transition-colors">
+                      <div className={clsx(
+                        "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm",
+                        idx === 0 ? "bg-amber-500/20 text-amber-400" :
+                        idx === 1 ? "bg-gray-400/20 text-gray-300" :
+                        idx === 2 ? "bg-orange-700/20 text-orange-500" :
+                        "bg-slate-800 text-gray-500"
+                      )}>
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{s.name}</p>
+                        <p className="text-[10px] text-gray-500 uppercase">
+                          {preferences.language === 'ar' ? 'صلاة' : 'Prayer'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-500/20">
+                        <span className="text-orange-400 font-bold">{s.streak}</span>
+                        <span className="text-[10px] text-orange-400/70">
+                          {preferences.language === 'ar' ? 'يوم' : 'days'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{s.name}</p>
-                      <p className="text-[10px] text-gray-500 uppercase">
-                        {preferences.language === 'ar' ? 'صلاة' : 'Prayer'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-500/20">
-                      <span className="text-orange-400 font-bold">{s.streak}</span>
-                      <span className="text-[10px] text-orange-400/70">
-                        {preferences.language === 'ar' ? 'يوم' : 'days'}
-                      </span>
-                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center">
+                    <p className="text-xs text-gray-500">
+                      {preferences.language === 'ar' ? 'لا توجد تتابعات فردية بعد' : 'No individual streaks yet'}
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             );
           })()}
