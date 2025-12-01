@@ -26,6 +26,7 @@ export interface Habit {
   type: HabitType;
   emoji?: string;
   icon?: string;
+  color?: string; // Icon color (hex or CSS color)
   dailyTarget?: number;
   presetId?: string;
   isActive: boolean; // Ensuring this exists

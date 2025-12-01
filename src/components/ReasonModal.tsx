@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Briefcase, Utensils, Plane, Thermometer, HelpCircle, Armchair, Users, Bed } from 'lucide-react';
 import { usePreferences } from '../App';
 import { useData } from '../context/DataContext';
+import clsx from 'clsx';
 
 interface ReasonModalProps {
   isOpen: boolean;
@@ -95,20 +96,30 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
             onClick={onClose}
           />
 
-          {/* Bottom Sheet with slide-up animation */}
+          {/* Modal Container - Bottom sheet or centered card based on mode */}
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
+            initial={isCustom ? { opacity: 0, scale: 0.95 } : { y: '100%' }}
+            animate={isCustom ? { opacity: 1, scale: 1 } : { y: 0 }}
+            exit={isCustom ? { opacity: 0, scale: 0.95 } : { y: '100%' }}
             transition={{
               type: 'spring',
               damping: 30,
               stiffness: 300,
             }}
-            className="fixed bottom-0 left-0 right-0 z-[9999] max-w-2xl mx-auto"
+            className={clsx(
+              "fixed z-[9999] max-w-2xl mx-auto",
+              isCustom 
+                ? "top-[15%] left-0 right-0" // Positioned at top for keyboard visibility
+                : "bottom-0 left-0 right-0" // Bottom sheet for selection
+            )}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="glass-card rounded-t-3xl rounded-b-none p-6 pb-10 shadow-2xl border-t border-x border-white/10 min-h-[50vh]">
+            <div className={clsx(
+              "glass-card shadow-2xl border-white/10",
+              isCustom 
+                ? "rounded-2xl p-5 border mx-4 mb-4" // Compact centered card for custom input
+                : "rounded-t-3xl rounded-b-none p-6 pb-10 border-t border-x min-h-[50vh]" // Bottom sheet for selection
+            )}>
               {/* Drag Handle (iOS style) */}
               <div className="flex justify-center mb-4">
                 <div className="w-10 h-1 bg-gray-500 rounded-full" />
@@ -159,15 +170,15 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
                 </>
               ) : (
                 <>
-                  {/* Custom Reason Input View */}
-                  <div className="flex items-center justify-between mb-6">
+                  {/* Custom Reason Input View - Compact for mobile keyboard */}
+                  <div className="flex items-center justify-between mb-4">
                     <button
                       onClick={handleBack}
                       className="text-emerald-500 text-base font-medium hover:text-emerald-400 transition-colors"
                     >
                       {isArabic ? 'رجوع' : 'Back'}
                     </button>
-                    <h2 className="text-xl font-semibold text-white">
+                    <h2 className="text-lg font-semibold text-white">
                       {isArabic ? 'سبب آخر' : 'Custom Reason'}
                     </h2>
                     <button
@@ -179,7 +190,7 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
                   </div>
 
                   {/* Large Input Field */}
-                  <div className="mb-6">
+                  <div className="mb-4">
                     <input
                       ref={inputRef}
                       type="text"
@@ -191,13 +202,13 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
                         }
                       }}
                       placeholder={isArabic ? 'اكتب السبب هنا...' : 'Type your reason here...'}
-                      className={`w-full px-5 py-4 bg-black/30 border border-white/10 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all text-lg ${isArabic ? 'text-right' : 'text-left'}`}
+                      className={`w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all text-base ${isArabic ? 'text-right' : 'text-left'}`}
                       dir={isArabic ? 'rtl' : 'ltr'}
                     />
                   </div>
 
-                  {/* Save as Preset Checkbox */}
-                  <label className={`flex items-center gap-3 mb-6 cursor-pointer group ${isArabic ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {/* Save as Preset Checkbox - Compact */}
+                  <label className={`flex items-center gap-2 mb-4 cursor-pointer group ${isArabic ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className="relative">
                       <input
                         type="checkbox"
@@ -205,35 +216,28 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
                         onChange={(e) => setSaveAsPreset(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-emerald-500 transition-all" />
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
+                      <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-emerald-500 transition-all" />
+                      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
                     </div>
                     <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
                       {isArabic ? 'حفظ كخيار افتراضي؟' : 'Save as preset?'}
                     </span>
                   </label>
 
-                  {/* Save Button */}
+                  {/* Save Button - Compact */}
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={handleSaveCustom}
                     disabled={!customText.trim()}
-                    className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all flex items-center justify-center gap-2 ${
+                    className={`w-full py-3 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 ${
                       customText.trim()
                         ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30'
                         : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                     }`}
                   >
-                    <Save size={20} />
+                    <Save size={18} />
                     {isArabic ? 'حفظ' : 'Save'}
                   </motion.button>
-
-                  {/* Helper Text */}
-                  <p className={`mt-4 text-xs text-gray-400 ${isArabic ? 'text-right' : 'text-left'}`}>
-                    {isArabic 
-                      ? 'هذا السبب سيساعدك على فهم أسباب التراجع'
-                      : 'This reason will help you understand patterns'}
-                  </p>
                 </>
               )}
             </div>

@@ -52,8 +52,10 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
   const isFailed = log?.status === LogStatus.FAIL;
   const isLogged = !!log;
 
-  // Resolve Icon Component safely
-  const IconComponent = (habit.emoji && ICON_MAP[habit.emoji as IconName] ? ICON_MAP[habit.emoji as IconName] : Activity) as React.ElementType;
+  // Resolve Icon Component safely - check icon first, then emoji as fallback
+  const iconName = habit.icon || habit.emoji;
+  const IconComponent = (iconName && ICON_MAP[iconName as IconName] ? ICON_MAP[iconName as IconName] : Activity) as React.ElementType;
+  const iconColor = habit.color || undefined;
 
   // Handlers
   const handleDoneClick = (e: React.MouseEvent) => {
@@ -155,7 +157,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
                             strokeLinecap="round"
                         />
                     </svg>
-                    <IconComponent size={20} className={clsx(isTargetMet ? "text-emerald-500" : "text-white")} />
+                    <IconComponent size={20} className={clsx(isTargetMet ? "text-emerald-500" : "")} style={!isTargetMet && iconColor ? { color: iconColor } : undefined} />
                  </div>
 
                  <div className="flex-1 min-w-0 mr-4">
@@ -231,7 +233,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
       
       {/* Icon Container */}
       <div className="w-10 h-full flex items-center justify-center shrink-0 mr-3 border-r border-white/5">
-        <IconComponent size={20} className={clsx(isLogged ? "text-gray-500" : "text-primary")} />
+        <IconComponent size={20} className={clsx(isLogged ? "text-gray-500" : "")} style={!isLogged && iconColor ? { color: iconColor } : undefined} />
       </div>
 
       {/* Text & Streak */}

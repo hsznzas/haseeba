@@ -2,20 +2,18 @@ import React, { useState, useMemo } from 'react';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { generateSpiritualInsights } from '../services/geminiService';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, LineChart, Line } from 'recharts';
-import { Sparkles, TrendingUp, Activity, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, BarChart2, AlertTriangle } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { TrendingUp, Activity, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog } from '../../types';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, 
   isSameDay, differenceInDays, addYears, isWithinInterval, 
   startOfWeek, endOfWeek, addWeeks, startOfQuarter, endOfQuarter, addQuarters, 
-  startOfYear, endOfYear, addDays
+  startOfYear, endOfYear
 } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { clsx } from 'clsx';
 import DobModal from '../components/DobModal';
-import HabitAnalyticsCard from '../components/HabitAnalyticsCard';
 import Tooltip from '../components/Tooltip';
 import BottomNav from '../components/BottomNav';
 import DateSelector from '../components/DateSelector';
@@ -53,8 +51,6 @@ const Analytics: React.FC = () => {
   const locale = preferences.language === 'ar' ? ar : enUS;
   
   const { habits, logs } = useData();
-  const [insight, setInsight] = useState<string | null>(null);
-  const [loadingInsight, setLoadingInsight] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isDobModalOpen, setIsDobModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -63,13 +59,6 @@ const Analytics: React.FC = () => {
   
   // Simple current streak for overview (Placeholder or calculated)
   const streak = 12; 
-
-  const handleGenerateInsight = async () => {
-    setLoadingInsight(true);
-    const result = await generateSpiritualInsights(habits, logs, preferences.language);
-    setInsight(result);
-    setLoadingInsight(false);
-  };
 
   // Calculate Countdown
   const calculateRemainingChances = () => {
@@ -222,35 +211,6 @@ const Analytics: React.FC = () => {
         return bestStreak;
     }
   };
-
-  // --- NEW: Top Streaks Calculation ---
-  const topStreaksData = useMemo(() => {
-    return habits
-      .filter(h => h.isActive)
-      .map(h => {
-         return { 
-            name: preferences.language === 'ar' ? h.nameAr : h.name, 
-            streak: calculateBestStreak(h.id) || Math.floor(Math.random() * 10) // fallback for visual
-         }; 
-      })
-      .sort((a, b) => b.streak - a.streak)
-      .slice(0, 5);
-  }, [habits, logs, preferences.language]);
-
-  // --- NEW: Completion Trend Calculation ---
-  const completionTrendData = useMemo(() => {
-      const data = [];
-      for (let i = 6; i >= 0; i--) {
-          const date = addDays(new Date(), -i);
-          const dateStr = format(date, 'yyyy-MM-dd');
-          // Count logs for this day
-          const dayLogs = logs.filter(l => l.date === dateStr).length;
-          // active habits * 1 (simplified target)
-          const rate = Math.min(100, Math.round((dayLogs / activeHabitCount) * 100)); 
-          data.push({ date: format(date, 'EEE'), rate });
-      }
-      return data;
-  }, [logs, activeHabitCount]);
 
   // --- Individual Prayer Analytics ---
   const prayerIds = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
@@ -587,17 +547,20 @@ const Analytics: React.FC = () => {
         <div className="grid grid-cols-2 gap-2">{prayerIds.map(id => renderPrayerCard(id))}</div>
       </div>
 
-      {/* Top 5 Longest Streaks */}
+      {/* Top Prayer Streaks */}
       <div className="space-y-3">
         <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide flex items-center gap-2">
           <Trophy size={14} className="text-orange-500" />
-          {preferences.language === 'ar' ? 'أطول 5 تتابعات' : 'Top 5 Longest Streaks'}
+          {preferences.language === 'ar' ? 'أطول تتابعات الصلوات' : 'Prayer Streaks'}
         </h2>
         <div className="bg-card rounded-xl border border-slate-800 overflow-hidden">
           {(() => {
-            // Calculate best streaks for all active habits
-            const allStreaks = habits
-              .filter(h => h.isActive)
+            // Calculate "All Prayers Perfect" streak (all 5 prayers at TAKBIRAH level)
+            const allPrayersPerfectStreak = calculateBestStreak(prayerIds);
+            
+            // Calculate best streaks for individual prayers
+            const prayerStreaks = habits
+              .filter(h => h.isActive && h.type === HabitType.PRAYER)
               .map(h => ({
                 id: h.id,
                 name: preferences.language === 'ar' ? h.nameAr : h.name,
@@ -608,7 +571,9 @@ const Analytics: React.FC = () => {
               .sort((a, b) => b.streak - a.streak)
               .slice(0, 5);
 
-            if (allStreaks.length === 0) {
+            const hasData = allPrayersPerfectStreak > 0 || prayerStreaks.length > 0;
+
+            if (!hasData) {
               return (
                 <div className="p-6 text-center">
                   <Trophy size={32} className="text-gray-700 mx-auto mb-2" />
@@ -621,7 +586,31 @@ const Analytics: React.FC = () => {
 
             return (
               <div className="divide-y divide-slate-800">
-                {allStreaks.map((s, idx) => (
+                {/* All Prayers Perfect Streak - Always first if exists */}
+                {allPrayersPerfectStreak > 0 && (
+                  <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-emerald-900/30 to-transparent hover:from-emerald-900/40 transition-colors">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm bg-emerald-500/20 text-emerald-400">
+                      ✓
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {preferences.language === 'ar' ? 'جميع الصلوات كاملة' : 'All Prayers Perfect'}
+                      </p>
+                      <p className="text-[10px] text-emerald-400 uppercase">
+                        {preferences.language === 'ar' ? 'الخمس صلوات بتكبيرة الإحرام' : 'All 5 prayers at Takbirah'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-emerald-500/20 px-3 py-1.5 rounded-lg border border-emerald-500/30">
+                      <span className="text-emerald-400 font-bold">{allPrayersPerfectStreak}</span>
+                      <span className="text-[10px] text-emerald-400/70">
+                        {preferences.language === 'ar' ? 'يوم' : 'days'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Individual Prayer Streaks */}
+                {prayerStreaks.map((s, idx) => (
                   <div key={s.id} className="flex items-center gap-3 p-3 hover:bg-slate-900/50 transition-colors">
                     <div className={clsx(
                       "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm",
@@ -635,9 +624,7 @@ const Analytics: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{s.name}</p>
                       <p className="text-[10px] text-gray-500 uppercase">
-                        {s.type === HabitType.PRAYER ? (preferences.language === 'ar' ? 'صلاة' : 'Prayer') : 
-                         s.type === HabitType.COUNTER ? (preferences.language === 'ar' ? 'عداد' : 'Counter') :
-                         (preferences.language === 'ar' ? 'عادة' : 'Habit')}
+                        {preferences.language === 'ar' ? 'صلاة' : 'Prayer'}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-500/20">
@@ -699,141 +686,6 @@ const Analytics: React.FC = () => {
              {emptyDays.map((_, i) => <div key={`empty-${i}`} />)}
              {daysInMonth.map((date) => (
                   <div key={date.toISOString()} className="flex justify-center"><div className="w-full max-w-[45px]"><ConsolidatedDayRing date={date} dayLogs={getDayLogs(date)} /></div></div>
-             ))}
-           </div>
-        </div>
-      </div>
-
-      {/* Top 5 Habit Streaks (Non-Prayer) */}
-      <div className="space-y-3">
-        <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide flex items-center gap-2">
-          <TrendingUp size={14} className="text-emerald-500" />
-          {preferences.language === 'ar' ? 'أفضل 5 عادات (غير الصلوات)' : 'Top 5 Habits (Non-Prayer)'}
-        </h2>
-        <div className="bg-card rounded-xl border border-slate-800 overflow-hidden">
-          {(() => {
-            // Calculate best streaks for non-prayer habits only
-            const nonPrayerStreaks = habits
-              .filter(h => h.isActive && h.type !== HabitType.PRAYER)
-              .map(h => ({
-                id: h.id,
-                name: preferences.language === 'ar' ? h.nameAr : h.name,
-                type: h.type,
-                emoji: h.emoji,
-                streak: calculateBestStreak(h.id),
-              }))
-              .filter(s => s.streak > 0)
-              .sort((a, b) => b.streak - a.streak)
-              .slice(0, 5);
-
-            if (nonPrayerStreaks.length === 0) {
-              return (
-                <div className="p-6 text-center">
-                  <TrendingUp size={32} className="text-gray-700 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">
-                    {preferences.language === 'ar' ? 'لا توجد تتابعات للعادات بعد' : 'No habit streaks yet'}
-                  </p>
-                </div>
-              );
-            }
-
-            return (
-              <div className="divide-y divide-slate-800">
-                {nonPrayerStreaks.map((s, idx) => (
-                  <div key={s.id} className="flex items-center gap-3 p-3 hover:bg-slate-900/50 transition-colors">
-                    <div className={clsx(
-                      "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm",
-                      idx === 0 ? "bg-emerald-500/20 text-emerald-400" :
-                      idx === 1 ? "bg-blue-500/20 text-blue-400" :
-                      idx === 2 ? "bg-purple-500/20 text-purple-400" :
-                      "bg-slate-800 text-gray-500"
-                    )}>
-                      {idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{s.name}</p>
-                      <p className="text-[10px] text-gray-500 uppercase">
-                        {s.type === HabitType.COUNTER ? (preferences.language === 'ar' ? 'عداد' : 'Counter') :
-                         (preferences.language === 'ar' ? 'عادة' : 'Regular')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
-                      <span className="text-emerald-400 font-bold">{s.streak}</span>
-                      <span className="text-[10px] text-emerald-400/70">
-                        {preferences.language === 'ar' ? 'يوم' : 'days'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-      </div>
-
-      {/* AI Insights */}
-      <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 p-5 rounded-lg border border-indigo-500/30 relative overflow-hidden mt-8 shadow-lg">
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-500/20 blur-3xl rounded-full"></div>
-        <h3 className="font-bold text-white mb-3 flex items-center gap-2 relative z-10"><Sparkles className="text-indigo-400" size={18} /> {t.insightsTitle}</h3>
-        {!insight ? (
-          <div className="text-center py-4">
-            <p className="text-sm text-indigo-200/70 mb-4">Get personalized spiritual coaching based on your recent tracking patterns.</p>
-            <button onClick={handleGenerateInsight} disabled={loadingInsight} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-md text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-2 mx-auto shadow-md">{loadingInsight ? t.insightsLoading : t.generateInsights}</button>
-          </div>
-        ) : (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="prose prose-invert prose-sm max-w-none text-indigo-100 leading-relaxed text-sm" dangerouslySetInnerHTML={{ __html: insight.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-            <button onClick={() => setInsight(null)} className="mt-4 text-xs text-indigo-400 hover:text-indigo-300 underline">Refresh</button>
-          </div>
-        )}
-      </div>
-      
-      {/* --- NEW SECTION: Expanded Habit Analytics --- */}
-      <div className="mt-12 space-y-8 border-t border-slate-800 pt-8">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <BarChart2 className="text-emerald-500" /> {preferences.language === 'ar' ? 'إحصائيات العادات' : 'Habit Analytics'}
-        </h2>
-        
-        {/* Combined Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-card p-4 rounded-2xl border border-slate-800">
-             <h3 className="font-bold text-sm text-gray-400 uppercase mb-4">{preferences.language === 'ar' ? 'أفضل التتابعات' : 'Top Streaks'}</h3>
-             <div className="h-48 w-full">
-               <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={topStreaksData} layout="vertical" margin={{ left: 20 }}>
-                   <XAxis type="number" hide />
-                   <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 10, fill: '#94a3b8'}} />
-                   <Bar dataKey="streak" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
-                   <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }} />
-                 </BarChart>
-               </ResponsiveContainer>
-             </div>
-          </div>
-          <div className="bg-card p-4 rounded-2xl border border-slate-800">
-             <h3 className="font-bold text-sm text-gray-400 uppercase mb-4">{preferences.language === 'ar' ? 'معدل الإنجاز (٧ أيام)' : 'Completion Rate (7 Days)'}</h3>
-             <div className="h-48 w-full">
-               <ResponsiveContainer width="100%" height="100%">
-                 <LineChart data={completionTrendData}>
-                    <XAxis dataKey="date" tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
-                    <Line type="basis" dataKey="rate" stroke="#3b82f6" strokeWidth={3} dot={false} />
-                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }} />
-                 </LineChart>
-               </ResponsiveContainer>
-             </div>
-          </div>
-        </div>
-
-        {/* Individual Habit Cards */}
-        <div className="space-y-4">
-           <h3 className="font-bold text-sm text-gray-400 uppercase">{preferences.language === 'ar' ? 'تحليل تفصيلي' : 'Detailed Analysis'}</h3>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             {habits.filter(h => h.isActive && h.type !== HabitType.PRAYER).map(habit => (
-               <HabitAnalyticsCard 
-                 key={habit.id} 
-                 habit={habit} 
-                 logs={logs} 
-                 language={preferences.language} 
-               />
              ))}
            </div>
         </div>
