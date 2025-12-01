@@ -690,6 +690,22 @@ export const deleteLog = (habitId: string, date: string): HabitLog[] => {
 
 export type DemoPersona = 'devout' | 'struggler' | 'beginner' | 'intermediate' | 'advanced';
 
+// Common reasons for not praying at Takbirah level
+const PRAYER_OBSTACLES = [
+  'Sleep', 'Work', 'Travel', 'Laziness', 'Forgot', 'Traffic', 
+  'Meeting', 'Family', 'Illness', 'No Mosque Nearby'
+];
+
+const PRAYER_OBSTACLES_AR = [
+  'نوم', 'عمل', 'سفر', 'كسل', 'نسيان', 'ازدحام',
+  'اجتماع', 'عائلة', 'مرض', 'لا يوجد مسجد قريب'
+];
+
+const getRandomObstacle = () => {
+  const idx = Math.floor(Math.random() * PRAYER_OBSTACLES.length);
+  return PRAYER_OBSTACLES[idx];
+};
+
 export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   console.log(`[Storage] Seeding demo data for persona: ${persona}`);
   
@@ -701,7 +717,9 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
 
   // 3. Use ALL habits from INITIAL_HABITS (including 5 Prayers and Rawatib)
   const today = new Date();
-  const startDateStr = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // 6 months of data (180 days)
+  const daysBack = 180;
+  const startDateStr = new Date(today.getTime() - daysBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
   // Save all initial habits with proper startDate
   const createdHabits: Habit[] = INITIAL_HABITS.map(h => {
@@ -716,9 +734,9 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   
   safeSetItem(STORAGE_KEYS.HABITS, createdHabits);
 
-  // 4. Generate Logs based on Persona
-  const daysBack = persona === 'devout' ? 365 : persona === 'struggler' ? 90 : 14;
+  // 4. Generate Logs - Always 6 months (180 days) of data
   const successRate = persona === 'devout' ? 0.95 : persona === 'struggler' ? 0.6 : 0.3;
+  const takbirahRate = persona === 'devout' ? 0.7 : persona === 'struggler' ? 0.35 : 0.15;
 
   // Helper to format date as YYYY-MM-DD
   const fmtDate = (d: Date) => d.toISOString().split('T')[0];
@@ -737,13 +755,29 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
     const isSuccess = isRecent || Math.random() < successRate;
 
     if (isSuccess) {
-      // Log Prayers with quality values
+      // Log Prayers with quality values and REASONS for non-Takbirah
       prayerIds.forEach(prayerId => {
-        const quality = Math.random() > 0.3 
-          ? PrayerQuality.TAKBIRAH 
-          : Math.random() > 0.5 
-            ? PrayerQuality.JAMAA 
-            : PrayerQuality.ON_TIME;
+        const isTakbirah = Math.random() < takbirahRate;
+        let quality: number;
+        let reason: string | undefined;
+        
+        if (isTakbirah) {
+          quality = PrayerQuality.TAKBIRAH;
+        } else {
+          // Distribute among other levels
+          const rand = Math.random();
+          if (rand < 0.5) {
+            quality = PrayerQuality.JAMAA;
+          } else if (rand < 0.8) {
+            quality = PrayerQuality.ON_TIME;
+          } else {
+            quality = PrayerQuality.MISSED;
+          }
+          // Add a reason for non-perfect prayers (70% chance)
+          if (Math.random() < 0.7) {
+            reason = getRandomObstacle();
+          }
+        }
         
         allLogs.push({
           id: `${prayerId}-${dateStr}`,
@@ -751,6 +785,7 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
           date: dateStr,
           value: quality,
           status: LogStatus.DONE,
+          reason: reason,
           timestamp: date.getTime(),
         });
       });
@@ -775,15 +810,17 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
           });
         });
     } else {
-      // Even on "miss" days, log some prayers as missed or late
+      // Even on "miss" days, log some prayers as missed or late with reasons
       prayerIds.forEach(prayerId => {
         if (Math.random() > 0.5) {
+          const quality = Math.random() > 0.5 ? PrayerQuality.ON_TIME : PrayerQuality.MISSED;
           allLogs.push({
             id: `${prayerId}-${dateStr}`,
             habitId: prayerId,
             date: dateStr,
-            value: Math.random() > 0.5 ? PrayerQuality.ON_TIME : PrayerQuality.MISSED,
+            value: quality,
             status: LogStatus.DONE,
+            reason: getRandomObstacle(), // Always add reason for missed days
             timestamp: date.getTime(),
           });
         }

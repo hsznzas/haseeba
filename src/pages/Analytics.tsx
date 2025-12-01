@@ -275,10 +275,10 @@ const Analytics: React.FC = () => {
     const missedPct = total > 0 ? Math.round((missed / total) * 100) : 0;
 
     const qualityBreakdown = [
-      { label: preferences.language === 'ar' ? 'تكبيرة الإحرام' : 'Takbirah', pct: takbirahPct, color: '#22c55e', dot: '🟢' },
-      { label: preferences.language === 'ar' ? 'جماعة' : 'In Group', pct: inGroupPct, color: '#eab308', dot: '🟡' },
-      { label: preferences.language === 'ar' ? 'في الوقت' : 'On Time', pct: onTimePct, color: '#f97316', dot: '🟠' },
-      { label: preferences.language === 'ar' ? 'فائتة' : 'Missed', pct: missedPct, color: '#ef4444', dot: '🔴' },
+      { label: preferences.language === 'ar' ? 'تكبيرة الإحرام' : 'Takbirah', pct: takbirahPct, color: '#22c55e' },
+      { label: preferences.language === 'ar' ? 'جماعة' : 'In Group', pct: inGroupPct, color: '#eab308' },
+      { label: preferences.language === 'ar' ? 'في الوقت' : 'On Time', pct: onTimePct, color: '#f97316' },
+      { label: preferences.language === 'ar' ? 'فائتة' : 'Missed', pct: missedPct, color: '#ef4444' },
     ];
 
     // --- Top Obstacles Analysis ---
@@ -378,11 +378,14 @@ const Analytics: React.FC = () => {
                 <h4 className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
                   {preferences.language === 'ar' ? 'توزيع الجودة' : 'Quality Breakdown'}
                 </h4>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                <div className="flex flex-col gap-1">
                   {qualityBreakdown.map(item => (
-                    <div key={item.label} className="flex items-center gap-1.5 text-xs">
-                      <span className="text-[10px]">{item.dot}</span>
-                      <span className="text-gray-400 truncate flex-1">{item.label}</span>
+                    <div key={item.label} className="flex items-center gap-2 text-xs">
+                      <span 
+                        className="w-2 h-2 rounded-full shrink-0" 
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-gray-400 flex-1">{item.label}</span>
                       <span className="font-bold tabular-nums" style={{ color: item.color }}>{item.pct}%</span>
                     </div>
                   ))}
@@ -582,6 +585,73 @@ const Analytics: React.FC = () => {
         <div className="w-full">{renderAllPrayersInsightCard()}</div>
         {/* Individual Prayer Cards */}
         <div className="grid grid-cols-2 gap-2">{prayerIds.map(id => renderPrayerCard(id))}</div>
+      </div>
+
+      {/* Top 5 Longest Streaks */}
+      <div className="space-y-3">
+        <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide flex items-center gap-2">
+          <Trophy size={14} className="text-orange-500" />
+          {preferences.language === 'ar' ? 'أطول 5 تتابعات' : 'Top 5 Longest Streaks'}
+        </h2>
+        <div className="bg-card rounded-xl border border-slate-800 overflow-hidden">
+          {(() => {
+            // Calculate best streaks for all active habits
+            const allStreaks = habits
+              .filter(h => h.isActive)
+              .map(h => ({
+                id: h.id,
+                name: preferences.language === 'ar' ? h.nameAr : h.name,
+                type: h.type,
+                streak: calculateBestStreak(h.id),
+              }))
+              .filter(s => s.streak > 0)
+              .sort((a, b) => b.streak - a.streak)
+              .slice(0, 5);
+
+            if (allStreaks.length === 0) {
+              return (
+                <div className="p-6 text-center">
+                  <Trophy size={32} className="text-gray-700 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">
+                    {preferences.language === 'ar' ? 'لا توجد تتابعات بعد' : 'No streaks yet'}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="divide-y divide-slate-800">
+                {allStreaks.map((s, idx) => (
+                  <div key={s.id} className="flex items-center gap-3 p-3 hover:bg-slate-900/50 transition-colors">
+                    <div className={clsx(
+                      "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm",
+                      idx === 0 ? "bg-amber-500/20 text-amber-400" :
+                      idx === 1 ? "bg-gray-400/20 text-gray-300" :
+                      idx === 2 ? "bg-orange-700/20 text-orange-500" :
+                      "bg-slate-800 text-gray-500"
+                    )}>
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{s.name}</p>
+                      <p className="text-[10px] text-gray-500 uppercase">
+                        {s.type === HabitType.PRAYER ? (preferences.language === 'ar' ? 'صلاة' : 'Prayer') : 
+                         s.type === HabitType.COUNTER ? (preferences.language === 'ar' ? 'عداد' : 'Counter') :
+                         (preferences.language === 'ar' ? 'عادة' : 'Habit')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-500/20">
+                      <span className="text-orange-400 font-bold">{s.streak}</span>
+                      <span className="text-[10px] text-orange-400/70">
+                        {preferences.language === 'ar' ? 'يوم' : 'days'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
       </div>
 
       {/* Growth Table */}
