@@ -19,6 +19,8 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   startDemo: (persona: DemoPersona) => void;
+  resetPasswordForEmail: (email: string) => Promise<{ error: any }>;
+  updateUserPassword: (newPassword: string) => Promise<{ error: any }>;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -97,6 +99,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log('🔄 Reloading app to mount DataContext with seeded data...');
     window.location.reload(); // Reload to force DataContext re-mount
   }, []);
+
+  const resetPasswordForEmail = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/#/update-password`,
+    });
+    return { error };
+  };
+
+  const updateUserPassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    return { error };
+  };
   const appUser: AppUser | null = useMemo(() => {
     if (user) {
       return {
@@ -122,6 +138,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     signUpWithEmail,
     signOut,
     startDemo,
+    resetPasswordForEmail,
+    updateUserPassword,
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
+import UpdatePassword from './pages/UpdatePassword';
 import { UserPreferences } from '@/index';
 import { getPreferences, savePreferences } from './services/storage';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -49,21 +50,26 @@ const AppRoutes = () => {
     );
   }
 
-  // Unauthenticated users see Login page
-  if (!user) {
-    return <Login />;
-  }
-
-  // User is logged in (Supabase or Demo), show app layout
+  // Always allow access to update-password route (Supabase handles auth via URL token)
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      {/* Password Reset Route - accessible regardless of auth state */}
+      <Route path="/update-password" element={<UpdatePassword />} />
+      
+      {/* Protected Routes */}
+      {user ? (
+        <>
+          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/analytics" element={<Layout><Analytics /></Layout>} />
+          <Route path="/profile" element={<Layout><Profile /></Layout>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      ) : (
+        <>
+          <Route path="*" element={<Login />} />
+        </>
+      )}
+    </Routes>
   );
 };
 
