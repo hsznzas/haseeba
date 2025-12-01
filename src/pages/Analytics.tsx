@@ -4,7 +4,7 @@ import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
 import { generateSpiritualInsights } from '../services/geminiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, LineChart, Line } from 'recharts';
-import { Sparkles, TrendingUp, Activity, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, BarChart2 } from 'lucide-react';
+import { Sparkles, TrendingUp, Activity, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, BarChart2, AlertTriangle } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog } from '../../types';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, 
@@ -255,12 +255,179 @@ const Analytics: React.FC = () => {
   // --- Individual Prayer Analytics ---
   const prayerIds = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
-  const renderPrayerCard = (prayerId: string, isAggregate: boolean = false) => {
-    const targetIds = isAggregate ? prayerIds : [prayerId];
+  // --- Enhanced All Prayers Insight Card ---
+  const renderAllPrayersInsightCard = () => {
+    const pLogs = logs.filter(l => prayerIds.includes(l.habitId));
+    const total = pLogs.length;
+    const missed = pLogs.filter(l => l.value === PrayerQuality.MISSED).length;
+    const onTime = pLogs.filter(l => l.value === PrayerQuality.ON_TIME).length;
+    const inGroup = pLogs.filter(l => l.value === PrayerQuality.JAMAA).length;
+    const takbirah = pLogs.filter(l => l.value === PrayerQuality.TAKBIRAH).length;
+    
+    const fullScoreRate = total > 0 ? Math.round((takbirah / total) * 100) : 0;
+    const rateColor = getRateColorStyle(fullScoreRate);
+    const bestStreak = calculateBestStreak(prayerIds);
+
+    // Calculate percentages for quality breakdown
+    const takbirahPct = total > 0 ? Math.round((takbirah / total) * 100) : 0;
+    const inGroupPct = total > 0 ? Math.round((inGroup / total) * 100) : 0;
+    const onTimePct = total > 0 ? Math.round((onTime / total) * 100) : 0;
+    const missedPct = total > 0 ? Math.round((missed / total) * 100) : 0;
+
+    const qualityBreakdown = [
+      { label: preferences.language === 'ar' ? 'تكبيرة الإحرام' : 'Takbirah', pct: takbirahPct, color: '#22c55e', dot: '🟢' },
+      { label: preferences.language === 'ar' ? 'جماعة' : 'In Group', pct: inGroupPct, color: '#eab308', dot: '🟡' },
+      { label: preferences.language === 'ar' ? 'في الوقت' : 'On Time', pct: onTimePct, color: '#f97316', dot: '🟠' },
+      { label: preferences.language === 'ar' ? 'فائتة' : 'Missed', pct: missedPct, color: '#ef4444', dot: '🔴' },
+    ];
+
+    // --- Top Obstacles Analysis ---
+    // Filter logs where quality is not perfect (< TAKBIRAH) AND has a reason
+    const problematicLogs = pLogs.filter(l => 
+      l.value !== undefined && 
+      l.value < PrayerQuality.TAKBIRAH && 
+      l.reason && 
+      l.reason.trim() !== ''
+    );
+
+    // Group by reason and count frequency
+    const reasonCounts: Record<string, number> = {};
+    problematicLogs.forEach(l => {
+      const reason = l.reason!.trim();
+      reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+    });
+
+    // Sort by count and get top 3
+    const topObstacles = Object.entries(reasonCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([reason, count]) => ({
+        reason,
+        count,
+        pct: problematicLogs.length > 0 ? Math.round((count / problematicLogs.length) * 100) : 0
+      }));
+
+    const chartData = [
+      { name: t.takbirah, value: takbirah, color: '#22c55e' },
+      { name: t.inGroup, value: inGroup, color: '#eab308' },
+      { name: t.onTime, value: onTime, color: '#f97316' },
+      { name: t.missed, value: missed, color: '#ef4444' },
+    ].filter(d => d.value > 0);
+
+    const emptyData = [{ name: 'Empty', value: 1, color: '#1e293b' }];
+    const finalChartData = chartData.length > 0 ? chartData : emptyData;
+
+    return (
+      <div className="bg-card rounded-xl border border-primary/30 bg-slate-900/80 shadow-lg overflow-hidden">
+        {/* Chances Left Header */}
+        <button 
+          onClick={() => setIsDobModalOpen(true)}
+          className="w-full bg-slate-900/50 border-b border-slate-800 py-2 px-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Hourglass size={12} className="text-gray-400" />
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">{t.chancesLeft}</span>
+          </div>
+          <span className={clsx("text-xs font-mono font-bold", remainingChances !== null ? "text-primary" : "text-gray-500")}>
+            {remainingChances !== null ? `${remainingChances.toLocaleString()} ${preferences.language === 'ar' ? 'يوم' : 'days'}` : t.setDob}
+          </span>
+        </button>
+
+        <div className="p-4">
+          {/* Title Row */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold text-white">{t.allPrayers}</h3>
+              <Tooltip text={preferences.language === 'ar' ? 'تحليل شامل لجميع الصلوات الخمس' : 'Comprehensive analysis of all 5 daily prayers'} />
+            </div>
+            {bestStreak > 0 && (
+              <div className="flex items-center gap-1 text-xs bg-orange-500/10 px-2 py-1 rounded-lg text-orange-400 border border-orange-500/20">
+                <Trophy size={12} />
+                <span className="font-bold">{bestStreak}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Main Content: Split View */}
+          <div className="flex gap-4" dir="ltr">
+            {/* Left Side: Ring Chart */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="relative h-24 w-24">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={finalChartData} cx="50%" cy="50%" innerRadius={30} outerRadius={42} paddingAngle={2} dataKey="value" stroke="none">
+                      {finalChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-bold" style={{ color: rateColor }}>{fullScoreRate}%</span>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-xl font-bold" style={{ color: rateColor }}>{takbirah}</span>
+                <span className="text-xs text-gray-500">/ {total}</span>
+              </div>
+              <span className="text-[10px] text-gray-400 mt-0.5">{t.perfectRate}</span>
+            </div>
+
+            {/* Right Side: Breakdown & Obstacles */}
+            <div className="flex-1 flex flex-col gap-3 min-w-0">
+              {/* Quality Breakdown */}
+              <div className="space-y-1.5">
+                <h4 className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                  {preferences.language === 'ar' ? 'توزيع الجودة' : 'Quality Breakdown'}
+                </h4>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                  {qualityBreakdown.map(item => (
+                    <div key={item.label} className="flex items-center gap-1.5 text-xs">
+                      <span className="text-[10px]">{item.dot}</span>
+                      <span className="text-gray-400 truncate flex-1">{item.label}</span>
+                      <span className="font-bold tabular-nums" style={{ color: item.color }}>{item.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="h-px bg-slate-700/50" />
+
+              {/* Top Obstacles */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1">
+                  <AlertTriangle size={10} className="text-amber-500" />
+                  <h4 className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                    {preferences.language === 'ar' ? 'أهم العوائق' : 'Top Obstacles'}
+                  </h4>
+                </div>
+                {topObstacles.length > 0 ? (
+                  <div className="space-y-1">
+                    {topObstacles.map((obs, idx) => (
+                      <div key={obs.reason} className="flex items-center gap-2 text-xs">
+                        <span className="text-gray-600 text-[10px] font-mono">{idx + 1}.</span>
+                        <span className="text-gray-300 truncate flex-1">{obs.reason}</span>
+                        <span className="text-amber-500/80 font-semibold text-[10px]">{obs.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-600 italic">
+                    {preferences.language === 'ar' ? 'لا توجد عوائق مسجلة بعد' : 'No obstacles logged yet'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPrayerCard = (prayerId: string) => {
     const habit = habits.find(h => h.id === prayerId);
     
-    const name = isAggregate ? t.allPrayers : (preferences.language === 'ar' ? habit?.nameAr : habit?.name);
-    const pLogs = logs.filter(l => targetIds.includes(l.habitId));
+    const name = preferences.language === 'ar' ? habit?.nameAr : habit?.name;
+    const pLogs = logs.filter(l => l.habitId === prayerId);
     const total = pLogs.length;
     const missed = pLogs.filter(l => l.value === PrayerQuality.MISSED).length;
     const onTime = pLogs.filter(l => l.value === PrayerQuality.ON_TIME).length;
@@ -270,7 +437,7 @@ const Analytics: React.FC = () => {
     const fullScoreCount = takbirah;
     const fullScoreRate = total > 0 ? Math.round((fullScoreCount / total) * 100) : 0;
     const rateColor = getRateColorStyle(fullScoreRate);
-    const bestStreak = calculateBestStreak(targetIds);
+    const bestStreak = calculateBestStreak([prayerId]);
 
     const data = [
       { name: t.takbirah, value: takbirah, color: '#22c55e' },
@@ -283,29 +450,11 @@ const Analytics: React.FC = () => {
     const chartData = data.length > 0 ? data : emptyData;
 
     return (
-      <div key={isAggregate ? 'all' : prayerId} className={clsx(
-          "bg-card rounded-lg border border-slate-800 shadow-sm flex flex-col relative overflow-hidden",
-          isAggregate ? "col-span-1 md:col-span-2 border-primary/30 bg-slate-900/80" : ""
-      )}>
-        {isAggregate && (
-             <button 
-                onClick={() => setIsDobModalOpen(true)}
-                className="w-full bg-slate-900/50 border-b border-slate-800 py-1.5 px-3 flex items-center justify-between hover:bg-slate-800/50 transition-colors mb-1"
-            >
-                <div className="flex items-center gap-2">
-                    <Hourglass size={10} className="text-gray-400" />
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">{t.chancesLeft}</span>
-                </div>
-                <span className={clsx("text-[10px] font-mono font-bold", remainingChances !== null ? "text-gray-400" : "text-gray-500")}>
-                    {remainingChances !== null ? remainingChances.toLocaleString() : t.setDob}
-                </span>
-            </button>
-        )}
-
+      <div key={prayerId} className="bg-card rounded-lg border border-slate-800 shadow-sm flex flex-col relative overflow-hidden">
         <div className="p-3 flex flex-col h-full justify-between">
             <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-1">
-                    <h3 className={clsx("font-bold text-foreground leading-tight", isAggregate ? "text-lg" : "text-xs uppercase tracking-wide text-gray-400")}>
+                    <h3 className="font-bold text-foreground leading-tight text-xs uppercase tracking-wide text-gray-400">
                         {name}
                     </h3>
                     <Tooltip text={`Analytics for ${name} based on log quality.`} />
@@ -319,16 +468,16 @@ const Analytics: React.FC = () => {
             </div>
             
             <div className="flex flex-row items-center justify-between gap-1">
-                <div className={clsx("flex-shrink-0 relative", isAggregate ? "h-20 w-20" : "h-14 w-14")}>
+                <div className="flex-shrink-0 relative h-14 w-14">
                     <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie data={chartData} cx="50%" cy="50%" innerRadius={isAggregate ? 25 : 18} outerRadius={isAggregate ? 35 : 25} paddingAngle={2} dataKey="value" stroke="none">
+                        <Pie data={chartData} cx="50%" cy="50%" innerRadius={18} outerRadius={25} paddingAngle={2} dataKey="value" stroke="none">
                         {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                         </Pie>
                     </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <span className={clsx("font-bold", isAggregate ? "text-sm" : "text-[10px]")} style={{ color: rateColor }}>
+                        <span className="font-bold text-[10px]" style={{ color: rateColor }}>
                             {fullScoreRate}%
                         </span>
                     </div>
@@ -336,7 +485,7 @@ const Analytics: React.FC = () => {
 
                 <div className="flex flex-col items-end flex-1 min-w-0">
                     <div className="flex items-baseline gap-1">
-                        <span className={clsx("font-bold", isAggregate ? "text-xl" : "text-sm")} style={{ color: rateColor }}>{fullScoreCount}</span>
+                        <span className="font-bold text-sm" style={{ color: rateColor }}>{fullScoreCount}</span>
                         <span className="text-[10px] text-gray-500">/ {total}</span>
                     </div>
                     <div className="mt-0.5 text-[10px] font-medium truncate w-full text-right" style={{ color: rateColor }}>{t.perfectRate}</div>
@@ -426,8 +575,12 @@ const Analytics: React.FC = () => {
 
       {/* Prayers Breakdown */}
       <div className="space-y-3">
-        <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">Prayers Breakdown</h2>
-        <div className="w-full">{renderPrayerCard('all', true)}</div>
+        <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">
+          {preferences.language === 'ar' ? 'تحليل الصلوات' : 'Prayers Breakdown'}
+        </h2>
+        {/* Enhanced All Prayers Insight Card */}
+        <div className="w-full">{renderAllPrayersInsightCard()}</div>
+        {/* Individual Prayer Cards */}
         <div className="grid grid-cols-2 gap-2">{prayerIds.map(id => renderPrayerCard(id))}</div>
       </div>
 
