@@ -251,6 +251,16 @@ const Analytics: React.FC = () => {
 
   // --- Individual Prayer Analytics ---
   const prayerIds = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+  
+  // --- Rawatib Prayer IDs (12 Sunnah Muakkadah) ---
+  const rawatibIds = [
+    'fajr_sunnah',           // 2 before Fajr
+    'dhuhr_sunnah_before_1', // 2 before Dhuhr (1st set)
+    'dhuhr_sunnah_before_2', // 2 before Dhuhr (2nd set)
+    'dhuhr_sunnah_after',    // 2 after Dhuhr
+    'maghrib_sunnah',        // 2 after Maghrib
+    'isha_sunnah',           // 2 after Isha
+  ];
 
   // --- Enhanced All Prayers Insight Card ---
   const renderAllPrayersInsightCard = () => {
@@ -534,9 +544,101 @@ const Analytics: React.FC = () => {
     );
   };
 
+  // Get Rawatib logs for a specific date
+  const getRawatibDayLogs = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return rawatibIds.map(rid => logs.find(l => l.habitId === rid && l.date === dateStr));
+  };
+
+  // Rawatib House Component - Creative house shape with 6 segments
+  const RawatibHouse = ({ date, dayLogs }: { date: Date, dayLogs: (HabitLog | undefined)[] }) => {
+    // Count how many rawatib are completed (DONE status)
+    const completedCount = dayLogs.filter(log => log?.status === LogStatus.DONE).length;
+    const allCompleted = completedCount === 6;
+    
+    // House SVG paths - 6 symmetrical segments
+    // Viewbox: 0 0 40 40
+    // Roof apex: (20, 6), Roof corners: (6, 18) and (34, 18)
+    // Wall bottom: (9, 34) and (31, 34)
+    const segments = [
+      { id: 0, d: 'M 20,6 L 6,18', name: 'roof-left' },      // Fajr Sunnah
+      { id: 1, d: 'M 20,6 L 34,18', name: 'roof-right' },    // Isha Sunnah (symmetry)
+      { id: 2, d: 'M 6,18 L 9,34', name: 'wall-left' },      // Dhuhr Before 1
+      { id: 3, d: 'M 34,18 L 31,34', name: 'wall-right' },   // Dhuhr After (symmetry)
+      { id: 4, d: 'M 9,34 L 20,34', name: 'floor-left' },    // Dhuhr Before 2
+      { id: 5, d: 'M 20,34 L 31,34', name: 'floor-right' },  // Maghrib Sunnah
+    ];
+    
+    // Mapping: segments array index matches rawatibIds order for intuitive display
+    // Reorder for visual symmetry: [0:fajr, 5:isha, 1:dhuhrB1, 3:dhuhrA, 2:dhuhrB2, 4:maghrib]
+    const segmentMapping = [0, 5, 1, 3, 2, 4]; // Maps rawatibIds index to segment index
+    
+    const baseColor = '#1e293b'; // Slate-800 - faded house outline
+    const activeColor = '#3b82f6'; // Blue - individual segment completed
+    const perfectColor = '#22c55e'; // Green - all 6 completed
+    
+    return (
+      <div className="relative w-full aspect-square flex items-center justify-center">
+        <svg viewBox="0 0 40 40" className="w-full h-full">
+          {/* Base house outline (always visible, faded) */}
+          {segments.map((seg) => (
+            <path 
+              key={`base-${seg.id}`} 
+              d={seg.d} 
+              fill="none" 
+              stroke={baseColor} 
+              strokeWidth={2.5} 
+              strokeLinecap="round"
+            />
+          ))}
+          
+          {/* Active segments based on completed rawatib */}
+          {dayLogs.map((log, rawatibIdx) => {
+            if (log?.status !== LogStatus.DONE) return null;
+            const segmentIdx = segmentMapping[rawatibIdx];
+            if (segmentIdx === undefined) return null;
+            const seg = segments[segmentIdx];
+            if (!seg) return null;
+            return (
+              <path 
+                key={`active-${seg.id}`} 
+                d={seg.d} 
+                fill="none" 
+                stroke={allCompleted ? perfectColor : activeColor} 
+                strokeWidth={3} 
+                strokeLinecap="round"
+                className={allCompleted ? 'drop-shadow-[0_0_4px_rgba(34,197,94,0.5)]' : ''}
+              />
+            );
+          })}
+        </svg>
+        
+        {/* Day number in center */}
+        <span className={clsx(
+          "absolute text-[10px] font-bold",
+          isSameDay(date, new Date()) ? "text-primary" : 
+          allCompleted ? "text-emerald-400" : "text-gray-500"
+        )}>
+          {format(date, 'd')}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 pb-24 space-y-6">
-      <h1 className="text-2xl font-bold text-white mb-4">{t.analytics}</h1>
+      {/* Header with Verse Image */}
+      <div className={clsx(
+        "flex items-center justify-between gap-4",
+        preferences.language === 'ar' && "flex-row-reverse"
+      )}>
+        <h1 className="text-2xl font-bold text-white">{t.analytics}</h1>
+        <img 
+          src="/verse.png" 
+          alt="Verse" 
+          className="w-auto h-10 opacity-90 p-1"
+        />
+      </div>
 
       {/* Global Overview */}
       <div className="space-y-3">
@@ -797,10 +899,10 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Monthly View */}
+      {/* Prayers Monthly View */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-           <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">{t.monthlyView}</h2>
+           <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">{t.prayersMonthlyView}</h2>
            <div className="flex items-center gap-2 bg-card rounded-md p-1 border border-slate-800">
              <button onClick={() => setCurrentMonth(addMonths(currentMonth, -1))} className="p-1 text-gray-400 hover:text-white"><ChevronLeft size={16} /></button>
              <span className="text-xs font-bold min-w-[80px] text-center">{format(currentMonth, 'MMMM yyyy', { locale })}</span>
@@ -815,6 +917,48 @@ const Analytics: React.FC = () => {
              {emptyDays.map((_, i) => <div key={`empty-${i}`} />)}
              {daysInMonth.map((date) => (
                   <div key={date.toISOString()} className="flex justify-center"><div className="w-full max-w-[45px]"><ConsolidatedDayRing date={date} dayLogs={getDayLogs(date)} /></div></div>
+             ))}
+           </div>
+        </div>
+      </div>
+
+      {/* Rawatib Prayers Monthly View */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+           <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">{t.rawatibMonthlyView}</h2>
+           <div className="flex items-center gap-2 bg-card rounded-md p-1 border border-slate-800">
+             <button onClick={() => setCurrentMonth(addMonths(currentMonth, -1))} className="p-1 text-gray-400 hover:text-white"><ChevronLeft size={16} /></button>
+             <span className="text-xs font-bold min-w-[80px] text-center">{format(currentMonth, 'MMMM yyyy', { locale })}</span>
+             <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 text-gray-400 hover:text-white"><ChevronRight size={16} /></button>
+           </div>
+        </div>
+        <div className="bg-card rounded-lg p-4 border border-slate-800 shadow-sm">
+           {/* Legend */}
+           <div className="flex items-center justify-center gap-4 mb-3 text-[10px]">
+             <div className="flex items-center gap-1.5">
+               <div className="w-3 h-3 rounded-sm bg-slate-800 border border-slate-700"></div>
+               <span className="text-gray-500">{preferences.language === 'ar' ? 'لم يتم' : 'Pending'}</span>
+             </div>
+             <div className="flex items-center gap-1.5">
+               <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
+               <span className="text-gray-500">{preferences.language === 'ar' ? 'جزئي' : 'Partial'}</span>
+             </div>
+             <div className="flex items-center gap-1.5">
+               <div className="w-3 h-3 rounded-sm bg-emerald-500"></div>
+               <span className="text-gray-500">{preferences.language === 'ar' ? 'كامل' : 'Complete'}</span>
+             </div>
+           </div>
+           <div className="grid grid-cols-7 mb-2">
+             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider">{d.charAt(0)}</div>)}
+           </div>
+           <div className="grid grid-cols-7 gap-y-2 gap-x-1">
+             {emptyDays.map((_, i) => <div key={`empty-rawatib-${i}`} />)}
+             {daysInMonth.map((date) => (
+                  <div key={`rawatib-${date.toISOString()}`} className="flex justify-center">
+                    <div className="w-full max-w-[45px]">
+                      <RawatibHouse date={date} dayLogs={getRawatibDayLogs(date)} />
+                    </div>
+                  </div>
              ))}
            </div>
         </div>

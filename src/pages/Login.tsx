@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap } from "lucide-react";
+import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone } from "lucide-react";
 import { DemoPersona } from "../services/storage";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -13,28 +13,23 @@ const AnimatedHourglass: React.FC<{ size?: number }> = ({ size = 24 }) => (
     animate={{ rotate: 360 }}
     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
   >
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="text-blue-400">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="text-white">
       <path 
         d="M6 2h12v4l-4 4 4 4v4H6v-4l4-4-4-4V2z" 
         stroke="currentColor" 
         strokeWidth="2" 
         strokeLinecap="round" 
         strokeLinejoin="round"
-        fill="rgba(59, 130, 246, 0.2)"
+        fill="rgba(255, 255, 255, 0.2)"
       />
     </svg>
-    <motion.div
-      className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full blur-[2px]"
-      animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
-      transition={{ duration: 0.5, repeat: Infinity }}
-    />
   </motion.div>
 );
 
 // Floating particles for background
 const FloatingParticle: React.FC<{ delay: number; duration: number; x: number }> = ({ delay, duration, x }) => (
   <motion.div
-    className="absolute w-1 h-1 bg-blue-500/30 rounded-full"
+    className="absolute w-1 h-1 bg-emerald-500/30 rounded-full"
     initial={{ y: "100vh", x: `${x}vw`, opacity: 0 }}
     animate={{ 
       y: "-10vh", 
@@ -45,6 +40,39 @@ const FloatingParticle: React.FC<{ delay: number; duration: number; x: number }>
       delay, 
       repeat: Infinity, 
       ease: "linear" 
+    }}
+  />
+);
+
+// Tiny white dust particles with depth of field
+const DustParticle: React.FC<{ 
+  x: number; 
+  y: number; 
+  size: number; 
+  blur: number; 
+  opacity: number;
+  duration: number;
+  delay: number;
+}> = ({ x, y, size, blur, opacity, duration, delay }) => (
+  <motion.div
+    className="absolute rounded-full bg-white pointer-events-none"
+    style={{
+      left: `${x}%`,
+      top: `${y}%`,
+      width: size,
+      height: size,
+      filter: `blur(${blur}px)`,
+    }}
+    animate={{
+      y: [0, -15, 0, 10, 0],
+      x: [0, 5, -5, 3, 0],
+      opacity: [opacity * 0.5, opacity, opacity * 0.7, opacity, opacity * 0.5],
+    }}
+    transition={{
+      duration,
+      delay,
+      repeat: Infinity,
+      ease: "easeInOut",
     }}
   />
 );
@@ -155,14 +183,31 @@ const Login: React.FC = () => {
     x: Math.random() * 100,
   }));
 
+  // Generate tiny dust particles with different depths
+  const dustParticles = Array.from({ length: 250 }, () => {
+    const depth = Math.random(); // 0 = far (blurry, small), 1 = close (sharp, larger)
+    return {
+      x: Math.random() * 100,
+      y: Math.random() * 50,
+      size: 0.5 + depth * 3.5, // 0.5px to 2px
+      blur: (1 - depth) * 1.5, // 0 to 1.5px blur
+      opacity: 0.1 + depth * 0.25, // 0.1 to 0.35
+      duration: 1 + Math.random() * 1.2,
+      delay: Math.random() * 5,
+    };
+  });
+
+  // State for install instructions tab
+  const [installTab, setInstallTab] = useState<'iphone' | 'android'>('iphone');
+
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col relative overflow-hidden" dir={isArabic ? "rtl" : "ltr"}>
       {/* Animated Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Gradient orbs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[128px] animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[150px]" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[128px] animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-teal-500/10 rounded-full blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/5 rounded-full blur-[150px]" />
         
         {/* Floating particles */}
         {particles.map((p, i) => (
@@ -173,10 +218,15 @@ const Login: React.FC = () => {
         <div 
           className="absolute inset-0 opacity-[0.02]"
           style={{
-            backgroundImage: `linear-gradient(rgba(59, 130, 246, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.3) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(16, 185, 129, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 185, 129, 0.3) 1px, transparent 1px)`,
             backgroundSize: '50px 50px'
           }}
         />
+        
+        {/* Tiny dust particles with depth of field */}
+        {dustParticles.map((p, i) => (
+          <DustParticle key={`dust-${i}`} {...p} />
+        ))}
       </div>
 
       {/* Top Bar */}
@@ -186,7 +236,7 @@ const Login: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center gap-2.5"
         >
-          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
             <Sparkles className="text-white" size={18} />
           </div>
           <span className="text-white font-bold text-xl tracking-tight">حَسِيب</span>
@@ -215,9 +265,9 @@ const Login: React.FC = () => {
           >
             <h1 className="text-5xl font-black text-white mb-4 tracking-tight leading-tight">
               {isArabic ? (
-                <>ابدأ <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">رحلتك</span></>
+                <>ابدأ <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">رحلتك</span></>
               ) : (
-                <>Start Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Journey</span></>
+                <>Start Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Journey</span></>
               )}
             </h1>
             <p className="text-white/40 text-lg leading-relaxed">
@@ -248,8 +298,8 @@ const Login: React.FC = () => {
 
                 <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-2xl p-6">
                   <div className="text-center mb-6">
-                    <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
-                      <Mail className="text-blue-400" size={24} />
+                    <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+                      <Mail className="text-emerald-400" size={24} />
                     </div>
                     <h2 className="text-xl font-bold text-white mb-1">
                       {isArabic ? "إعادة تعيين كلمة المرور" : "Reset Password"}
@@ -276,7 +326,7 @@ const Login: React.FC = () => {
                       <p className="text-white/30 text-sm mb-4">{email}</p>
                       <button
                         onClick={switchToLogin}
-                        className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                        className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
                       >
                         {isArabic ? "العودة" : "Return to Login"}
                       </button>
@@ -288,7 +338,7 @@ const Login: React.FC = () => {
                         placeholder={isArabic ? "البريد الإلكتروني" : "Email"}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className={`w-full px-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all text-base ${isArabic ? 'text-right' : 'text-left'}`}
+                        className={`w-full px-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all text-base ${isArabic ? 'text-right' : 'text-left'}`}
                         required
                         dir={isArabic ? "rtl" : "ltr"}
                       />
@@ -300,7 +350,7 @@ const Login: React.FC = () => {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+                        className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {loading && <AnimatedHourglass size={18} />}
                         {isArabic ? "إرسال" : "Send Link"}
@@ -322,12 +372,12 @@ const Login: React.FC = () => {
                 {/* Auth Card */}
                 <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-2xl p-6">
                   {/* Tab Switcher */}
-                  <div className="flex bg-white/[0.03] rounded-xl p-1 mb-6">
+                  <div className="flex bg-white/[0.03] rounded-xl p-1 mb-6 border border-white/[0.04]">
                     <button
                       onClick={() => setMode("signin")}
                       className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-all ${
                         mode === "signin"
-                          ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg"
+                          ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-400 border border-emerald-500/30"
                           : "text-white/30 hover:text-white/50"
                       }`}
                     >
@@ -337,7 +387,7 @@ const Login: React.FC = () => {
                       onClick={() => setMode("signup")}
                       className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-all ${
                         mode === "signup"
-                          ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg"
+                          ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-400 border border-emerald-500/30"
                           : "text-white/30 hover:text-white/50"
                       }`}
                     >
@@ -352,7 +402,7 @@ const Login: React.FC = () => {
                       placeholder={isArabic ? "البريد الإلكتروني" : "Email"}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`w-full px-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all text-base ${isArabic ? 'text-right' : 'text-left'}`}
+                      className={`w-full px-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all text-base ${isArabic ? 'text-right' : 'text-left'}`}
                       required
                       dir={isArabic ? "rtl" : "ltr"}
                     />
@@ -361,7 +411,7 @@ const Login: React.FC = () => {
                       placeholder={isArabic ? "كلمة المرور" : "Password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className={`w-full px-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all text-base ${isArabic ? 'text-right' : 'text-left'}`}
+                      className={`w-full px-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all text-base ${isArabic ? 'text-right' : 'text-left'}`}
                       required
                       dir={isArabic ? "rtl" : "ltr"}
                     />
@@ -371,7 +421,7 @@ const Login: React.FC = () => {
                         <button
                           type="button"
                           onClick={switchToRecovery}
-                          className="text-white/30 hover:text-blue-400 text-sm transition-colors"
+                          className="text-white/30 hover:text-emerald-400 text-sm transition-colors"
                         >
                           {isArabic ? "نسيت كلمة المرور؟" : "Forgot Password?"}
                         </button>
@@ -387,7 +437,7 @@ const Login: React.FC = () => {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+                      className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {loading && <AnimatedHourglass size={18} />}
                       {mode === "signin"
@@ -442,6 +492,109 @@ const Login: React.FC = () => {
                     );
                   })}
                 </div>
+
+                {/* Install to Home Screen Instructions */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-8"
+                >
+                  <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.04] rounded-xl p-4">
+                    {/* Header */}
+                    <div className={`flex items-center gap-2 mb-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                      <Smartphone size={14} className="text-white/40" />
+                      <span className="text-white/40 text-xs font-medium">
+                        {isArabic ? 'أضف إلى الشاشة الرئيسية' : 'Add to Home Screen'}
+                      </span>
+                    </div>
+
+                    {/* Tab Switcher */}
+                    <div className="flex bg-white/[0.03] rounded-lg p-0.5 mb-3 border border-white/[0.04]">
+                      <button
+                        onClick={() => setInstallTab('iphone')}
+                        className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                          installTab === 'iphone'
+                            ? 'bg-white/[0.08] text-white'
+                            : 'text-white/30 hover:text-white/50'
+                        }`}
+                      >
+                        <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor">
+                          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                        </svg>
+                        iPhone
+                      </button>
+                      <button
+                        onClick={() => setInstallTab('android')}
+                        className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                          installTab === 'android'
+                            ? 'bg-white/[0.08] text-white'
+                            : 'text-white/30 hover:text-white/50'
+                        }`}
+                      >
+                        <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor">
+                          <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24c-2.86-1.21-6.08-1.21-8.94 0L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.83L6.4 9.48C3.3 11.25 1.28 14.44 1 18h22c-.28-3.56-2.3-6.75-5.4-8.52zM7 15.25c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zm10 0c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z"/>
+                        </svg>
+                        Android
+                      </button>
+                    </div>
+
+                    {/* Instructions */}
+                    <AnimatePresence mode="wait">
+                      {installTab === 'iphone' ? (
+                        <motion.div
+                          key="iphone"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          className="space-y-2"
+                        >
+                          <div className={`flex items-center gap-2.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                            <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/50 font-bold shrink-0">1</div>
+                            <div className={`flex items-center gap-1.5 text-white/50 text-xs ${isArabic ? 'flex-row-reverse' : ''}`}>
+                              <span>{isArabic ? 'اضغط على' : 'Tap'}</span>
+                              <Share size={12} className="text-emerald-400" />
+                              <span>{isArabic ? 'في Safari' : 'in Safari'}</span>
+                            </div>
+                          </div>
+                          <div className={`flex items-center gap-2.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                            <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/50 font-bold shrink-0">2</div>
+                            <div className={`flex items-center gap-1.5 text-white/50 text-xs ${isArabic ? 'flex-row-reverse' : ''}`}>
+                              <span>{isArabic ? 'اختر' : 'Select'}</span>
+                              <Plus size={12} className="text-emerald-400" />
+                              <span>{isArabic ? '"إضافة إلى الشاشة"' : '"Add to Home Screen"'}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="android"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          className="space-y-2"
+                        >
+                          <div className={`flex items-center gap-2.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                            <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/50 font-bold shrink-0">1</div>
+                            <div className={`flex items-center gap-1.5 text-white/50 text-xs ${isArabic ? 'flex-row-reverse' : ''}`}>
+                              <span>{isArabic ? 'اضغط على' : 'Tap'}</span>
+                              <MoreVertical size={12} className="text-emerald-400" />
+                              <span>{isArabic ? 'في Chrome' : 'in Chrome'}</span>
+                            </div>
+                          </div>
+                          <div className={`flex items-center gap-2.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                            <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/50 font-bold shrink-0">2</div>
+                            <div className={`flex items-center gap-1.5 text-white/50 text-xs ${isArabic ? 'flex-row-reverse' : ''}`}>
+                              <span>{isArabic ? 'اختر' : 'Select'}</span>
+                              <Smartphone size={12} className="text-emerald-400" />
+                              <span>{isArabic ? '"تثبيت التطبيق"' : '"Install App"'}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
