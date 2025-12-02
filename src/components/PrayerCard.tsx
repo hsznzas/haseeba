@@ -223,7 +223,8 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
               )}
             </div>
             
-            <div className="w-full overflow-hidden mt-1" dir="ltr">
+            {/* Hadith text - hidden for now */}
+            {/* <div className="w-full overflow-hidden mt-1" dir="ltr">
               <div className="animate-scroll-right flex gap-12">
                 <span dir="rtl" className={clsx(
                   "whitespace-nowrap text-[10px] font-arabic",
@@ -231,14 +232,8 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
                 )}>
                   {dailyHadith.text} <span className="text-primary/60 mx-1">— {dailyHadith.source}</span>
                 </span>
-                <span dir="rtl" className={clsx(
-                  "whitespace-nowrap text-[10px] font-arabic",
-                  isLogged ? "text-gray-600" : "text-slate-400"
-                )}>
-                  {dailyHadith.text} <span className="text-primary/60 mx-1">— {dailyHadith.source}</span>
-                </span>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {streak > 0 && (
