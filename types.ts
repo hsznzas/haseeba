@@ -81,3 +81,11 @@ export interface User {
   name?: string;
   isDemo?: boolean;
 }
+
+// Custom reason with optional AI description
+export interface CustomReason {
+  id: string;
+  text: string;
+  description?: string; // Helps AI understand this reason for better analysis
+  createdAt?: string;
+}

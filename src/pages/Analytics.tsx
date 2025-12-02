@@ -549,11 +549,14 @@ const Analytics: React.FC = () => {
            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
            <div className="flex justify-between items-center relative z-10">
              <div>
-               <p className="text-gray-400 text-sm mb-1">{t.perfectLogs}</p>
+               <p className="text-gray-400 text-sm mb-1">{preferences.language === 'ar' ? 'الإنجازات' : 'Wins'}</p>
                <div className="flex items-baseline gap-2">
-                 <span className="text-4xl font-bold text-white">{globalStats.perfectLogs}</span>
-                 <span className="text-lg text-gray-500">/ {globalStats.totalLogs}</span>
+                 <span className="text-4xl font-bold text-emerald-500">{globalStats.wins}</span>
+                 <span className="text-lg text-gray-500">/ {totalAttempts}</span>
                </div>
+               <p className="text-xs text-gray-500 mt-1">
+                 <span className="text-red-400">{globalStats.losses}</span> {preferences.language === 'ar' ? 'خسائر' : 'losses'}
+               </p>
              </div>
              <div className="flex flex-col items-center justify-center w-20 h-20 rounded-full border-4 relative" style={{ borderColor: `${globalRateColor}4D` }}>
                <span className="text-xl font-bold" style={{ color: globalRateColor }}>{globalScoreRate}%</span>

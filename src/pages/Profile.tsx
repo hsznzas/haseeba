@@ -3,13 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database } from 'lucide-react';
+import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
 import { differenceInMonths, differenceInYears, addYears } from 'date-fns';
 import { HabitType } from '../../types';
 import { ICON_MAP, IconName } from '../utils/iconMap';
+
+// Inline Tooltip for column headers
+const ColumnTooltip: React.FC<{ text: string }> = ({ text }) => (
+  <div className="group relative inline-flex items-center ml-1">
+    <Info size={10} className="text-gray-600 hover:text-gray-400 cursor-help transition-colors" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-40 p-2 bg-slate-900 text-[10px] text-white text-center rounded-lg border border-slate-700 shadow-xl z-50">
+      {text}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+    </div>
+  </div>
+);
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -435,10 +446,14 @@ const Profile: React.FC = () => {
          {/* Column Headers */}
          <div className="flex items-center gap-2 mb-2 px-3 text-[9px] text-gray-500 uppercase tracking-wider border-b border-slate-800 pb-2">
            <div className="flex-1">{preferences.language === 'ar' ? 'العادة' : 'Habit'}</div>
-           <div className="w-14 text-center">{preferences.language === 'ar' ? 'نشط' : 'Active'}</div>
-           <div className="w-14 text-center flex items-center justify-center gap-0.5">
-             <MessageSquare size={8} />
+           <div className="w-14 text-center flex items-center justify-center">
+             {preferences.language === 'ar' ? 'نشط' : 'Active'}
+             <ColumnTooltip text={preferences.language === 'ar' ? 'تفعيل/تعطيل العادة من الشاشة الرئيسية' : 'Enable/disable this habit on the home screen'} />
+           </div>
+           <div className="w-14 text-center flex items-center justify-center">
+             <MessageSquare size={8} className="mr-0.5" />
              {preferences.language === 'ar' ? 'سبب' : 'Reason'}
+             <ColumnTooltip text={preferences.language === 'ar' ? 'عند الفشل، هل تريد إدخال سبب؟' : 'When failed, prompt for a reason?'} />
            </div>
          </div>
          

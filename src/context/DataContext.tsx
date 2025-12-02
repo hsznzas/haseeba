@@ -1,7 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Habit, HabitLog } from '../../types';
+import { Habit, HabitLog, HabitType, PrayerQuality } from '../../types';
 import { useAuth } from './AuthContext';
 import { INITIAL_HABITS } from '../../constants';
+
+// Prayer quality level names for notifications
+const PRAYER_LEVEL_NAMES: Record<number, { en: string; ar: string }> = {
+  [PrayerQuality.TAKBIRAH]: { en: '1st Takbirah', ar: 'تكبيرة الإحرام' },
+  [PrayerQuality.JAMAA]: { en: 'In Group', ar: 'جماعة' },
+  [PrayerQuality.ON_TIME]: { en: 'On Time', ar: 'في الوقت' },
+  [PrayerQuality.MISSED]: { en: 'Missed', ar: 'فائتة' },
+};
 
 import * as storage from '../services/storage';
 import * as api from '../services/api';
@@ -31,11 +39,11 @@ interface NotificationState {
   type: 'success' | 'error';
 }
 
-// Notification Bar Component (will be rendered in App)
+// Notification Bar Component - positioned at bottom to avoid phone notch
 export const NotificationBar: React.FC<{ notification: NotificationState; onHide: () => void }> = ({ notification, onHide }) => {
   useEffect(() => {
     if (notification.show) {
-      const timer = setTimeout(onHide, 2000);
+      const timer = setTimeout(onHide, 2500);
       return () => clearTimeout(timer);
     }
   }, [notification.show, onHide]);
@@ -44,14 +52,14 @@ export const NotificationBar: React.FC<{ notification: NotificationState; onHide
 
   return (
     <div 
-      className={`fixed top-0 left-0 right-0 z-[9999] transition-transform duration-300 ease-out ${
-        notification.show ? 'translate-y-0' : '-translate-y-full'
+      className={`fixed bottom-20 left-4 right-4 z-[9999] transition-all duration-300 ease-out ${
+        notification.show ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
       }`}
     >
-      <div className={`py-2 px-4 text-center text-xs font-medium ${
+      <div className={`py-3 px-4 rounded-xl text-center text-sm font-medium shadow-lg backdrop-blur-md ${
         notification.type === 'success' 
-          ? 'bg-emerald-500/90 text-white' 
-          : 'bg-red-500/90 text-white'
+          ? 'bg-emerald-500/95 text-white border border-emerald-400/30' 
+          : 'bg-red-500/95 text-white border border-red-400/30'
       }`}>
         {notification.message}
       </div>
@@ -169,14 +177,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // 3. Persist to storage in background
+    // 3. Build notification message
+    const habit = habits.find(h => h.id === log.habitId);
+    let notificationMsg = '✓ Saved';
+    
+    // For prayer habits, show the quality level name
+    if (habit?.type === HabitType.PRAYER && log.value !== undefined) {
+      const levelNames = PRAYER_LEVEL_NAMES[log.value];
+      if (levelNames) {
+        // Get language from localStorage preferences
+        const prefs = localStorage.getItem('haseeb_preferences');
+        const lang = prefs ? JSON.parse(prefs).language || 'en' : 'en';
+        const levelName = lang === 'ar' ? levelNames.ar : levelNames.en;
+        notificationMsg = `✓ ${levelName}`;
+      }
+    }
+
+    // 4. Persist to storage in background
     try {
       if (user.isDemo) {
         storage.saveLog(log);
-        showNotification('✓ Saved', 'success');
+        showNotification(notificationMsg, 'success');
       } else {
         await api.saveLog(log);
-        showNotification('✓ Synced', 'success');
+        showNotification(notificationMsg, 'success');
       }
     } catch (error) {
       console.error('❌ Error saving log:', error);

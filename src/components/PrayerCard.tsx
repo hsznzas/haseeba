@@ -71,13 +71,21 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
     }
   }, [justClicked]);
 
+  // Levels ordered from best (left) to worst (right): Takbirah -> Jamaa -> OnTime -> Missed
   const levels = [
+    {
+      val: PrayerQuality.TAKBIRAH,
+      label: t.takbirah,
+      icon: Sparkles,
+      base: "text-primary hover:bg-primary/20",
+      color: "text-primary"
+    },
     { 
-      val: PrayerQuality.MISSED, 
-      label: t.missed, 
-      icon: XCircle,
-      base: "text-slate-400 hover:text-red-400 hover:bg-red-500/20",
-      color: "text-red-400"
+      val: PrayerQuality.JAMAA, 
+      label: t.inGroup, 
+      icon: Users,
+      base: "text-slate-400 hover:text-yellow-400 hover:bg-yellow-500/20",
+      color: "text-yellow-400"
     },
     { 
       val: PrayerQuality.ON_TIME, 
@@ -87,18 +95,11 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
       color: "text-orange-400"
     },
     { 
-      val: PrayerQuality.JAMAA, 
-      label: t.inGroup, 
-      icon: Users,
-      base: "text-slate-400 hover:text-yellow-400 hover:bg-yellow-500/20",
-      color: "text-yellow-400"
-    },
-    {
-      val: PrayerQuality.TAKBIRAH,
-      label: t.takbirah,
-      icon: Sparkles,
-      base: "text-primary hover:bg-primary/20",
-      color: "text-primary"
+      val: PrayerQuality.MISSED, 
+      label: t.missed, 
+      icon: XCircle,
+      base: "text-slate-400 hover:text-red-400 hover:bg-red-500/20",
+      color: "text-red-400"
     },
   ];
 
@@ -270,8 +271,20 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
         </motion.button>
       ) : (
         <div className="h-full flex items-stretch flex-none">
-          {levels.slice(0, 3).map((level) => {
+          {/* Takbirah button (1st/best) */}
+          <motion.button
+            onClick={handleTakbirah}
+            whileTap={{ scale: 0.9 }}
+            className="h-full flex-1 w-11 flex items-center justify-center font-bold transition-all duration-300 border-s border-white/10 relative z-10 text-primary hover:bg-primary/20 bg-transparent"
+            aria-label={t.takbirah}
+          >
+            <span className="font-black italic text-sm">1st</span>
+          </motion.button>
+          
+          {/* Other levels: Jamaa, OnTime, Missed */}
+          {levels.slice(1).map((level, idx) => {
             const LevelIcon = level.icon;
+            const isLast = idx === levels.slice(1).length - 1;
             return (
               <motion.button
                 key={level.val}
@@ -279,6 +292,7 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
                 whileTap={{ scale: 0.9 }}
                 className={clsx(
                   "h-full flex-1 w-11 flex items-center justify-center transition-all duration-300 border-s border-white/10 relative z-10 bg-transparent",
+                  isLast && "rounded-e-xl",
                   level.base
                 )}
                 aria-label={level.label}
@@ -287,15 +301,6 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
               </motion.button>
             );
           })}
-          
-          <motion.button
-            onClick={handleTakbirah}
-            whileTap={{ scale: 0.9 }}
-            className="h-full flex-1 w-11 flex items-center justify-center font-bold transition-all duration-300 border-s border-white/10 rounded-e-xl relative z-10 text-primary hover:bg-primary/20 bg-transparent"
-            aria-label={t.takbirah}
-          >
-            <span className="font-black italic text-sm">1st</span>
-          </motion.button>
         </div>
       )}
     </div>
