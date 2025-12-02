@@ -40,8 +40,8 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
       ...DEFAULT_REASONS,
       ...customReasons.map((r: CustomReason) => ({
         id: r.id,
-        labelEn: r.text,
-        labelAr: r.text,
+        labelEn: r.reason_text,
+        labelAr: r.reason_text,
         icon: HelpCircle
       }))
     ];
@@ -74,7 +74,7 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
       if (saveAsPreset) {
         const newReason: CustomReason = {
           id: `custom_${Date.now()}`,
-          text: customText.trim(),
+          reason_text: customText.trim(),
           createdAt: new Date().toISOString()
         };
         await handleSaveCustomReason(newReason);

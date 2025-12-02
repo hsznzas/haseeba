@@ -366,7 +366,6 @@ import { CustomReason } from '../../types';
 
 export const supabaseGetCustomReasons = async (userId: string): Promise<CustomReason[]> => {
   try {
-    // Note: 'description' column may not exist in DB yet - only select existing columns
     const { data, error } = await supabase
       .from('custom_reasons')
       .select('id, reason_text, created_at')
@@ -380,8 +379,7 @@ export const supabaseGetCustomReasons = async (userId: string): Promise<CustomRe
 
     return (data || []).map(row => ({
       id: row.id,
-      text: row.reason_text,
-      // description stored locally only until DB column is added
+      reason_text: row.reason_text,
       createdAt: row.created_at
     }));
   } catch (err) {
@@ -392,14 +390,12 @@ export const supabaseGetCustomReasons = async (userId: string): Promise<CustomRe
 
 export const supabaseSaveCustomReason = async (userId: string, reason: CustomReason): Promise<void> => {
   try {
-    // Note: 'description' column may not exist in DB yet - only save existing columns
     const { error } = await supabase
       .from('custom_reasons')
       .upsert({
         id: reason.id,
         user_id: userId,
-        reason_text: reason.text.trim(),
-        // description: reason.description?.trim() || null, // DB column doesn't exist yet
+        reason_text: reason.reason_text.trim(),
       });
 
     if (error) {

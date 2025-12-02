@@ -285,17 +285,25 @@ export function saveHabit(habit: Habit): Habit[] {
  * Supports both old format (string[]) and new format (CustomReason[])
  */
 export function getCustomReasons(): CustomReason[] {
-  const raw = safeGetItem<(string | CustomReason)[]>(STORAGE_KEYS.CUSTOM_REASONS, []);
-  // Migrate old string format to new CustomReason format
+  const raw = safeGetItem<(string | CustomReason | { text?: string; reason_text?: string })[]>(STORAGE_KEYS.CUSTOM_REASONS, []);
+  // Migrate old formats to new CustomReason format with reason_text
   return raw.map((item, index) => {
     if (typeof item === 'string') {
       return {
         id: `custom_${index}_${Date.now()}`,
-        text: item,
+        reason_text: item,
         createdAt: new Date().toISOString()
       };
     }
-    return item;
+    // Handle old format with 'text' property
+    if ('text' in item && item.text && !('reason_text' in item)) {
+      return {
+        id: item.id || `custom_${index}_${Date.now()}`,
+        reason_text: item.text,
+        createdAt: item.createdAt || new Date().toISOString()
+      };
+    }
+    return item as CustomReason;
   });
 }
 

@@ -310,7 +310,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const handleSaveCustomReason = async (reason: CustomReason) => {
-    console.log('💾 Attempting to save custom reason:', reason.text);
+    console.log('💾 Attempting to save custom reason:', reason.reason_text);
     
     if (!user) {
       console.error('❌ Cannot save custom reason: No user found');

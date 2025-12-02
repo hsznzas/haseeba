@@ -133,11 +133,10 @@ export interface HabitWithStats extends Habit {
   isCompletedToday: boolean;
 }
 
-// Custom reason with optional AI description
+// Custom reason - matches Supabase custom_reasons table
 export interface CustomReason {
   id: string;
-  text: string;
-  description?: string; // Helps AI understand this reason for better analysis
+  reason_text: string; // Column name in Supabase
   createdAt?: string;
 }
 

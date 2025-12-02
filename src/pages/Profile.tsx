@@ -30,11 +30,9 @@ const CustomReasonsSection: React.FC = () => {
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-  const [editDescription, setEditDescription] = useState('');
   const [showDeleteWarning, setShowDeleteWarning] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newReasonText, setNewReasonText] = useState('');
-  const [newReasonDesc, setNewReasonDesc] = useState('');
 
   // Check if a reason is used in any logs
   const getReasonUsageCount = (reasonText: string) => {
@@ -43,8 +41,7 @@ const CustomReasonsSection: React.FC = () => {
 
   const handleEdit = (reason: CustomReason) => {
     setEditingId(reason.id);
-    setEditText(reason.text);
-    setEditDescription(reason.description || '');
+    setEditText(reason.reason_text);
   };
 
   const handleSaveEdit = async () => {
@@ -54,13 +51,11 @@ const CustomReasonsSection: React.FC = () => {
     if (existing) {
       await handleSaveCustomReason({
         ...existing,
-        text: editText.trim(),
-        description: editDescription.trim() || undefined
+        reason_text: editText.trim(),
       });
     }
     setEditingId(null);
     setEditText('');
-    setEditDescription('');
   };
 
   const handleDelete = async (reasonId: string) => {
@@ -73,14 +68,12 @@ const CustomReasonsSection: React.FC = () => {
     
     const newReason: CustomReason = {
       id: `custom_${Date.now()}`,
-      text: newReasonText.trim(),
-      description: newReasonDesc.trim() || undefined,
+      reason_text: newReasonText.trim(),
       createdAt: new Date().toISOString()
     };
     await handleSaveCustomReason(newReason);
     setIsAddingNew(false);
     setNewReasonText('');
-    setNewReasonDesc('');
   };
 
   if (customReasons.length === 0 && !isAddingNew) {
@@ -133,13 +126,6 @@ const CustomReasonsSection: React.FC = () => {
             placeholder={isArabic ? 'اسم السبب...' : 'Reason name...'}
             className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 mb-2"
           />
-          <textarea
-            value={newReasonDesc}
-            onChange={(e) => setNewReasonDesc(e.target.value)}
-            placeholder={isArabic ? 'وصف للذكاء الاصطناعي (اختياري)...' : 'AI description (optional)...'}
-            rows={2}
-            className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white text-xs placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 resize-none mb-2"
-          />
           <div className="flex gap-2">
             <button
               onClick={handleAddNew}
@@ -149,7 +135,7 @@ const CustomReasonsSection: React.FC = () => {
               <Check size={14} /> {isArabic ? 'حفظ' : 'Save'}
             </button>
             <button
-              onClick={() => { setIsAddingNew(false); setNewReasonText(''); setNewReasonDesc(''); }}
+              onClick={() => { setIsAddingNew(false); setNewReasonText(''); }}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-gray-400"
             >
               {isArabic ? 'إلغاء' : 'Cancel'}
@@ -161,7 +147,7 @@ const CustomReasonsSection: React.FC = () => {
       {/* Reasons List */}
       <div className="space-y-2">
         {customReasons.map((reason) => {
-          const usageCount = getReasonUsageCount(reason.text);
+          const usageCount = getReasonUsageCount(reason.reason_text);
           const isEditing = editingId === reason.id;
           const isDeleting = showDeleteWarning === reason.id;
 
@@ -175,13 +161,6 @@ const CustomReasonsSection: React.FC = () => {
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
                     className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 mb-2"
-                  />
-                  <textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder={isArabic ? 'وصف للذكاء الاصطناعي (اختياري)' : 'AI description (optional)'}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white text-xs placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 resize-none mb-2"
                   />
                   <div className="flex gap-2">
                     <button onClick={handleSaveEdit} className="flex-1 py-1.5 bg-cyan-500 rounded-lg text-xs font-bold text-white">
@@ -219,10 +198,7 @@ const CustomReasonsSection: React.FC = () => {
                 // Normal View
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-white truncate">{reason.text}</h4>
-                    {reason.description && (
-                      <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">{reason.description}</p>
-                    )}
+                    <h4 className="text-sm font-bold text-white truncate">{reason.reason_text}</h4>
                     <p className="text-[9px] text-gray-600 mt-1">
                       {isArabic ? `${usageCount} استخدام` : `Used ${usageCount} times`}
                     </p>
