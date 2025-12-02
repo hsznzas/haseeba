@@ -2,13 +2,35 @@ import { GoogleGenAI } from "@google/genai";
 import { Habit, HabitLog, HabitType, PrayerQuality, LogStatus } from '../../types';
 import { AVAILABLE_ICONS } from '../utils/iconMap';
 
+// Helper to get API key from multiple sources
+function getApiKey(): string {
+  // 1. Check user's BYOK (Bring Your Own Key) from localStorage
+  const userKey = localStorage.getItem('user_openai_key');
+  if (userKey && userKey.trim()) {
+    return userKey.trim();
+  }
+  
+  // 2. Check Vite environment variable
+  const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (envKey && envKey.trim()) {
+    return envKey.trim();
+  }
+  
+  return '';
+}
+
 export async function generateSpiritualInsights(habits: Habit[], logs: HabitLog[], language: string): Promise<string> {
   try {
-    if (!process.env.API_KEY) {
-       console.warn("API_KEY not found in env");
+    const apiKey = getApiKey();
+    
+    if (!apiKey) {
+      console.warn("No Gemini API key found. Set VITE_GEMINI_API_KEY in .env or add your key in Profile > AI Settings");
+      return language === 'ar' 
+        ? "⚠️ لم يتم العثور على مفتاح API. يرجى إضافة مفتاح Gemini في الإعدادات > AI Settings"
+        : "⚠️ No API key found. Please add your Gemini API key in Profile > AI Settings";
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const ai = new GoogleGenAI({ apiKey });
     
     // Data Summary Construction
     const prayerHabits = habits.filter(h => h.type === HabitType.PRAYER);
@@ -134,9 +156,11 @@ export async function translateCustomHabits(habits: Habit[], targetLang: 'en' | 
     const customHabits = habits.filter(h => h.id.startsWith('custom_'));
     
     if (customHabits.length === 0) return habits;
-    if (!process.env.API_KEY) return habits;
+    
+    const apiKey = getApiKey();
+    if (!apiKey) return habits;
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const ai = new GoogleGenAI({ apiKey });
     
     const habitsToTranslate = customHabits.map(h => ({
       id: h.id,
@@ -185,12 +209,14 @@ export async function translateCustomHabits(habits: Habit[], targetLang: 'en' | 
 export async function suggestIcon(habitName: string): Promise<string> {
   try {
     if (!habitName.trim()) return 'Activity';
-    if (!process.env.API_KEY) {
-      console.warn("API_KEY not found, using default icon");
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      console.warn("No API key found, using default icon");
       return 'Activity';
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const ai = new GoogleGenAI({ apiKey });
     
     const prompt = `
       You are an expert icon selector. Choose the BEST matching icon from this list for the habit: "${habitName}"
