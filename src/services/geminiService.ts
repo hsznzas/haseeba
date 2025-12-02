@@ -11,49 +11,107 @@ export async function generateSpiritualInsights(habits: Habit[], logs: HabitLog[
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     
     // Data Summary Construction
-    const summary = habits.map(h => {
+    const prayerHabits = habits.filter(h => h.type === HabitType.PRAYER);
+    const otherHabits = habits.filter(h => h.type !== HabitType.PRAYER && h.isActive);
+    
+    // Calculate prayer stats
+    let totalPrayerLogs = 0;
+    let takbirahCount = 0;
+    let jamaaCount = 0;
+    let onTimeCount = 0;
+    let missedCount = 0;
+    
+    const prayerSummary = prayerHabits.map(h => {
         const habitLogs = logs.filter(l => l.habitId === h.id);
         const total = habitLogs.length;
+        totalPrayerLogs += total;
 
-        if (h.type === HabitType.PRAYER) {
-          const takbirah = habitLogs.filter(l => l.value === PrayerQuality.TAKBIRAH).length;
-          const jamaa = habitLogs.filter(l => l.value === PrayerQuality.JAMAA).length;
-          const onTime = habitLogs.filter(l => l.value === PrayerQuality.ON_TIME).length;
-          const missed = habitLogs.filter(l => l.value === PrayerQuality.MISSED).length;
-          
-          return `- ${h.name} (Prayer): Total ${total} days logged. 
-             PERFECT (Takbirah): ${takbirah} (Only this is considered a true success).
-             GOOD BUT NOT PERFECT (In Group): ${jamaa}.
-             NEEDS IMPROVEMENT (On Time): ${onTime}.
-             FAILED (Missed): ${missed}.`;
-        } else {
-          const done = habitLogs.filter(l => l.status === LogStatus.DONE || (l.value && l.value > 0)).length;
-          return `- ${h.name}: Completed ${done} times in last 30 days.`;
-        }
+        const takbirah = habitLogs.filter(l => l.value === PrayerQuality.TAKBIRAH).length;
+        const jamaa = habitLogs.filter(l => l.value === PrayerQuality.JAMAA).length;
+        const onTime = habitLogs.filter(l => l.value === PrayerQuality.ON_TIME).length;
+        const missed = habitLogs.filter(l => l.value === PrayerQuality.MISSED).length;
+        
+        takbirahCount += takbirah;
+        jamaaCount += jamaa;
+        onTimeCount += onTime;
+        missedCount += missed;
+        
+        const takbirahPct = total > 0 ? Math.round((takbirah / total) * 100) : 0;
+        return `- ${h.name}: ${takbirahPct}% Takbirah (${takbirah}/${total}), Jamaa: ${jamaa}, OnTime: ${onTime}, Missed: ${missed}`;
+    }).join('\n');
+    
+    const overallTakbirahPct = totalPrayerLogs > 0 ? Math.round((takbirahCount / totalPrayerLogs) * 100) : 0;
+    
+    // Collect obstacles/reasons
+    const reasonsMap: Record<string, number> = {};
+    logs.forEach(l => {
+      if (l.reason && l.reason.trim()) {
+        reasonsMap[l.reason] = (reasonsMap[l.reason] || 0) + 1;
+      }
+    });
+    const topReasons = Object.entries(reasonsMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([reason, count]) => `${reason}: ${count} times`);
+    
+    // Other habits summary
+    const habitSummary = otherHabits.slice(0, 8).map(h => {
+      const habitLogs = logs.filter(l => l.habitId === h.id);
+      const done = habitLogs.filter(l => l.status === LogStatus.DONE || (l.value && l.value > 0)).length;
+      const total = habitLogs.length;
+      const rate = total > 0 ? Math.round((done / total) * 100) : 0;
+      return `- ${h.name}: ${rate}% success (${done}/${total})`;
     }).join('\n');
 
     const langPrompt = language === 'ar' ? "Respond in Arabic." : "Respond in English.";
     
+    // Determine performance tier
+    const isHighPerformer = overallTakbirahPct >= 70;
+    const isMidPerformer = overallTakbirahPct >= 40 && overallTakbirahPct < 70;
+    const isLowPerformer = overallTakbirahPct < 40;
+    
     const prompt = `
-      You are a wise and strict but compassionate Islamic spiritual coach. 
-      Here is the user's habit tracking data for the last 30 days:
-      
-      ${summary}
-      
-      CRITICAL RULES FOR YOUR ANALYSIS:
-      1. For Prayers, ONLY "Takbirah" (Level 3) is considered a success/perfect score.
-      2. "In Group" (Jamaa) is good, but clearly state it is not the highest level.
-      3. "On Time" or "Missed" should be treated as needing serious improvement. 
-      4. If the user has a low percentage of "Takbirah" (e.g. 11%), DO NOT say "Well done" overall. Be honest that they are missing the highest reward.
-      5. Be encouraging, but do not give false praise for mediocre performance.
+You are a youthful, witty Islamic spiritual coach. Your tone is engaging, occasionally sarcastic (in a friendly way), but always constructive. Keep responses under 1 minute of reading time (max 150 words).
 
-      Please provide:
-      1. A breakdown of their spiritual quality (Focus heavily on whether they are reaching Takbirah or just praying on time).
-      2. A gentle but firm suggestion for improvement.
-      3. A relevant short Quran verse or Hadith about the excellence of the first Takbirah or early prayer.
-      
-      ${langPrompt}
-      Keep the tone inspiring. Format as Markdown.
+## USER'S PRAYER DATA:
+Overall Takbirah Rate: ${overallTakbirahPct}%
+${prayerSummary}
+
+## OTHER HABITS:
+${habitSummary || "No other habits tracked."}
+
+## TOP OBSTACLES REPORTED:
+${topReasons.length > 0 ? topReasons.join('\n') : "None recorded."}
+
+## YOUR MISSION:
+${isHighPerformer ? `
+HIGH PERFORMER DETECTED (${overallTakbirahPct}% Takbirah). DO NOT praise them excessively. Instead:
+- Remind them sincerity (Ikhlas) is what matters, not just showing up early
+- Warn against self-admiration (Ujub) - "Don't let your good deeds make you arrogant"
+- Urge them to pray for ACCEPTANCE (Qubool): "يا مقلب القلوب ثبت قلبي على دينك"
+- A hint of sarcasm: "Impressive numbers... but does Allah see the same quality you see?"
+` : isMidPerformer ? `
+MID PERFORMER (${overallTakbirahPct}% Takbirah). Be direct:
+- Acknowledge effort but push harder: "You're not bad, but 'not bad' won't get you to Jannah VIP section"
+- Identify their top obstacle and give ONE actionable tip
+- No sugarcoating: If Fajr is weak, call it out specifically
+` : `
+LOW PERFORMER (${overallTakbirahPct}% Takbirah). Be firm but hopeful:
+- Be honest: "Let's not pretend this is okay"
+- Pick their WORST prayer and focus advice on that one
+- Give them ONE small win they can achieve this week
+- End with hope: Every expert was once a beginner
+`}
+
+RULES:
+1. NEVER say "Great job" or "Well done" for anything below 80% Takbirah
+2. Always identify the WEAKEST area and address it directly
+3. If obstacles are listed, call them out (e.g., "Sleep? Really? Set an alarm.")
+4. Include one short, punchy Hadith or Quran reference
+5. End with a specific, actionable next step
+
+${langPrompt}
+Format: Use bullet points, keep it scannable. No long paragraphs.
     `;
 
     const response = await ai.models.generateContent({

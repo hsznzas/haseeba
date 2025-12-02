@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
+import { generateSpiritualInsights } from '../services/geminiService';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Activity, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, X } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog } from '../../types';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, 
@@ -17,6 +18,7 @@ import DobModal from '../components/DobModal';
 import Tooltip from '../components/Tooltip';
 import BottomNav from '../components/BottomNav';
 import DateSelector from '../components/DateSelector';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Helper to parse YYYY-MM-DD strings locally without UTC shifting
 const parseLocalISO = (dateStr: string) => {
@@ -54,11 +56,26 @@ const Analytics: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isDobModalOpen, setIsDobModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-
-  const activeHabitCount = habits.filter(h => h.isActive).length;
   
-  // Simple current streak for overview (Placeholder or calculated)
-  const streak = 12; 
+  // AI Insight state
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [isLoadingInsight, setIsLoadingInsight] = useState(false);
+
+  const handleGenerateInsight = async () => {
+    setIsLoadingInsight(true);
+    setAiInsight(null);
+    try {
+      const result = await generateSpiritualInsights(habits, logs, preferences.language);
+      setAiInsight(result);
+    } catch (error) {
+      console.error('AI Insight Error:', error);
+      setAiInsight(preferences.language === 'ar' 
+        ? 'عذراً، حدث خطأ. حاول مرة أخرى.' 
+        : 'Sorry, an error occurred. Please try again.');
+    } finally {
+      setIsLoadingInsight(false);
+    }
+  }; 
 
   // Calculate Countdown
   const calculateRemainingChances = () => {
@@ -524,16 +541,91 @@ const Analytics: React.FC = () => {
              </div>
            </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card p-3 rounded-lg border border-slate-800 flex flex-col justify-center items-center text-center shadow-sm">
-            <div className="flex items-center gap-2 text-blue-400 mb-1"><Activity size={14} /> <span className="text-xl font-bold text-white">{activeHabitCount}</span></div>
-            <span className="text-[10px] text-gray-400 uppercase">{t.activeHabits}</span>
-          </div>
-          <div className="bg-card p-3 rounded-lg border border-slate-800 flex flex-col justify-center items-center text-center shadow-sm">
-            <div className="flex items-center gap-2 text-orange-400 mb-1"><TrendingUp size={14} /> <span className="text-xl font-bold text-white">{streak} days</span></div>
-            <span className="text-[10px] text-gray-400 uppercase">{t.streak}</span>
-          </div>
-        </div>
+        {/* AI Insight Button & Result */}
+        <AnimatePresence mode="wait">
+          {!aiInsight ? (
+            <motion.button
+              key="ai-button"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              onClick={handleGenerateInsight}
+              disabled={isLoadingInsight}
+              className={clsx(
+                "w-full p-4 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-3",
+                "bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600",
+                "hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500",
+                "shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40",
+                "disabled:opacity-70 disabled:cursor-wait",
+                "border border-purple-400/20"
+              )}
+            >
+              {isLoadingInsight ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>{preferences.language === 'ar' ? 'جاري التحليل...' : 'Analyzing...'}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={20} className="text-yellow-300" />
+                  <span>{preferences.language === 'ar' ? '✨ احصل على تحليل ذكي' : '✨ Get AI Insight'}</span>
+                </>
+              )}
+            </motion.button>
+          ) : (
+            <motion.div
+              key="ai-result"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 rounded-xl border border-purple-500/30 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-3 border-b border-purple-500/20 bg-purple-500/10">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-purple-400" />
+                  <span className="text-sm font-bold text-purple-300">
+                    {preferences.language === 'ar' ? 'التحليل الذكي' : 'AI Insight'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleGenerateInsight}
+                    disabled={isLoadingInsight}
+                    className="text-[10px] px-2 py-1 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors flex items-center gap-1"
+                  >
+                    {isLoadingInsight ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                    {preferences.language === 'ar' ? 'تحديث' : 'Refresh'}
+                  </button>
+                  <button
+                    onClick={() => setAiInsight(null)}
+                    className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Content */}
+              <div className="p-4">
+                <div 
+                  className="prose prose-invert prose-sm max-w-none text-gray-300 leading-relaxed
+                    prose-headings:text-purple-300 prose-headings:font-bold prose-headings:text-sm
+                    prose-strong:text-white prose-strong:font-semibold
+                    prose-ul:my-2 prose-li:my-0.5 prose-li:text-gray-300
+                    prose-p:my-2"
+                  dangerouslySetInnerHTML={{ 
+                    __html: aiInsight
+                      .replace(/\n/g, '<br/>')
+                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                      .replace(/^- /gm, '• ')
+                  }} 
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Prayers Breakdown */}
