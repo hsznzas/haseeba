@@ -23,11 +23,32 @@ export async function generateSpiritualInsights(habits: Habit[], logs: HabitLog[
   try {
     const apiKey = getApiKey();
     
+    // Debug logging
+    console.log('🤖 AI Insight Debug:', {
+      habitsCount: habits?.length || 0,
+      logsCount: logs?.length || 0,
+      hasApiKey: !!apiKey,
+      language
+    });
+    
     if (!apiKey) {
       console.warn("No Gemini API key found. Set VITE_GEMINI_API_KEY in .env or add your key in Profile > AI Settings");
       return language === 'ar' 
         ? "⚠️ لم يتم العثور على مفتاح API. يرجى إضافة مفتاح Gemini في الإعدادات > AI Settings"
         : "⚠️ No API key found. Please add your Gemini API key in Profile > AI Settings";
+    }
+    
+    // Check if we have data
+    if (!habits || habits.length === 0) {
+      return language === 'ar'
+        ? "⚠️ لا توجد عادات لتحليلها. أضف بعض العادات أولاً."
+        : "⚠️ No habits to analyze. Add some habits first.";
+    }
+    
+    if (!logs || logs.length === 0) {
+      return language === 'ar'
+        ? "⚠️ لا توجد سجلات لتحليلها. سجل بعض العادات أولاً."
+        : "⚠️ No logs to analyze. Log some habits first to get insights.";
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -135,11 +156,23 @@ ${langPrompt}
 Format: Use bullet points, keep it scannable. No long paragraphs.
     `;
 
+    // Debug: Log the prompt summary
+    console.log('🤖 AI Prompt Summary:', {
+      prayerHabitsCount: prayerHabits.length,
+      otherHabitsCount: otherHabits.length,
+      totalPrayerLogs,
+      overallTakbirahPct,
+      topReasons,
+      promptLength: prompt.length
+    });
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
 
+    console.log('🤖 AI Response received:', response.text?.substring(0, 100) + '...');
+    
     return response.text || "Could not generate insights.";
   } catch (error) {
     console.error("Gemini API Error:", error);
