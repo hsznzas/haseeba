@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X } from 'lucide-react';
+import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
@@ -82,13 +82,16 @@ const Profile: React.FC = () => {
 
   // Load API Key from LocalStorage on mount
   useEffect(() => {
-    const storedKey = localStorage.getItem('user_openai_key');
+    // Check new key first, then legacy key for backwards compatibility
+    const storedKey = localStorage.getItem('haseeb_gemini_key') || localStorage.getItem('user_openai_key');
     if (storedKey) setApiKey(storedKey);
   }, []);
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setApiKey(val);
+    localStorage.setItem('haseeb_gemini_key', val);
+    // Also keep legacy key for backwards compatibility with geminiService
     localStorage.setItem('user_openai_key', val);
   };
 
@@ -353,19 +356,63 @@ const Profile: React.FC = () => {
          </div>
        </div>
 
-       {/* AI Settings (BYOK) */}
+       {/* AI Settings (BYOK - Gemini) */}
        <div className="glass-card p-5 rounded-2xl">
-          <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-             <Database size={18} className="text-purple-500" /> AI Settings
-          </h3>
-          <p className="text-xs text-gray-500 mb-3">Enter your OpenAI API Key to enable smart insights (Stored locally on your device).</p>
-          <input 
-            type="password" 
-            value={apiKey}
-            onChange={handleApiKeyChange}
-            placeholder="sk-..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white text-sm focus:border-purple-500 focus:outline-none"
-          />
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-white flex items-center gap-2">
+               <Sparkles size={18} className="text-purple-500" /> 
+               {preferences.language === 'ar' ? 'إعدادات الذكاء الاصطناعي' : 'AI Settings'}
+            </h3>
+            {apiKey && (
+              <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                ✓ {preferences.language === 'ar' ? 'متصل' : 'Connected'}
+              </span>
+            )}
+          </div>
+          
+          <p className="text-xs text-gray-400 mb-3">
+            {preferences.language === 'ar' 
+              ? 'أضف مفتاح Gemini API للحصول على تحليلات ذكية مخصصة.'
+              : 'Add your Gemini API key to unlock personalized AI insights.'}
+          </p>
+          
+          <div className="relative">
+            <input 
+              type="password" 
+              value={apiKey}
+              onChange={handleApiKeyChange}
+              placeholder="AIza..."
+              className={clsx(
+                "w-full bg-slate-900 border rounded-xl p-3 text-white text-sm focus:outline-none pr-20",
+                apiKey ? "border-emerald-500/50 focus:border-emerald-500" : "border-slate-800 focus:border-purple-500"
+              )}
+            />
+            {apiKey && (
+              <button
+                onClick={() => { setApiKey(''); localStorage.removeItem('haseeb_gemini_key'); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] px-2 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              >
+                {preferences.language === 'ar' ? 'مسح' : 'Clear'}
+              </button>
+            )}
+          </div>
+          
+          <div className="mt-3 p-3 bg-slate-900/50 rounded-xl border border-slate-800">
+            <p className="text-[10px] text-gray-500 mb-2">
+              <span className="text-purple-400 font-bold">🔒 {preferences.language === 'ar' ? 'آمن:' : 'Secure:'}</span>{' '}
+              {preferences.language === 'ar' 
+                ? 'مفتاحك مخزن على جهازك فقط ولا يُرسل إلا مباشرة إلى Google.'
+                : 'Your key is stored only on your device and sent directly to Google.'}
+            </p>
+            <a 
+              href="https://aistudio.google.com/apikey" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[10px] text-purple-400 hover:text-purple-300 underline"
+            >
+              {preferences.language === 'ar' ? '🔗 احصل على مفتاح مجاني من Google AI Studio' : '🔗 Get a free key from Google AI Studio'}
+            </a>
+          </div>
        </div>
 
        {/* Habits Settings - All habits with Activity and Reason toggles */}
