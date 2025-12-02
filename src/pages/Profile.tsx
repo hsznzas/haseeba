@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Edit2 } from 'lucide-react';
+import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
-import { differenceInDays, differenceInMonths, differenceInYears, differenceInHours, differenceInMinutes, differenceInSeconds, addYears, differenceInWeeks } from 'date-fns';
+import { differenceInMonths, differenceInYears, addYears } from 'date-fns';
 import { HabitType } from '../../types';
 import { ICON_MAP, IconName } from '../utils/iconMap';
 
