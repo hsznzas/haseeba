@@ -873,13 +873,13 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   const prayerHabits = allHabits.filter(h => prayerIds.includes(h.id));
   const nonPrayerHabits = allHabits.filter(h => !prayerIds.includes(h.id));
   
-  // 6. Generate logs - STRICT NO GAPS! Every habit gets a log for every day
+  // 6. Generate logs - STRICT NO GAPS! Every applicable habit gets a log for every day
+  // NOTE: SKIP status is DEPRECATED - we only use DONE or FAIL
   const allLogs: HabitLog[] = [];
   
-  // Tracking for streak calculation info
-  let doneCount = 0;
-  let skipCount = 0;
-  let failCount = 0;
+  // Tracking for stats
+  let winsCount = 0;  // DONE or TAKBIRAH
+  let lossCount = 0;  // FAIL or non-TAKBIRAH prayers
   
   // Start from 1 (yesterday) so users can log today's habits themselves
   for (let i = 1; i <= daysBack; i++) {
@@ -889,23 +889,16 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
     const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
 
     // ===== PRAYERS: Always log all 5 prayers (NO GAPS) =====
+    // WIN = TAKBIRAH, LOSS = anything else
     prayerHabits.forEach(prayer => {
       const quality = getPrayerQuality(persona);
       let reason: string | undefined;
-      let status: LogStatus;
       
-      // Determine status based on prayer quality
-      if (quality === PrayerQuality.TAKBIRAH || quality === PrayerQuality.JAMAA) {
-        status = LogStatus.DONE;
-        doneCount++;
-      } else if (quality === PrayerQuality.ON_TIME) {
-        // On time is partially done - use DONE but lower quality
-        status = LogStatus.DONE;
-        doneCount++;
+      // Track wins/losses for prayers
+      if (quality === PrayerQuality.TAKBIRAH) {
+        winsCount++;
       } else {
-        // Missed = FAIL
-        status = LogStatus.FAIL;
-        failCount++;
+        lossCount++;
       }
       
       // MANDATORY REASONING: If quality < TAKBIRAH, MUST have a reason
@@ -918,79 +911,36 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
         habitId: prayer.id,
         date: dateStr,
         value: quality,
-        status: status,
+        status: LogStatus.DONE, // All prayers are "logged", quality indicates win/loss
         reason: reason,
         timestamp: date.getTime(),
       });
     });
 
-    // ===== NON-PRAYER HABITS: Always log (NO GAPS) =====
+    // ===== NON-PRAYER HABITS: Log only on applicable days =====
+    // No SKIP status - either don't log (non-applicable) or log DONE/FAIL
     nonPrayerHabits.forEach(habit => {
       let status: LogStatus;
       let value: number;
       let reason: string | undefined;
       
-      // Handle fasting habits - SKIP on non-applicable days
-      if (habit.id === 'fasting_monday' && dayOfWeek !== 1) {
-        status = LogStatus.SKIP;
-        value = 0;
-        skipCount++;
-        allLogs.push({
-          id: `${habit.id}-${dateStr}`,
-          habitId: habit.id,
-          date: dateStr,
-          value: value,
-          status: status,
-          timestamp: date.getTime(),
-        });
-        return;
-      }
-      if (habit.id === 'fasting_thursday' && dayOfWeek !== 4) {
-        status = LogStatus.SKIP;
-        value = 0;
-        skipCount++;
-        allLogs.push({
-          id: `${habit.id}-${dateStr}`,
-          habitId: habit.id,
-          date: dateStr,
-          value: value,
-          status: status,
-          timestamp: date.getTime(),
-        });
-        return;
-      }
-      // White days: 13th, 14th, 15th of Islamic month - just skip for simplicity
-      if (habit.id === 'fasting_white_days') {
-        status = LogStatus.SKIP;
-        value = 0;
-        skipCount++;
-        allLogs.push({
-          id: `${habit.id}-${dateStr}`,
-          habitId: habit.id,
-          date: dateStr,
-          value: value,
-          status: status,
-          timestamp: date.getTime(),
-        });
-        return;
-      }
+      // Fasting habits: Only log on applicable days (no log = not applicable)
+      if (habit.id === 'fasting_monday' && dayOfWeek !== 1) return; // Skip - not Monday
+      if (habit.id === 'fasting_thursday' && dayOfWeek !== 4) return; // Skip - not Thursday
+      if (habit.id === 'fasting_white_days') return; // Skip white days for simplicity
       
-      // Regular habit: Determine DONE or FAIL based on persona
+      // Determine DONE or FAIL based on persona success rate
       const succeeded = didHabitSucceed(persona);
       
       if (succeeded) {
         status = LogStatus.DONE;
         value = habit.dailyTarget || 1;
-        doneCount++;
+        winsCount++;
       } else {
-        // Failed habits get either FAIL or SKIP based on random chance
-        // FAIL = tried but couldn't, SKIP = intentionally skipped
-        const isFail = Math.random() > 0.3; // 70% FAIL, 30% SKIP
-        status = isFail ? LogStatus.FAIL : LogStatus.SKIP;
+        status = LogStatus.FAIL;
         value = 0;
-        if (isFail) failCount++; else skipCount++;
-        
-        // MANDATORY REASONING for failed/skipped habits
+        lossCount++;
+        // MANDATORY REASONING for failed habits
         reason = getReasonForPersona(persona);
       }
       
@@ -1024,11 +974,12 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   const prayerLogs = allLogs.filter(l => prayerIds.includes(l.habitId));
   const habitLogs = allLogs.filter(l => !prayerIds.includes(l.habitId));
   const logsWithReasons = allLogs.filter(l => l.reason);
+  const overallRate = Math.round((winsCount / (winsCount + lossCount)) * 100);
   
   console.log(`[Storage] ✅ Seeding complete!`);
   console.log(`  📋 Habits: ${allHabits.length} (${prayerHabits.length} prayers + ${nonPrayerHabits.length} others)`);
   console.log(`  📊 Logs: ${allLogs.length} total (${prayerLogs.length} prayers, ${habitLogs.length} habits)`);
-  console.log(`  ✅ DONE: ${doneCount} | ⏭️ SKIP: ${skipCount} | ❌ FAIL: ${failCount}`);
+  console.log(`  ✅ WINS: ${winsCount} | ❌ LOSSES: ${lossCount} | 📈 Rate: ${overallRate}%`);
   console.log(`  💬 Reasons: ${logsWithReasons.length} logs have reasoning`);
   console.log(`  📅 Period: ${daysBack} days (${startDateStr} to ${formatDate(today)})`);
 };

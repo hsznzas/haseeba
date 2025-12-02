@@ -95,11 +95,6 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
     }
   };
 
-  const handleSkipClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onUpdate(0, LogStatus.SKIP);
-  };
-
   const handleDeleteClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       onDeleteLog();
@@ -217,7 +212,6 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
     if (!isLogged) return null;
     if (isDone) return <Check size={12} className="text-emerald-500 shrink-0" />;
     if (isFailed) return <X size={12} className="text-red-500 shrink-0" />;
-    if (log?.status === LogStatus.SKIP) return <Minus size={12} className="text-gray-500 shrink-0" />;
     return null;
   };
 
@@ -253,9 +247,9 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
         </div>
       </div>
 
-      {/* Action Buttons (Edge-to-Edge Grid) */}
+      {/* Action Buttons (2-Column Grid: Done & Fail) */}
       {isLogged ? (
-        <div className="h-full w-16 flex items-center justify-center bg-slate-900/50 border-l border-white/5 ml-auto">
+        <div className="h-full w-16 flex items-center justify-center bg-slate-900/50 border-l border-white/5 ml-auto rounded-e-xl">
              <motion.button 
                 whileTap={{ scale: 0.9 }}
                 onClick={handleDeleteClick}
@@ -265,7 +259,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
             </motion.button>
         </div>
       ) : (
-        <div className="grid grid-cols-3 h-full w-40 ml-auto">
+        <div className="grid grid-cols-2 h-full w-28 ml-auto">
              {/* GREEN Check-in button */}
              <motion.button
                 whileTap={{ scale: 0.9 }}
@@ -275,18 +269,11 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
                 <Check size={20} />
             </motion.button>
 
-            <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={handleSkipClick}
-                className="flex items-center justify-center bg-slate-800/30 hover:bg-slate-700/50 text-gray-400 border-l border-white/10 transition-colors"
-            >
-                <Minus size={20} />
-            </motion.button>
-
+            {/* RED Fail button */}
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleFailClick}
-                className="flex items-center justify-center bg-red-500/10 hover:bg-red-500/20 text-red-500 border-l border-white/10 transition-colors"
+                className="flex items-center justify-center bg-red-500/10 hover:bg-red-500/20 text-red-500 border-l border-white/10 transition-colors rounded-e-xl"
             >
                 <X size={20} />
             </motion.button>

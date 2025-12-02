@@ -93,31 +93,51 @@ const Analytics: React.FC = () => {
 
   const remainingChances = calculateRemainingChances();
 
-  // --- Global Score Calculation ---
+  // --- Global Score Calculation (Wins vs Losses) ---
+  // WIN = DONE for regular habits, TAKBIRAH for prayers
+  // LOSS = FAIL for regular habits, non-TAKBIRAH for prayers
+  // SKIP is ignored (deprecated)
   const globalStats = useMemo(() => {
     return logs.reduce((acc, log) => {
       const habit = habits.find(h => h.id === log.habitId);
       if (!habit) return acc;
+      
+      // Skip legacy SKIP logs - they don't count
+      if (log.status === LogStatus.SKIP) return acc;
 
-      acc.totalLogs += 1;
-
-      let isPerfect = false;
+      // For prayers: TAKBIRAH = win, anything else = loss
       if (habit.type === HabitType.PRAYER) {
-        if (log.value === PrayerQuality.TAKBIRAH) isPerfect = true;
-      } else if (habit.type === HabitType.REGULAR) {
-        if (log.status === LogStatus.DONE) isPerfect = true;
-      } else if (habit.type === HabitType.COUNTER) {
+        if (log.value === PrayerQuality.TAKBIRAH) {
+          acc.wins += 1;
+        } else {
+          acc.losses += 1;
+        }
+      } 
+      // For regular habits: DONE = win, FAIL = loss
+      else if (habit.type === HabitType.REGULAR) {
+        if (log.status === LogStatus.DONE) {
+          acc.wins += 1;
+        } else if (log.status === LogStatus.FAIL) {
+          acc.losses += 1;
+        }
+      } 
+      // For counter habits: met target = win, else loss
+      else if (habit.type === HabitType.COUNTER) {
         const target = habit.dailyTarget || 1;
-        if (log.value >= target || log.status === LogStatus.DONE) isPerfect = true;
+        if (log.value >= target || log.status === LogStatus.DONE) {
+          acc.wins += 1;
+        } else if (log.status === LogStatus.FAIL) {
+          acc.losses += 1;
+        }
       }
 
-      if (isPerfect) acc.perfectLogs += 1;
       return acc;
-    }, { totalLogs: 0, perfectLogs: 0 });
+    }, { wins: 0, losses: 0 });
   }, [logs, habits]);
 
-  const globalScoreRate = globalStats.totalLogs > 0 
-    ? Math.round((globalStats.perfectLogs / globalStats.totalLogs) * 100) 
+  const totalAttempts = globalStats.wins + globalStats.losses;
+  const globalScoreRate = totalAttempts > 0 
+    ? Math.round((globalStats.wins / totalAttempts) * 100) 
     : 0;
   
   const globalRateColor = getRateColorStyle(globalScoreRate);
