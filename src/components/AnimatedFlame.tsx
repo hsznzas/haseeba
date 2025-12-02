@@ -16,10 +16,10 @@ const AnimatedFlame: React.FC<AnimatedFlameProps> = ({ size = 10, streak, classN
   const animParams = useMemo(() => {
     // Random values for each keyframe to create organic flickering
     const flicker = () => ({
-      scale: 0.95 + Math.random() * 0.08, // Very subtle: 0.95 to 1.03
-      rotate: -3 + Math.random() * 6, // Small rotation: -3 to 3 degrees
-      y: Math.random() * 0.5, // Tiny float: 0 to 0.5px
-      opacity: 0.85 + Math.random() * 0.15, // 0.85 to 1.0
+      scale: 0.95 + Math.random() * 0.08, // Very subtle: 0.95 to 1.08
+      rotate: -3 + Math.random() * 8, // Small rotation: -3 to 3 degrees
+      y: Math.random() * 0.8, // Tiny float: 0 to 0.5px
+      opacity: 0.70 + Math.random() * 0.15, // 0.85 to 1.0
     });
     
     return {
