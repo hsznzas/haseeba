@@ -8,54 +8,84 @@ interface AnimatedFlameProps {
 }
 
 /**
- * Animated flame icon with randomized animation parameters
- * Each instance gets unique timing, scale, rotation and float effects
+ * Animated flame icon with realistic flickering animation
+ * Each instance gets unique timing for organic, randomized feel
  */
 const AnimatedFlame: React.FC<AnimatedFlameProps> = ({ size = 10, streak, className = '' }) => {
   // Generate random animation parameters (memoized so they stay consistent)
-  const animParams = useMemo(() => ({
-    // Animation duration between 0.8s and 1.6s
-    duration: 0.8 + Math.random() * 0.8,
-    // Animation delay between 0 and 0.5s
-    delay: Math.random() * 0.5,
-    // Scale variation: oscillates between these values
-    scaleMin: 0.85 + Math.random() * 0.1,
-    scaleMax: 1.1 + Math.random() * 0.15,
-    // Rotation range: -15 to 15 degrees max
-    rotationRange: 5 + Math.random() * 10,
-    // Opacity variation
-    opacityMin: 0.7 + Math.random() * 0.2,
-    // Y-axis float amount
-    floatAmount: 0.5 + Math.random() * 1.5,
-  }), []);
+  const animParams = useMemo(() => {
+    // Random values for each keyframe to create organic flickering
+    const flicker = () => ({
+      scale: 0.95 + Math.random() * 0.08, // Very subtle: 0.95 to 1.03
+      rotate: -3 + Math.random() * 6, // Small rotation: -3 to 3 degrees
+      y: Math.random() * 0.5, // Tiny float: 0 to 0.5px
+      opacity: 0.85 + Math.random() * 0.15, // 0.85 to 1.0
+    });
+    
+    return {
+      // Fast flickering: 0.3s to 0.6s
+      duration: 0.3 + Math.random() * 0.3,
+      // Stagger start times
+      delay: Math.random() * 0.3,
+      // Generate 8 random keyframe states for irregular flickering
+      k0: flicker(),
+      k1: flicker(),
+      k2: flicker(),
+      k3: flicker(),
+      k4: flicker(),
+      k5: flicker(),
+      k6: flicker(),
+      k7: flicker(),
+    };
+  }, []);
 
-  // Unique animation name based on params
-  const animationName = `flame-dance-${Math.random().toString(36).substr(2, 9)}`;
+  // Unique animation name
+  const animationName = `flame-flicker-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Keyframes CSS (no glow, just transform and opacity)
+  // Keyframes with many steps for realistic flickering (no smooth transitions)
   const keyframesStyle = `
     @keyframes ${animationName} {
-      0%, 100% {
-        transform: scale(${animParams.scaleMin}) rotate(-${animParams.rotationRange}deg) translateY(0px);
-        opacity: ${animParams.opacityMin};
+      0% {
+        transform: scale(${animParams.k0.scale}) rotate(${animParams.k0.rotate}deg) translateY(-${animParams.k0.y}px);
+        opacity: ${animParams.k0.opacity};
+      }
+      12% {
+        transform: scale(${animParams.k1.scale}) rotate(${animParams.k1.rotate}deg) translateY(-${animParams.k1.y}px);
+        opacity: ${animParams.k1.opacity};
       }
       25% {
-        transform: scale(${animParams.scaleMax}) rotate(${animParams.rotationRange * 0.5}deg) translateY(-${animParams.floatAmount}px);
-        opacity: 1;
+        transform: scale(${animParams.k2.scale}) rotate(${animParams.k2.rotate}deg) translateY(-${animParams.k2.y}px);
+        opacity: ${animParams.k2.opacity};
+      }
+      37% {
+        transform: scale(${animParams.k3.scale}) rotate(${animParams.k3.rotate}deg) translateY(-${animParams.k3.y}px);
+        opacity: ${animParams.k3.opacity};
       }
       50% {
-        transform: scale(${(animParams.scaleMin + animParams.scaleMax) / 2}) rotate(${animParams.rotationRange}deg) translateY(-${animParams.floatAmount * 0.5}px);
-        opacity: ${(1 + animParams.opacityMin) / 2};
+        transform: scale(${animParams.k4.scale}) rotate(${animParams.k4.rotate}deg) translateY(-${animParams.k4.y}px);
+        opacity: ${animParams.k4.opacity};
+      }
+      62% {
+        transform: scale(${animParams.k5.scale}) rotate(${animParams.k5.rotate}deg) translateY(-${animParams.k5.y}px);
+        opacity: ${animParams.k5.opacity};
       }
       75% {
-        transform: scale(${animParams.scaleMax * 0.95}) rotate(-${animParams.rotationRange * 0.3}deg) translateY(-${animParams.floatAmount * 1.2}px);
-        opacity: 0.95;
+        transform: scale(${animParams.k6.scale}) rotate(${animParams.k6.rotate}deg) translateY(-${animParams.k6.y}px);
+        opacity: ${animParams.k6.opacity};
+      }
+      87% {
+        transform: scale(${animParams.k7.scale}) rotate(${animParams.k7.rotate}deg) translateY(-${animParams.k7.y}px);
+        opacity: ${animParams.k7.opacity};
+      }
+      100% {
+        transform: scale(${animParams.k0.scale}) rotate(${animParams.k0.rotate}deg) translateY(-${animParams.k0.y}px);
+        opacity: ${animParams.k0.opacity};
       }
     }
   `;
 
-  // Calculate streak-based size enhancement (no glow)
-  const streakBonus = Math.min(streak / 30, 1); // Max bonus at 30 day streak
+  // Minimal streak bonus (very subtle)
+  const streakBonus = Math.min(streak / 50, 1); // Max bonus at 50 day streak
 
   return (
     <span className={`inline-flex items-center ${className}`}>
@@ -63,7 +93,8 @@ const AnimatedFlame: React.FC<AnimatedFlameProps> = ({ size = 10, streak, classN
       <span
         className="inline-block"
         style={{
-          animation: `${animationName} ${animParams.duration}s ease-in-out infinite`,
+          // Use steps() for instant jumps between keyframes - more flame-like
+          animation: `${animationName} ${animParams.duration}s steps(8) infinite`,
           animationDelay: `${animParams.delay}s`,
           transformOrigin: 'center bottom',
         }}
@@ -73,8 +104,8 @@ const AnimatedFlame: React.FC<AnimatedFlameProps> = ({ size = 10, streak, classN
           className="text-orange-500"
           fill="currentColor"
           style={{
-            // Longer streaks get slightly larger flames
-            transform: `scale(${1 + streakBonus * 0.2})`,
+            // Very subtle size increase for long streaks
+            transform: `scale(${1 + streakBonus * 0.08})`,
           }}
         />
       </span>
