@@ -2,7 +2,8 @@ import React from 'react';
 import { Habit, HabitLog, HabitType, LogStatus } from '../../types';
 import { usePreferences } from '../App';
 import PrayerCard from './PrayerCard';
-import { Check, X, Minus, RotateCcw, Flame, Plus, CheckCircle2, Activity } from 'lucide-react';
+import { Check, X, Minus, RotateCcw, Plus, CheckCircle2, Activity } from 'lucide-react';
+import AnimatedFlame from './AnimatedFlame';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { ICON_MAP, IconName } from '../utils/iconMap';
@@ -166,7 +167,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
                         <span className="text-xs text-gray-400 font-mono">{count} / {target}</span>
                         {streak > 0 && (
                             <div className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20">
-                                <Flame size={10} fill="currentColor" /> {streak}
+                                <AnimatedFlame size={10} streak={streak} /> {streak}
                             </div>
                         )}
                     </div>
@@ -246,7 +247,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
             {getStatusIcon()}
             {streak > 0 && (
                 <div className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20">
-                    <Flame size={10} fill="currentColor" /> {streak}
+                    <AnimatedFlame size={10} streak={streak} /> {streak}
                 </div>
             )}
         </div>

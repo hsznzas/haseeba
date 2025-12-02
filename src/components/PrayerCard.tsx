@@ -4,7 +4,8 @@ import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Flame, Sunrise, Sun, CloudSun, Sunset, Moon, Users, Clock, XCircle, RotateCcw, GripVertical } from 'lucide-react';
+import { Sparkles, Sunrise, Sun, CloudSun, Sunset, Moon, Users, Clock, XCircle, RotateCcw, GripVertical } from 'lucide-react';
+import AnimatedFlame from './AnimatedFlame';
 import { getDailyHadith } from '../utils/hadithRotator';
 
 interface PrayerCardProps {
@@ -241,7 +242,7 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
 
           {streak > 0 && (
             <div className="relative z-10 flex items-center gap-1 text-[9px] font-semibold text-orange-400 ms-2 shrink-0">
-              <Flame size={9} className="fill-orange-400 animate-flame" /> 
+              <AnimatedFlame size={9} streak={streak} /> 
               <motion.span
                 key={streak}
                 initial={{ scale: 1.5, color: "#fbbf24" }}
