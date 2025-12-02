@@ -90,7 +90,6 @@ export async function generateSpiritualInsights(habits: Habit[], logs: HabitLog[
     // Determine performance tier
     const isHighPerformer = overallTakbirahPct >= 70;
     const isMidPerformer = overallTakbirahPct >= 40 && overallTakbirahPct < 70;
-    const isLowPerformer = overallTakbirahPct < 40;
     
     const prompt = `
 You are a youthful, witty Islamic spiritual coach. Your tone is engaging, occasionally sarcastic (in a friendly way), but always constructive. Keep responses under 1 minute of reading time (max 150 words).
