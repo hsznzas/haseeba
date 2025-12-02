@@ -362,11 +362,13 @@ export const getLogForDate = async (habitId: string, date: string): Promise<Habi
 // CUSTOM REASONS (CLOUD STORAGE)
 // ==========================================
 
-export const supabaseGetCustomReasons = async (userId: string): Promise<string[]> => {
+import { CustomReason } from '../../types';
+
+export const supabaseGetCustomReasons = async (userId: string): Promise<CustomReason[]> => {
   try {
     const { data, error } = await supabase
       .from('custom_reasons')
-      .select('reason_text')
+      .select('id, reason_text, description, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
@@ -375,20 +377,27 @@ export const supabaseGetCustomReasons = async (userId: string): Promise<string[]
       return [];
     }
 
-    return (data || []).map(row => row.reason_text);
+    return (data || []).map(row => ({
+      id: row.id,
+      text: row.reason_text,
+      description: row.description || undefined,
+      createdAt: row.created_at
+    }));
   } catch (err) {
     console.error('Unexpected error in fetchCustomReasons:', err);
     return [];
   }
 };
 
-export const supabaseSaveCustomReason = async (userId: string, reason: string): Promise<void> => {
+export const supabaseSaveCustomReason = async (userId: string, reason: CustomReason): Promise<void> => {
   try {
     const { error } = await supabase
       .from('custom_reasons')
-      .insert({
+      .upsert({
+        id: reason.id,
         user_id: userId,
-        reason_text: reason.trim(),
+        reason_text: reason.text.trim(),
+        description: reason.description?.trim() || null,
       });
 
     if (error) {
@@ -401,15 +410,38 @@ export const supabaseSaveCustomReason = async (userId: string, reason: string): 
   }
 };
 
+export const supabaseDeleteCustomReason = async (userId: string, reasonId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('custom_reasons')
+      .delete()
+      .eq('id', reasonId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('❌ Error deleting custom reason from Supabase:', error);
+      throw error;
+    }
+  } catch (err) {
+    console.error('❌ Unexpected error in deleteCustomReason:', err);
+    throw err;
+  }
+};
+
 // Wrapper functions
-export const getCustomReasons = async (): Promise<string[]> => {
+export const getCustomReasons = async (): Promise<CustomReason[]> => {
   const userId = await getCurrentUserId();
   return supabaseGetCustomReasons(userId);
 };
 
-export const saveCustomReason = async (reason: string): Promise<void> => {
+export const saveCustomReason = async (reason: CustomReason): Promise<void> => {
   const userId = await getCurrentUserId();
   return supabaseSaveCustomReason(userId, reason);
+};
+
+export const deleteCustomReason = async (reasonId: string): Promise<void> => {
+  const userId = await getCurrentUserId();
+  return supabaseDeleteCustomReason(userId, reasonId);
 };
 
 // --- BATCH UPDATE HABIT ORDER ---

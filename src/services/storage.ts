@@ -19,6 +19,7 @@ import {
   STORAGE_KEYS,
   StorageKey,
   HabitType,
+  CustomReason,
 } from "@/index";
 import { INITIAL_HABITS } from "../../constants";
 import { generateId, getTodayString } from "@/lib/utils";
@@ -281,20 +282,46 @@ export function saveHabit(habit: Habit): Habit[] {
 
 /**
  * Get custom reasons for skipping habits
+ * Supports both old format (string[]) and new format (CustomReason[])
  */
-export function getCustomReasons(): string[] {
-  return safeGetItem<string[]>(STORAGE_KEYS.CUSTOM_REASONS, []);
+export function getCustomReasons(): CustomReason[] {
+  const raw = safeGetItem<(string | CustomReason)[]>(STORAGE_KEYS.CUSTOM_REASONS, []);
+  // Migrate old string format to new CustomReason format
+  return raw.map((item, index) => {
+    if (typeof item === 'string') {
+      return {
+        id: `custom_${index}_${Date.now()}`,
+        text: item,
+        createdAt: new Date().toISOString()
+      };
+    }
+    return item;
+  });
 }
 
 /**
  * Save a custom reason for skipping habits
  */
-export function saveCustomReason(reason: string): void {
+export function saveCustomReason(reason: CustomReason): void {
   const reasons = getCustomReasons();
-  if (!reasons.includes(reason)) {
+  const existingIndex = reasons.findIndex(r => r.id === reason.id);
+  if (existingIndex >= 0) {
+    // Update existing
+    reasons[existingIndex] = reason;
+  } else {
+    // Add new
     reasons.push(reason);
-    safeSetItem(STORAGE_KEYS.CUSTOM_REASONS, reasons);
   }
+  safeSetItem(STORAGE_KEYS.CUSTOM_REASONS, reasons);
+}
+
+/**
+ * Delete a custom reason
+ */
+export function deleteCustomReason(reasonId: string): void {
+  const reasons = getCustomReasons();
+  const filtered = reasons.filter(r => r.id !== reasonId);
+  safeSetItem(STORAGE_KEYS.CUSTOM_REASONS, filtered);
 }
 
 /**

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Habit, HabitLog, HabitType, PrayerQuality } from '../../types';
+import { Habit, HabitLog, HabitType, PrayerQuality, CustomReason } from '../../types';
 import { useAuth } from './AuthContext';
 import { INITIAL_HABITS } from '../../constants';
 
@@ -73,7 +73,7 @@ export const NotificationBar: React.FC<{ notification: NotificationState; onHide
 interface DataContextType {
   habits: Habit[];
   logs: HabitLog[];
-  customReasons: string[];
+  customReasons: CustomReason[];
   loading: boolean;
   notification: NotificationState;
   hideNotification: () => void;
@@ -82,7 +82,8 @@ interface DataContextType {
   handleDeleteLog: (habitId: string, date: string) => Promise<void>;
   handleSaveHabit: (habit: Habit) => Promise<void>;
   handleDeleteHabit: (id: string) => Promise<void>;
-  handleAddCustomReason: (reason: string) => Promise<void>;
+  handleSaveCustomReason: (reason: CustomReason) => Promise<void>;
+  handleDeleteCustomReason: (reasonId: string) => Promise<void>;
   handleSeedData: () => void;
   setHabits: React.Dispatch<React.SetStateAction<Habit[]>>;
   handleReorderHabits: (newOrder: Habit[]) => Promise<void>;
@@ -94,7 +95,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user, loading: authLoading } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
-  const [customReasons, setCustomReasons] = useState<string[]>([]);
+  const [customReasons, setCustomReasons] = useState<CustomReason[]>([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationState>({
     show: false,
@@ -308,8 +309,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const handleAddCustomReason = async (reason: string) => {
-    console.log('💾 Attempting to save custom reason:', reason);
+  const handleSaveCustomReason = async (reason: CustomReason) => {
+    console.log('💾 Attempting to save custom reason:', reason.text);
     
     if (!user) {
       console.error('❌ Cannot save custom reason: No user found');
@@ -318,19 +319,56 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Optimistic update
     const previousReasons = [...customReasons];
-    if (!customReasons.includes(reason)) {
+    const existingIndex = customReasons.findIndex(r => r.id === reason.id);
+    if (existingIndex >= 0) {
+      setCustomReasons(prev => {
+        const updated = [...prev];
+        updated[existingIndex] = reason;
+        return updated;
+      });
+    } else {
       setCustomReasons(prev => [...prev, reason]);
     }
 
     try {
       if (user.isDemo) {
         storage.saveCustomReason(reason);
+        showNotification('✓ Reason saved', 'success');
       } else {
         await api.saveCustomReason(reason);
+        showNotification('✓ Reason synced', 'success');
       }
     } catch (error) {
       console.error('❌ Error saving custom reason:', error);
       setCustomReasons(previousReasons);
+      showNotification('Failed to save reason', 'error');
+    }
+  };
+
+  const handleDeleteCustomReason = async (reasonId: string) => {
+    console.log('🗑️ Attempting to delete custom reason:', reasonId);
+    
+    if (!user) {
+      console.error('❌ Cannot delete custom reason: No user found');
+      return;
+    }
+    
+    // Optimistic update
+    const previousReasons = [...customReasons];
+    setCustomReasons(prev => prev.filter(r => r.id !== reasonId));
+
+    try {
+      if (user.isDemo) {
+        storage.deleteCustomReason(reasonId);
+        showNotification('✓ Reason deleted', 'success');
+      } else {
+        await api.deleteCustomReason(reasonId);
+        showNotification('✓ Reason deleted', 'success');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting custom reason:', error);
+      setCustomReasons(previousReasons);
+      showNotification('Failed to delete reason', 'error');
     }
   };
 
@@ -388,7 +426,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleDeleteLog, 
       handleSaveHabit,
       handleDeleteHabit,
-      handleAddCustomReason,
+      handleSaveCustomReason,
+      handleDeleteCustomReason,
       handleSeedData,
       setHabits,
       handleReorderHabits

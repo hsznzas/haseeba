@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info } from 'lucide-react';
+import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
 import { differenceInMonths, differenceInYears, addYears } from 'date-fns';
-import { HabitType } from '../../types';
+import { HabitType, CustomReason } from '../../types';
 import { ICON_MAP, IconName } from '../utils/iconMap';
 
 // Inline Tooltip for column headers
@@ -21,6 +21,235 @@ const ColumnTooltip: React.FC<{ text: string }> = ({ text }) => (
     </div>
   </div>
 );
+
+// Custom Reasons Settings Section
+const CustomReasonsSection: React.FC = () => {
+  const { preferences } = usePreferences();
+  const { customReasons, handleSaveCustomReason, handleDeleteCustomReason, logs } = useData();
+  const isArabic = preferences.language === 'ar';
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [showDeleteWarning, setShowDeleteWarning] = useState<string | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newReasonText, setNewReasonText] = useState('');
+  const [newReasonDesc, setNewReasonDesc] = useState('');
+
+  // Check if a reason is used in any logs
+  const getReasonUsageCount = (reasonText: string) => {
+    return logs.filter(l => l.reason === reasonText).length;
+  };
+
+  const handleEdit = (reason: CustomReason) => {
+    setEditingId(reason.id);
+    setEditText(reason.text);
+    setEditDescription(reason.description || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editText.trim()) return;
+    
+    const existing = customReasons.find(r => r.id === editingId);
+    if (existing) {
+      await handleSaveCustomReason({
+        ...existing,
+        text: editText.trim(),
+        description: editDescription.trim() || undefined
+      });
+    }
+    setEditingId(null);
+    setEditText('');
+    setEditDescription('');
+  };
+
+  const handleDelete = async (reasonId: string) => {
+    await handleDeleteCustomReason(reasonId);
+    setShowDeleteWarning(null);
+  };
+
+  const handleAddNew = async () => {
+    if (!newReasonText.trim()) return;
+    
+    const newReason: CustomReason = {
+      id: `custom_${Date.now()}`,
+      text: newReasonText.trim(),
+      description: newReasonDesc.trim() || undefined,
+      createdAt: new Date().toISOString()
+    };
+    await handleSaveCustomReason(newReason);
+    setIsAddingNew(false);
+    setNewReasonText('');
+    setNewReasonDesc('');
+  };
+
+  if (customReasons.length === 0 && !isAddingNew) {
+    return (
+      <div className="glass-card p-5 rounded-2xl">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-bold text-white flex items-center gap-2">
+            <MessageSquare size={18} className="text-cyan-500" />
+            {isArabic ? 'الأسباب المخصصة' : 'Custom Reasons'}
+          </h3>
+        </div>
+        <div className="text-center py-4">
+          <p className="text-xs text-gray-500 mb-3">
+            {isArabic ? 'لا توجد أسباب مخصصة. أضف سبباً جديداً عند تسجيل العادات.' : 'No custom reasons yet. Add one when logging habits.'}
+          </p>
+          <button
+            onClick={() => setIsAddingNew(true)}
+            className="text-xs bg-cyan-500/10 text-cyan-500 px-3 py-2 rounded-lg border border-cyan-500/30 flex items-center gap-1 mx-auto"
+          >
+            <Plus size={12} /> {isArabic ? 'إضافة سبب' : 'Add Reason'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-card p-5 rounded-2xl">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-bold text-white flex items-center gap-2">
+          <MessageSquare size={18} className="text-cyan-500" />
+          {isArabic ? 'الأسباب المخصصة' : 'Custom Reasons'}
+          <ColumnTooltip text={isArabic ? 'إدارة الأسباب المخصصة للعادات الفاشلة' : 'Manage custom reasons for failed habits'} />
+        </h3>
+        <button
+          onClick={() => setIsAddingNew(true)}
+          className="text-[10px] font-bold bg-cyan-500/10 text-cyan-500 px-2 py-1 rounded-lg border border-cyan-500/30 flex items-center gap-1"
+        >
+          <Plus size={10} /> {isArabic ? 'إضافة' : 'Add'}
+        </button>
+      </div>
+
+      {/* Add New Reason Form */}
+      {isAddingNew && (
+        <div className="mb-4 p-3 bg-slate-900/50 rounded-xl border border-cyan-500/30">
+          <input
+            type="text"
+            value={newReasonText}
+            onChange={(e) => setNewReasonText(e.target.value)}
+            placeholder={isArabic ? 'اسم السبب...' : 'Reason name...'}
+            className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 mb-2"
+          />
+          <textarea
+            value={newReasonDesc}
+            onChange={(e) => setNewReasonDesc(e.target.value)}
+            placeholder={isArabic ? 'وصف للذكاء الاصطناعي (اختياري)...' : 'AI description (optional)...'}
+            rows={2}
+            className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white text-xs placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 resize-none mb-2"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleAddNew}
+              disabled={!newReasonText.trim()}
+              className="flex-1 py-2 bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-1"
+            >
+              <Check size={14} /> {isArabic ? 'حفظ' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setIsAddingNew(false); setNewReasonText(''); setNewReasonDesc(''); }}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-gray-400"
+            >
+              {isArabic ? 'إلغاء' : 'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reasons List */}
+      <div className="space-y-2">
+        {customReasons.map((reason) => {
+          const usageCount = getReasonUsageCount(reason.text);
+          const isEditing = editingId === reason.id;
+          const isDeleting = showDeleteWarning === reason.id;
+
+          return (
+            <div key={reason.id} className="p-3 bg-slate-900/50 rounded-xl border border-slate-800">
+              {isEditing ? (
+                // Edit Mode
+                <div>
+                  <input
+                    type="text"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 mb-2"
+                  />
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder={isArabic ? 'وصف للذكاء الاصطناعي (اختياري)' : 'AI description (optional)'}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white text-xs placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 resize-none mb-2"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveEdit} className="flex-1 py-1.5 bg-cyan-500 rounded-lg text-xs font-bold text-white">
+                      {isArabic ? 'حفظ' : 'Save'}
+                    </button>
+                    <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-slate-800 rounded-lg text-xs text-gray-400">
+                      {isArabic ? 'إلغاء' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              ) : isDeleting ? (
+                // Delete Warning
+                <div className="text-center py-2">
+                  <div className="flex items-center justify-center gap-2 text-yellow-500 mb-2">
+                    <AlertTriangle size={16} />
+                    <span className="text-xs font-bold">{isArabic ? 'تحذير' : 'Warning'}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mb-3">
+                    {usageCount > 0 
+                      ? (isArabic 
+                          ? `${usageCount} سجل سيفقد السبب` 
+                          : `${usageCount} logs will lose this reason`)
+                      : (isArabic ? 'هل تريد حذف هذا السبب؟' : 'Delete this reason?')}
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <button onClick={() => handleDelete(reason.id)} className="px-3 py-1.5 bg-red-500 rounded-lg text-xs font-bold text-white">
+                      {isArabic ? 'حذف' : 'Delete'}
+                    </button>
+                    <button onClick={() => setShowDeleteWarning(null)} className="px-3 py-1.5 bg-slate-800 rounded-lg text-xs text-gray-400">
+                      {isArabic ? 'إلغاء' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Normal View
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-white truncate">{reason.text}</h4>
+                    {reason.description && (
+                      <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">{reason.description}</p>
+                    )}
+                    <p className="text-[9px] text-gray-600 mt-1">
+                      {isArabic ? `${usageCount} استخدام` : `Used ${usageCount} times`}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => handleEdit(reason)}
+                      className="p-1.5 text-gray-500 hover:text-cyan-500 hover:bg-cyan-500/10 rounded-lg transition-colors"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteWarning(reason.id)}
+                      className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -373,7 +602,7 @@ const Profile: React.FC = () => {
             <h3 className="font-bold text-white flex items-center gap-2">
                <Sparkles size={18} className="text-purple-500" /> 
                {preferences.language === 'ar' ? 'إعدادات الذكاء الاصطناعي' : 'AI Settings'}
-            </h3>
+          </h3>
             {apiKey && (
               <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                 ✓ {preferences.language === 'ar' ? 'متصل' : 'Connected'}
@@ -388,10 +617,10 @@ const Profile: React.FC = () => {
           </p>
           
           <div className="relative">
-            <input 
-              type="password" 
-              value={apiKey}
-              onChange={handleApiKeyChange}
+          <input 
+            type="password" 
+            value={apiKey}
+            onChange={handleApiKeyChange}
               placeholder="AIza..."
               className={clsx(
                 "w-full bg-slate-900 border rounded-xl p-3 text-white text-sm focus:outline-none pr-20",
@@ -449,12 +678,12 @@ const Profile: React.FC = () => {
            <div className="w-14 text-center flex items-center justify-center">
              {preferences.language === 'ar' ? 'نشط' : 'Active'}
              <ColumnTooltip text={preferences.language === 'ar' ? 'تفعيل/تعطيل العادة من الشاشة الرئيسية' : 'Enable/disable this habit on the home screen'} />
-           </div>
+                </div>
            <div className="w-14 text-center flex items-center justify-center">
              <MessageSquare size={8} className="mr-0.5" />
              {preferences.language === 'ar' ? 'سبب' : 'Reason'}
              <ColumnTooltip text={preferences.language === 'ar' ? 'عند الفشل، هل تريد إدخال سبب؟' : 'When failed, prompt for a reason?'} />
-           </div>
+                </div>
          </div>
          
          <div className="space-y-1">
@@ -468,7 +697,7 @@ const Profile: React.FC = () => {
                <div>
                  <h4 className="text-sm font-bold text-white">Rawatib</h4>
                  <p className="text-[10px] text-gray-500">{preferences.language === 'ar' ? '٦ سنن مؤكدة' : '6 confirmed Sunnahs'}</p>
-               </div>
+       </div>
              </div>
              {/* Activity Toggle */}
              <div className="w-14 flex justify-center">
@@ -525,7 +754,7 @@ const Profile: React.FC = () => {
                      )}>
                        {displayName}
                      </span>
-                   </div>
+             </div>
                    
                    {/* Activity Toggle */}
                    <div className="w-14 flex justify-center">
@@ -541,7 +770,7 @@ const Profile: React.FC = () => {
                          habit.isActive ? "right-[3px]" : "left-[3px]"
                        )} />
                      </button>
-                   </div>
+             </div>
                    
                    {/* Reason Toggle */}
                    <div className="w-14 flex justify-center">
@@ -557,8 +786,8 @@ const Profile: React.FC = () => {
                          habit.requireReason !== false ? "right-[3px]" : "left-[3px]"
                        )} />
                      </button>
-                   </div>
-                 </div>
+             </div>
+           </div>
                );
              })}
          </div>
@@ -570,20 +799,23 @@ const Profile: React.FC = () => {
          )}
        </div>
 
+       {/* Custom Reasons Settings */}
+       <CustomReasonsSection />
+
        {/* Developer Tools - Only for Demo Users */}
        {user?.isDemo && (
-         <div className="glass-card p-5 rounded-2xl">
-           <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Database size={18} className="text-yellow-500" /> Developer Tools</h3>
-           <div className="flex gap-2">
-               <button onClick={handleSeed} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-sm font-bold text-gray-300 transition-colors flex items-center justify-center gap-2">
-                 {t.seedData}
-               </button>
-               <button onClick={() => { localStorage.removeItem('haseeb_demo_persona'); window.location.reload(); }} className="flex-1 py-3 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-sm font-bold text-yellow-500 transition-colors flex items-center justify-center gap-2">
-                  <RotateCcw size={14} /> Reset Demo
-               </button>
-           </div>
-           {message && <p className="text-green-500 text-xs mt-2 text-center">{message}</p>}
+       <div className="glass-card p-5 rounded-2xl">
+         <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Database size={18} className="text-yellow-500" /> Developer Tools</h3>
+         <div className="flex gap-2">
+             <button onClick={handleSeed} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-sm font-bold text-gray-300 transition-colors flex items-center justify-center gap-2">
+               {t.seedData}
+             </button>
+                 <button onClick={() => { localStorage.removeItem('haseeb_demo_persona'); window.location.reload(); }} className="flex-1 py-3 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-sm font-bold text-yellow-500 transition-colors flex items-center justify-center gap-2">
+                    <RotateCcw size={14} /> Reset Demo
+                 </button>
          </div>
+         {message && <p className="text-green-500 text-xs mt-2 text-center">{message}</p>}
+       </div>
        )}
 
        {/* Home Button */}

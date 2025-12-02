@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Briefcase, Utensils, Plane, Thermometer, HelpCircle, Armchair, Users, Bed } from 'lucide-react';
 import { usePreferences } from '../App';
 import { useData } from '../context/DataContext';
+import { CustomReason } from '../../types';
 import clsx from 'clsx';
 
 interface ReasonModalProps {
@@ -25,7 +26,7 @@ const DEFAULT_REASONS = [
 
 const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm }) => {
   const { preferences } = usePreferences();
-  const { customReasons, handleAddCustomReason } = useData();
+  const { customReasons, handleSaveCustomReason } = useData();
   const isArabic = preferences.language === 'ar';
   
   const [isCustom, setIsCustom] = useState(false);
@@ -37,10 +38,10 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
   const reasons = useMemo(() => {
     return [
       ...DEFAULT_REASONS,
-      ...customReasons.map(r => ({
-        id: `custom_${r}`,
-        labelEn: r,
-        labelAr: r,
+      ...customReasons.map((r: CustomReason) => ({
+        id: r.id,
+        labelEn: r.text,
+        labelAr: r.text,
         icon: HelpCircle
       }))
     ];
@@ -71,7 +72,12 @@ const ReasonModal: React.FC<ReasonModalProps> = ({ isOpen, onClose, onConfirm })
   const handleSaveCustom = async () => {
     if (customText.trim()) {
       if (saveAsPreset) {
-        await handleAddCustomReason(customText.trim());
+        const newReason: CustomReason = {
+          id: `custom_${Date.now()}`,
+          text: customText.trim(),
+          createdAt: new Date().toISOString()
+        };
+        await handleSaveCustomReason(newReason);
       }
       onConfirm(customText.trim());
     }

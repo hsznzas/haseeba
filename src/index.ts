@@ -133,6 +133,14 @@ export interface HabitWithStats extends Habit {
   isCompletedToday: boolean;
 }
 
+// Custom reason with optional AI description
+export interface CustomReason {
+  id: string;
+  text: string;
+  description?: string; // Helps AI understand this reason for better analysis
+  createdAt?: string;
+}
+
 // ============================================
 // Prayer Types
 // ============================================
