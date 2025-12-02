@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Habit, HabitLog, PrayerQuality } from '../../types';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
@@ -6,7 +6,7 @@ import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Sunrise, Sun, CloudSun, Sunset, Moon, Users, Clock, XCircle, RotateCcw, GripVertical } from 'lucide-react';
 import AnimatedFlame from './AnimatedFlame';
-import { getDailyHadith } from '../utils/hadithRotator';
+// import { getDailyHadith } from '../utils/hadithRotator'; // Hadith feature disabled
 
 interface PrayerCardProps {
   habit: Habit;
@@ -28,7 +28,8 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
   const currentLevel = log ? log.value : null;
   const isLogged = currentLevel !== null;
 
-  const dailyHadith = useMemo(() => getDailyHadith(habit.id), [habit.id]);
+  // Hadith feature disabled for now
+  // const dailyHadith = useMemo(() => getDailyHadith(habit.id), [habit.id]);
 
   const handleTakbirah = (e: React.MouseEvent) => {
     e.stopPropagation();

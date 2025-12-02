@@ -547,6 +547,7 @@ const Analytics: React.FC = () => {
         
         <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-6 rounded-lg border border-slate-800 relative overflow-hidden shadow-md">
            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+           {/* Overall Performance: Wins / Total with losses count */}
            <div className="flex justify-between items-center relative z-10">
              <div>
                <p className="text-gray-400 text-sm mb-1">{preferences.language === 'ar' ? 'الإنجازات' : 'Wins'}</p>
