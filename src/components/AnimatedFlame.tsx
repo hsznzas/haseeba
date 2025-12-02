@@ -9,7 +9,7 @@ interface AnimatedFlameProps {
 
 /**
  * Animated flame icon with randomized animation parameters
- * Each instance gets unique timing, scale, rotation and glow effects
+ * Each instance gets unique timing, scale, rotation and float effects
  */
 const AnimatedFlame: React.FC<AnimatedFlameProps> = ({ size = 10, streak, className = '' }) => {
   // Generate random animation parameters (memoized so they stay consistent)
@@ -25,8 +25,6 @@ const AnimatedFlame: React.FC<AnimatedFlameProps> = ({ size = 10, streak, classN
     rotationRange: 5 + Math.random() * 10,
     // Opacity variation
     opacityMin: 0.7 + Math.random() * 0.2,
-    // Glow intensity
-    glowIntensity: 0.3 + Math.random() * 0.4,
     // Y-axis float amount
     floatAmount: 0.5 + Math.random() * 1.5,
   }), []);
@@ -34,35 +32,30 @@ const AnimatedFlame: React.FC<AnimatedFlameProps> = ({ size = 10, streak, classN
   // Unique animation name based on params
   const animationName = `flame-dance-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Keyframes CSS
+  // Keyframes CSS (no glow, just transform and opacity)
   const keyframesStyle = `
     @keyframes ${animationName} {
       0%, 100% {
         transform: scale(${animParams.scaleMin}) rotate(-${animParams.rotationRange}deg) translateY(0px);
         opacity: ${animParams.opacityMin};
-        filter: drop-shadow(0 0 ${animParams.glowIntensity * 2}px #f97316) drop-shadow(0 0 ${animParams.glowIntensity * 4}px #ea580c);
       }
       25% {
         transform: scale(${animParams.scaleMax}) rotate(${animParams.rotationRange * 0.5}deg) translateY(-${animParams.floatAmount}px);
         opacity: 1;
-        filter: drop-shadow(0 0 ${animParams.glowIntensity * 4}px #f97316) drop-shadow(0 0 ${animParams.glowIntensity * 8}px #ea580c);
       }
       50% {
         transform: scale(${(animParams.scaleMin + animParams.scaleMax) / 2}) rotate(${animParams.rotationRange}deg) translateY(-${animParams.floatAmount * 0.5}px);
         opacity: ${(1 + animParams.opacityMin) / 2};
-        filter: drop-shadow(0 0 ${animParams.glowIntensity * 3}px #f97316) drop-shadow(0 0 ${animParams.glowIntensity * 6}px #ea580c);
       }
       75% {
         transform: scale(${animParams.scaleMax * 0.95}) rotate(-${animParams.rotationRange * 0.3}deg) translateY(-${animParams.floatAmount * 1.2}px);
         opacity: 0.95;
-        filter: drop-shadow(0 0 ${animParams.glowIntensity * 5}px #f97316) drop-shadow(0 0 ${animParams.glowIntensity * 10}px #ea580c);
       }
     }
   `;
 
-  // Calculate streak-based enhancements
+  // Calculate streak-based size enhancement (no glow)
   const streakBonus = Math.min(streak / 30, 1); // Max bonus at 30 day streak
-  const enhancedGlow = animParams.glowIntensity * (1 + streakBonus * 0.5);
 
   return (
     <span className={`inline-flex items-center ${className}`}>
@@ -82,9 +75,6 @@ const AnimatedFlame: React.FC<AnimatedFlameProps> = ({ size = 10, streak, classN
           style={{
             // Longer streaks get slightly larger flames
             transform: `scale(${1 + streakBonus * 0.2})`,
-            filter: streak > 7 
-              ? `drop-shadow(0 0 ${enhancedGlow * 6}px #f97316)` 
-              : undefined,
           }}
         />
       </span>
