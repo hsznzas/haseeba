@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
-import { TRANSLATIONS } from '../../constants';
+import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare } from 'lucide-react';
+import { User, Globe, Database, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Edit2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
-import DobModal from '../components/DobModal';
 import { useAuth } from '../context/AuthContext';
-import { differenceInDays, differenceInMonths, differenceInYears, addYears } from 'date-fns';
+import { differenceInDays, differenceInMonths, differenceInYears, differenceInHours, differenceInMinutes, differenceInSeconds, addYears, differenceInWeeks } from 'date-fns';
 import { HabitType } from '../../types';
+import { ICON_MAP, IconName } from '../utils/iconMap';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -20,10 +20,11 @@ const Profile: React.FC = () => {
   
   const [message, setMessage] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
-  const [isDobModalOpen, setIsDobModalOpen] = useState(false);
   const [apiKey, setApiKey] = useState('');
+  const [showDobModal, setShowDobModal] = useState(false);
+  const [dobInput, setDobInput] = useState(preferences.dateOfBirth || '');
 
-  // Lifetime Countdown calculation
+  // Lifetime Countdown calculation with more metrics
   const lifetimeStats = useMemo(() => {
     if (!preferences.dateOfBirth) return null;
     
@@ -35,26 +36,44 @@ const Profile: React.FC = () => {
       
       if (targetDate <= now) return null;
       
-      const daysLeft = differenceInDays(targetDate, now);
+      // Time calculations
+      const totalMs = targetDate.getTime() - now.getTime();
+      const secondsLeft = Math.floor(totalMs / 1000);
+      const minutesLeft = Math.floor(totalMs / (1000 * 60));
+      const hoursLeft = Math.floor(totalMs / (1000 * 60 * 60));
+      const daysLeft = Math.floor(totalMs / (1000 * 60 * 60 * 24));
+      const weeksLeft = Math.floor(daysLeft / 7);
       const monthsLeft = differenceInMonths(targetDate, now);
       const yearsLeft = differenceInYears(targetDate, now);
       
+      // Life progress percentage
+      const totalLifeMs = targetDate.getTime() - dob.getTime();
+      const livedMs = now.getTime() - dob.getTime();
+      const lifeProgress = (livedMs / totalLifeMs) * 100;
+      
       // Islamic calculations
-      const prayersLeft = daysLeft * 5;
       const fridaysLeft = Math.floor(daysLeft / 7);
       const ramadansLeft = yearsLeft;
       const hajjsLeft = yearsLeft;
-      const monThuLeft = Math.floor(daysLeft / 7) * 2; // Approx Mon + Thu fasting days
+      const monThuLeft = Math.floor(daysLeft / 7) * 2;
+      
+      // White days (13th, 14th, 15th of each lunar month) - approximately 3 per month
+      const whiteDaysLeft = monthsLeft * 3;
       
       return {
+        secondsLeft,
+        minutesLeft,
+        hoursLeft,
         daysLeft,
+        weeksLeft,
         monthsLeft,
         yearsLeft,
-        prayersLeft,
+        lifeProgress,
         fridaysLeft,
         ramadansLeft,
         hajjsLeft,
         monThuLeft,
+        whiteDaysLeft,
       };
     } catch (e) {
       return null;
@@ -88,11 +107,19 @@ const Profile: React.FC = () => {
     setTimeout(() => setMessage(''), 3000);
   };
 
+  const handleSaveDob = () => {
+    if (!dobInput) return;
+    setPreferences({
+      ...preferences,
+      dateOfBirth: dobInput
+    });
+    setShowDobModal(false);
+  };
+
   const toggleHabit = (id: string) => {
     const habit = habits.find(h => h.id === id);
     if (id === 'rawatib_master') {
         const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
-        // Check if all currently active to toggle off, else toggle on
         const allActive = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.isActive);
         const newState = !allActive;
         
@@ -113,6 +140,23 @@ const Profile: React.FC = () => {
 
   const isRawatibActive = habits.filter(h => h.presetId === 'rawatib').every(h => h.isActive);
 
+  // Helper to get icon for a habit
+  const getHabitIcon = (habit: { id: string; icon?: string; emoji?: string }) => {
+    // First check if habit has an icon defined
+    const iconName = habit.icon || INITIAL_HABITS.find(h => h.id === habit.id)?.icon;
+    if (iconName && ICON_MAP[iconName as IconName]) {
+      return ICON_MAP[iconName as IconName];
+    }
+    // Fallback to a default icon
+    return ICON_MAP.Activity;
+  };
+
+  // Helper to get color for a habit
+  const getHabitColor = (habit: { id: string; color?: string }) => {
+    const color = habit.color || INITIAL_HABITS.find(h => h.id === habit.id)?.color;
+    return color || '#10b981';
+  };
+
   return (
     <div className="p-4 space-y-6 pb-32">
        <h1 className="text-2xl font-bold text-white mb-4">{t.profile}</h1>
@@ -125,11 +169,7 @@ const Profile: React.FC = () => {
             </div>
             <div>
                 <h2 className="font-bold text-lg text-white">{user?.email || 'User'}</h2>
-                <div className="flex items-center gap-2">
-                    <button onClick={() => setIsDobModalOpen(true)} className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-full border border-slate-700 text-gray-400 transition-colors">
-                        {t.setDob}
-                    </button>
-                </div>
+                <p className="text-xs text-gray-500">{user?.isDemo ? 'Demo Account' : 'Logged In'}</p>
             </div>
          </div>
          <button 
@@ -140,6 +180,150 @@ const Profile: React.FC = () => {
             <LogOut size={20} />
          </button>
        </div>
+
+       {/* Lifetime Countdown - Moved above language settings */}
+       <div className="glass-card rounded-2xl overflow-hidden">
+         {/* Header */}
+         <div className="flex items-center justify-between p-4 border-b border-slate-800">
+           <h3 className="font-bold text-white flex items-center gap-2">
+             <Hourglass size={18} className="text-amber-500" />
+             {preferences.language === 'ar' ? 'العد التنازلي للعمر (حتى ٧٥)' : 'Life Countdown (to 75)'}
+           </h3>
+           <button 
+             onClick={() => { setDobInput(preferences.dateOfBirth || ''); setShowDobModal(true); }}
+             className="text-xs text-emerald-500 hover:text-emerald-400 font-medium"
+           >
+             {preferences.language === 'ar' ? 'تعديل التاريخ' : 'Edit DOB'}
+           </button>
+         </div>
+
+         {lifetimeStats ? (
+           <div className="p-4 space-y-4">
+             {/* Life Progress Bar */}
+             <div className="space-y-2">
+               <div className="flex items-center justify-between">
+                 <span className="text-2xl font-bold text-emerald-400 font-mono">
+                   {lifetimeStats.lifeProgress.toFixed(5)}%
+                 </span>
+                 <span className="text-xs text-gray-400 uppercase tracking-wider">LIFE PROGRESS</span>
+               </div>
+               <div className="h-3 bg-slate-800 rounded-full overflow-hidden relative">
+                 <div 
+                   className="h-full rounded-full absolute left-0 top-0"
+                   style={{
+                     width: `${lifetimeStats.lifeProgress}%`,
+                     background: 'linear-gradient(90deg, #0ea5e9, #10b981, #22c55e)',
+                   }}
+                 />
+               </div>
+             </div>
+
+             {/* Large Metrics: Seconds & Minutes */}
+             <div className="space-y-3">
+               <div className="bg-slate-900/80 rounded-xl p-4 text-center border border-slate-800">
+                 <p className="text-3xl md:text-4xl font-bold text-rose-400 font-mono">
+                   {lifetimeStats.secondsLeft.toLocaleString()}
+                 </p>
+                 <p className="text-xs text-gray-400 mt-1">
+                   {preferences.language === 'ar' ? 'ثانية' : 'seconds'}
+                 </p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-4 text-center border border-slate-800">
+                 <p className="text-3xl md:text-4xl font-bold text-cyan-400 font-mono">
+                   {lifetimeStats.minutesLeft.toLocaleString()}
+                 </p>
+                 <p className="text-xs text-gray-400 mt-1">
+                   {preferences.language === 'ar' ? 'دقيقة' : 'minutes'}
+                 </p>
+               </div>
+             </div>
+
+             {/* Grid of Metrics */}
+             <div className="grid grid-cols-3 gap-2">
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-rose-400 font-mono">{lifetimeStats.ramadansLeft}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'رمضان' : 'Ramadan'}</p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-cyan-400 font-mono">{lifetimeStats.daysLeft.toLocaleString()}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'يوم' : 'days'}</p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-amber-400 font-mono">{lifetimeStats.hoursLeft.toLocaleString()}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'ساعة' : 'hours'}</p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-rose-400 font-mono">{lifetimeStats.fridaysLeft.toLocaleString()}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'جمعة' : 'Fridays'}</p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-white font-mono">{lifetimeStats.monThuLeft.toLocaleString()}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'إثنين وخميس' : 'Mon & Thu'}</p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-white font-mono">{lifetimeStats.whiteDaysLeft.toLocaleString()}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'أيام بيض' : 'White Days'}</p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-rose-400 font-mono">{lifetimeStats.yearsLeft}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'سنة' : 'years'}</p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-white font-mono">{lifetimeStats.monthsLeft}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'شهر' : 'months'}</p>
+               </div>
+               <div className="bg-slate-900/80 rounded-xl p-3 text-center border border-slate-800">
+                 <p className="text-xl font-bold text-white font-mono">{lifetimeStats.hajjsLeft}</p>
+                 <p className="text-[10px] text-gray-400">{preferences.language === 'ar' ? 'حج' : 'Hajj'}</p>
+               </div>
+             </div>
+           </div>
+         ) : (
+           <div className="p-6 text-center">
+             <p className="text-sm text-gray-400 mb-4">{t.dobDesc}</p>
+             <button 
+               onClick={() => setShowDobModal(true)}
+               className="py-3 px-6 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-sm font-bold text-amber-500 transition-colors"
+             >
+               {t.setDob}
+             </button>
+           </div>
+         )}
+       </div>
+
+       {/* DOB Modal */}
+       {showDobModal && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+           <div className="bg-card w-full max-w-sm rounded-2xl p-6 border border-slate-800 shadow-2xl">
+             <div className="flex justify-between items-center mb-4">
+               <h2 className="text-xl font-bold text-foreground">{t.dobTitle}</h2>
+               <button onClick={() => setShowDobModal(false)} className="text-gray-400 hover:text-white">
+                 <X size={20} />
+               </button>
+             </div>
+             
+             <p className="text-sm text-gray-400 mb-6">{t.dobDesc}</p>
+
+             <div className="space-y-4">
+               <input 
+                 type="date" 
+                 value={dobInput}
+                 onChange={(e) => setDobInput(e.target.value)}
+                 className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:border-primary focus:outline-none [color-scheme:dark]"
+               />
+
+               <div className="flex gap-3">
+                 <button onClick={() => setShowDobModal(false)} className="flex-1 py-3 rounded-xl bg-slate-800 text-gray-300 font-medium">
+                   {t.cancel}
+                 </button>
+                 <button onClick={handleSaveDob} className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-bold">
+                   {t.save}
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
 
        {/* Preferences */}
        <div className="glass-card p-5 rounded-2xl">
@@ -214,9 +398,15 @@ const Profile: React.FC = () => {
          <div className="space-y-1">
            {/* Rawatib Master Toggle */}
            <div className="flex items-center gap-2 p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-             <div className="flex-1 min-w-0">
-               <h4 className="text-sm font-bold text-white">Rawatib</h4>
-               <p className="text-[10px] text-gray-500">{preferences.language === 'ar' ? '٦ سنن مؤكدة' : '6 confirmed Sunnahs'}</p>
+             <div className="flex-1 min-w-0 flex items-center gap-2">
+               {(() => {
+                 const IconComp = ICON_MAP.Star;
+                 return <IconComp size={18} style={{ color: '#38bdf8' }} className="shrink-0" />;
+               })()}
+               <div>
+                 <h4 className="text-sm font-bold text-white">Rawatib</h4>
+                 <p className="text-[10px] text-gray-500">{preferences.language === 'ar' ? '٦ سنن مؤكدة' : '6 confirmed Sunnahs'}</p>
+               </div>
              </div>
              {/* Activity Toggle */}
              <div className="w-14 flex justify-center">
@@ -256,14 +446,17 @@ const Profile: React.FC = () => {
              .sort((a, b) => a.order - b.order)
              .map(habit => {
                const displayName = preferences.language === 'ar' ? (habit.nameAr || habit.name) : habit.name;
+               const IconComp = getHabitIcon(habit);
+               const iconColor = getHabitColor(habit);
+               
                return (
                  <div 
                    key={habit.id} 
                    className="flex items-center gap-2 p-2.5 hover:bg-slate-900/50 rounded-xl transition-colors"
                  >
-                   {/* Habit Name with Emoji */}
+                   {/* Habit Name with Icon */}
                    <div className="flex-1 min-w-0 flex items-center gap-2">
-                     <span className="text-lg shrink-0">{habit.emoji || '🔹'}</span>
+                     <IconComp size={18} style={{ color: habit.isActive ? iconColor : '#6b7280' }} className="shrink-0" />
                      <span className={clsx(
                        "text-sm font-medium truncate",
                        habit.isActive ? "text-gray-200" : "text-gray-500"
@@ -315,77 +508,21 @@ const Profile: React.FC = () => {
          )}
        </div>
 
-       {/* Lifetime Countdown */}
-       {lifetimeStats && (
+       {/* Developer Tools - Only for Demo Users */}
+       {user?.isDemo && (
          <div className="glass-card p-5 rounded-2xl">
-           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-             <Hourglass size={18} className="text-amber-500" /> {t.lifeCountdown}
-           </h3>
-           <div className="grid grid-cols-3 gap-3">
-             <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
-               <p className="text-2xl font-bold text-white">{lifetimeStats.yearsLeft}</p>
-               <p className="text-[10px] text-gray-400 uppercase">{t.years}</p>
-             </div>
-             <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
-               <p className="text-2xl font-bold text-white">{lifetimeStats.monthsLeft}</p>
-               <p className="text-[10px] text-gray-400 uppercase">{t.months}</p>
-             </div>
-             <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
-               <p className="text-2xl font-bold text-white">{lifetimeStats.daysLeft.toLocaleString()}</p>
-               <p className="text-[10px] text-gray-400 uppercase">{t.days}</p>
-             </div>
+           <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Database size={18} className="text-yellow-500" /> Developer Tools</h3>
+           <div className="flex gap-2">
+               <button onClick={handleSeed} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-sm font-bold text-gray-300 transition-colors flex items-center justify-center gap-2">
+                 {t.seedData}
+               </button>
+               <button onClick={() => { localStorage.removeItem('haseeb_demo_persona'); window.location.reload(); }} className="flex-1 py-3 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-sm font-bold text-yellow-500 transition-colors flex items-center justify-center gap-2">
+                  <RotateCcw size={14} /> Reset Demo
+               </button>
            </div>
-           <div className="grid grid-cols-2 gap-3 mt-3">
-             <div className="bg-emerald-500/10 rounded-xl p-3 text-center border border-emerald-500/20">
-               <p className="text-xl font-bold text-emerald-400">{lifetimeStats.prayersLeft.toLocaleString()}</p>
-               <p className="text-[10px] text-emerald-400/70 uppercase">Prayers Left</p>
-             </div>
-             <div className="bg-amber-500/10 rounded-xl p-3 text-center border border-amber-500/20">
-               <p className="text-xl font-bold text-amber-400">{lifetimeStats.fridaysLeft.toLocaleString()}</p>
-               <p className="text-[10px] text-amber-400/70 uppercase">{t.fridays}</p>
-             </div>
-             <div className="bg-purple-500/10 rounded-xl p-3 text-center border border-purple-500/20">
-               <p className="text-xl font-bold text-purple-400">{lifetimeStats.ramadansLeft}</p>
-               <p className="text-[10px] text-purple-400/70 uppercase">{t.ramadans}</p>
-             </div>
-             <div className="bg-blue-500/10 rounded-xl p-3 text-center border border-blue-500/20">
-               <p className="text-xl font-bold text-blue-400">{lifetimeStats.hajjsLeft}</p>
-               <p className="text-[10px] text-blue-400/70 uppercase">{t.hajjs}</p>
-             </div>
-           </div>
+           {message && <p className="text-green-500 text-xs mt-2 text-center">{message}</p>}
          </div>
        )}
-       
-       {!lifetimeStats && (
-         <div className="glass-card p-5 rounded-2xl">
-           <h3 className="font-bold text-white mb-2 flex items-center gap-2">
-             <Hourglass size={18} className="text-amber-500" /> {t.lifeCountdown}
-           </h3>
-           <p className="text-sm text-gray-400 mb-3">{t.dobDesc}</p>
-           <button 
-             onClick={() => setIsDobModalOpen(true)}
-             className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-sm font-bold text-amber-500 transition-colors"
-           >
-             {t.setDob}
-           </button>
-         </div>
-       )}
-
-       {/* Developer Tools */}
-       <div className="glass-card p-5 rounded-2xl">
-         <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Database size={18} className="text-yellow-500" /> Developer Tools</h3>
-         <div className="flex gap-2">
-             <button onClick={handleSeed} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-sm font-bold text-gray-300 transition-colors flex items-center justify-center gap-2">
-               {t.seedData}
-             </button>
-             {user?.isDemo && (
-                 <button onClick={() => { localStorage.removeItem('haseeb_demo_persona'); window.location.reload(); }} className="flex-1 py-3 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-sm font-bold text-yellow-500 transition-colors flex items-center justify-center gap-2">
-                    <RotateCcw size={14} /> Reset Demo
-                 </button>
-             )}
-         </div>
-         {message && <p className="text-green-500 text-xs mt-2 text-center">{message}</p>}
-       </div>
 
        {/* Home Button */}
        <button 
@@ -395,8 +532,6 @@ const Profile: React.FC = () => {
          <Home size={24} />
          {t.home}
        </button>
-       
-       <DobModal isOpen={isDobModalOpen} onClose={() => setIsDobModalOpen(false)} />
     </div>
   );
 };

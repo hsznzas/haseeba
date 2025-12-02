@@ -870,7 +870,8 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   // 6. Generate logs - NO GAPS! Every habit gets a log for every day
   const allLogs: HabitLog[] = [];
   
-  for (let i = 0; i < daysBack; i++) {
+  // Start from 1 (yesterday) so users can log today's habits themselves
+  for (let i = 1; i <= daysBack; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     const dateStr = formatDate(date);
