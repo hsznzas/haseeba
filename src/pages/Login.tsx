@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone } from "lucide-react";
 import { DemoPersona } from "../services/storage";
-import { motion, AnimatePresence } from "framer-motion";
+// 1. Updated Imports to include Scroll hooks
+import { motion, AnimatePresence, useScroll, useTransform, MotionValue } from "framer-motion";
 
 type FormMode = "signin" | "signup" | "recovery";
 
@@ -44,7 +45,7 @@ const FloatingParticle: React.FC<{ delay: number; duration: number; x: number }>
   />
 );
 
-// Long-life floating particles
+// 2. UPDATED COMPONENT: Handles Parallax + Levitation + Wobble
 const DustParticle: React.FC<{ 
   x: number; 
   y: number; 
@@ -54,44 +55,61 @@ const DustParticle: React.FC<{
   duration: number;
   delay: number;
   wobble: number;
-}> = ({ x, y, size, blur, opacity, duration, delay, wobble }) => (
-  <motion.div
-    className="absolute rounded-full bg-white pointer-events-none"
-    style={{
-      left: `${x}%`,
-      top: `${y}%`,
-      width: size,
-      height: size,
-      filter: `blur(${blur}px)`,
-      boxShadow: `0 0 ${size * 2}px rgba(255,255,255,0.4)`
-    }}
-    animate={{
-      y: [0, -200], // Increased distance (was -120) so they travel further up
-      x: [0, wobble, -wobble, 0],
-      opacity: [0, opacity, opacity, 0],
-    }}
-    transition={{
-      duration: duration,
-      delay: delay,
-      repeat: Infinity,
-      ease: "linear",
-      // These times control the lifecycle: 
-      // Fade in fast (10%), stay visible LONG (until 80%), then fade (20%)
-      times: [0, 0.1, 0.8, 1], 
-      
-      x: {
-        duration: duration, 
-        repeat: Infinity, 
-        ease: "easeInOut", 
-        times: [0, 0.25, 0.75, 1] 
-      }
-    }}
-  />
-);
+  depth: number; // Needed for parallax speed calculation
+  scrollY: MotionValue<number>; // Needed to track scroll
+}> = ({ x, y, size, blur, opacity, duration, delay, wobble, depth, scrollY }) => {
+  
+  // Parallax Logic: Maps scroll position to vertical movement
+  // Depth 1 (Close) moves fast (-200px), Depth 0 (Far) moves slow
+  const parallaxY = useTransform(scrollY, [0, 1000], [0, -200 * depth]);
+
+  return (
+    // OUTER DIV: Handles Scroll Parallax & Position
+    <motion.div
+      className="absolute pointer-events-none"
+      style={{
+        left: `${x}%`,
+        top: `${y}%`,
+        y: parallaxY, // Bind scroll movement
+      }}
+    >
+      {/* INNER DIV: Handles Levitation, Wobble & Appearance */}
+      <motion.div
+        className="rounded-full bg-white"
+        style={{
+          width: size,
+          height: size,
+          filter: `blur(${blur}px)`,
+          boxShadow: `0 0 ${size * 2}px rgba(255,255,255,0.4)`
+        }}
+        animate={{
+          y: [0, -200], // Levitation Upwards
+          x: [0, wobble, -wobble, 0], // Wobble Left/Right
+          opacity: [0, opacity, opacity, 0], // Long life fade
+        }}
+        transition={{
+          duration: duration,
+          delay: delay,
+          repeat: Infinity,
+          ease: "linear",
+          times: [0, 0.1, 0.8, 1], // Fade in fast, stay visible long, fade out end
+          x: {
+            duration: duration, 
+            repeat: Infinity, 
+            ease: "easeInOut", 
+            times: [0, 0.25, 0.75, 1] 
+          }
+        }}
+      />
+    </motion.div>
+  );
+};
 
 const Login: React.FC = () => {
+  // 3. Initialize Scroll Hook
+  const { scrollY } = useScroll();
+  
   const { signInWithEmail, signUpWithEmail, startDemo, resetPasswordForEmail } = useAuth();
-  // Arabic as default
   const [language, setLanguage] = useState<"en" | "ar">("ar");
   const [mode, setMode] = useState<FormMode>("signin");
   const [email, setEmail] = useState("");
@@ -151,7 +169,6 @@ const Login: React.FC = () => {
     setRecoverySuccess(false);
   };
 
-  // Persona configs with relatable names
   const personas = [
     {
       id: "devout" as DemoPersona,
@@ -188,31 +205,22 @@ const Login: React.FC = () => {
     },
   ];
 
-// Generate particles with longer life and organic wobble
+  // 4. UPDATED DATA: Added 'depth' to the return object
   const dustParticles = Array.from({ length: 150 }, () => {
     const depth = Math.random(); 
     return {
+      depth, // <--- Passing this is crucial for parallax calculation
       x: Math.random() * 100,
       y: Math.random() * 100, 
-      
-      // Slightly larger max size for better visibility
       size: 1 + depth * 2.5, 
-      
       blur: (1 - depth) * 2, 
       opacity: 0.1 + depth * 0.4, 
-      
-      // Increased duration slightly to account for the longer travel distance
-      // Ranges from 6s (close/fast) to 15s (far/slow)
       duration: 15 - (depth * 9), 
-      
       delay: Math.random() * 5,
-      
-      // Wobble width
       wobble: 10 + (depth * 30) 
     };
   });
 
-  // State for install instructions tab
   const [installTab, setInstallTab] = useState<'iphone' | 'android'>('iphone');
 
   return (
@@ -224,12 +232,6 @@ const Login: React.FC = () => {
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-teal-500/10 rounded-full blur-[100px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/5 rounded-full blur-[150px]" />
         
-        {/* Tiny dust particles with depth of field */}
-        {dustParticles.map((p, i) => (
-          // @ts-ignore - Ignore TS error if wobble isn't defined in interface yet
-          <DustParticle key={`dust-${i}`} {...p} />
-        ))}
-        
         {/* Grid pattern */}
         <div 
           className="absolute inset-0 opacity-[0.02]"
@@ -239,9 +241,13 @@ const Login: React.FC = () => {
           }}
         />
         
-        {/* Tiny dust particles with depth of field */}
+        {/* 5. UPDATED RENDER: Passed scrollY prop and cleaned up duplicates */}
         {dustParticles.map((p, i) => (
-          <DustParticle key={`dust-${i}`} {...p} />
+          <DustParticle 
+            key={`dust-${i}`} 
+            {...p} 
+            scrollY={scrollY} 
+          />
         ))}
       </div>
 
