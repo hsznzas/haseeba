@@ -44,7 +44,7 @@ const FloatingParticle: React.FC<{ delay: number; duration: number; x: number }>
   />
 );
 
-// Tiny white dust particles with depth of field
+// Long-life floating particles
 const DustParticle: React.FC<{ 
   x: number; 
   y: number; 
@@ -53,7 +53,8 @@ const DustParticle: React.FC<{
   opacity: number;
   duration: number;
   delay: number;
-}> = ({ x, y, size, blur, opacity, duration, delay }) => (
+  wobble: number;
+}> = ({ x, y, size, blur, opacity, duration, delay, wobble }) => (
   <motion.div
     className="absolute rounded-full bg-white pointer-events-none"
     style={{
@@ -62,17 +63,28 @@ const DustParticle: React.FC<{
       width: size,
       height: size,
       filter: `blur(${blur}px)`,
+      boxShadow: `0 0 ${size * 2}px rgba(255,255,255,0.4)`
     }}
     animate={{
-      y: [0, -15, 0, 10, 0],
-      x: [0, 5, -5, 3, 0],
-      opacity: [opacity * 0.5, opacity, opacity * 0.7, opacity, opacity * 0.5],
+      y: [0, -200], // Increased distance (was -120) so they travel further up
+      x: [0, wobble, -wobble, 0],
+      opacity: [0, opacity, opacity, 0],
     }}
     transition={{
-      duration,
-      delay,
+      duration: duration,
+      delay: delay,
       repeat: Infinity,
-      ease: "easeInOut",
+      ease: "linear",
+      // These times control the lifecycle: 
+      // Fade in fast (10%), stay visible LONG (until 80%), then fade (20%)
+      times: [0, 0.1, 0.8, 1], 
+      
+      x: {
+        duration: duration, 
+        repeat: Infinity, 
+        ease: "easeInOut", 
+        times: [0, 0.25, 0.75, 1] 
+      }
     }}
   />
 );
@@ -144,7 +156,7 @@ const Login: React.FC = () => {
     {
       id: "devout" as DemoPersona,
       nameEn: "The Worshiper",
-      nameAr: "العابد",
+      nameAr: "المجتهد",
       descEn: "95% consistency",
       descAr: "٩٥٪ التزام",
       icon: Sparkles,
@@ -155,7 +167,7 @@ const Login: React.FC = () => {
     {
       id: "intermediate" as DemoPersona,
       nameEn: "Half & Half",
-      nameAr: "نصف ونصف",
+      nameAr: "الوسط",
       descEn: "75% consistency",
       descAr: "٧٥٪ التزام",
       icon: Users,
@@ -166,7 +178,7 @@ const Login: React.FC = () => {
     {
       id: "beginner" as DemoPersona,
       nameEn: "The Careless",
-      nameAr: "الغافل",
+      nameAr: "الصايع / الغافل",
       descEn: "30% consistency",
       descAr: "٣٠٪ التزام",
       icon: Zap,
@@ -176,24 +188,27 @@ const Login: React.FC = () => {
     },
   ];
 
-  // Generate particles
-  const particles = Array.from({ length: 20 }, () => ({
-    delay: Math.random() * 10,
-    duration: 8 + Math.random() * 12,
-    x: Math.random() * 100,
-  }));
-
-  // Generate tiny dust particles with different depths
-  const dustParticles = Array.from({ length: 250 }, () => {
-    const depth = Math.random(); // 0 = far (blurry, small), 1 = close (sharp, larger)
+// Generate particles with longer life and organic wobble
+  const dustParticles = Array.from({ length: 150 }, () => {
+    const depth = Math.random(); 
     return {
       x: Math.random() * 100,
-      y: Math.random() * 50,
-      size: 0.5 + depth * 3.5, // 0.5px to 2px
-      blur: (1 - depth) * 1.5, // 0 to 1.5px blur
-      opacity: 0.1 + depth * 0.25, // 0.1 to 0.35
-      duration: 1 + Math.random() * 1.2,
+      y: Math.random() * 100, 
+      
+      // Slightly larger max size for better visibility
+      size: 1 + depth * 2.5, 
+      
+      blur: (1 - depth) * 2, 
+      opacity: 0.1 + depth * 0.4, 
+      
+      // Increased duration slightly to account for the longer travel distance
+      // Ranges from 6s (close/fast) to 15s (far/slow)
+      duration: 15 - (depth * 9), 
+      
       delay: Math.random() * 5,
+      
+      // Wobble width
+      wobble: 10 + (depth * 30) 
     };
   });
 
@@ -209,9 +224,10 @@ const Login: React.FC = () => {
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-teal-500/10 rounded-full blur-[100px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/5 rounded-full blur-[150px]" />
         
-        {/* Floating particles */}
-        {particles.map((p, i) => (
-          <FloatingParticle key={i} {...p} />
+        {/* Tiny dust particles with depth of field */}
+        {dustParticles.map((p, i) => (
+          // @ts-ignore - Ignore TS error if wobble isn't defined in interface yet
+          <DustParticle key={`dust-${i}`} {...p} />
         ))}
         
         {/* Grid pattern */}
@@ -604,7 +620,7 @@ const Login: React.FC = () => {
       {/* Footer */}
       <footer className="py-8 text-center relative z-10">
         <p className="text-white/15 text-xs font-medium tracking-wide">
-          {isArabic ? "صُنع بـ 💙 للأمة" : "Built with 💙 for the Ummah"}
+          {isArabic ? "صُنع بـ 💙 للآخــرة" : "Built with 💙 for the Ummah"}
         </p>
       </footer>
     </div>
