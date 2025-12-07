@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import UpdatePassword from './pages/UpdatePassword';
 import { UserPreferences } from '@/index';
 import { getPreferences, savePreferences } from './services/storage';
+import { supabaseGetPreferences, supabaseSavePreferences } from './services/api';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider, NotificationBar, useData } from './context/DataContext';
 import { ToastProvider } from './context/ToastContext'; // Restored
@@ -96,6 +97,7 @@ const NotificationWrapper: React.FC<{ children: React.ReactNode }> = ({ children
 interface AppContextType {
   preferences: UserPreferences;
   setPreferences: (prefs: UserPreferences) => void;
+  refreshPreferences: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -104,6 +106,61 @@ export const usePreferences = () => {
   const context = useContext(AppContext);
   if (!context) throw new Error("usePreferences must be used within AppProvider");
   return context;
+};
+
+// Preferences Provider that syncs with Supabase for authenticated users
+const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading: authLoading } = useAuth();
+  const [preferences, setPreferencesState] = useState<UserPreferences>(getPreferences());
+
+  // Load preferences from Supabase when user is authenticated
+  const refreshPreferences = useCallback(async () => {
+    if (authLoading) return;
+    
+    if (user && !user.isDemo) {
+      console.log('📥 Loading preferences from Supabase...');
+      try {
+        const cloudPrefs = await supabaseGetPreferences(user.id);
+        setPreferencesState(cloudPrefs);
+        savePreferences(cloudPrefs); // Also update local cache
+        console.log('✅ Preferences loaded from cloud:', cloudPrefs);
+      } catch (err) {
+        console.error('❌ Error loading preferences from cloud:', err);
+      }
+    }
+  }, [user, authLoading]);
+
+  useEffect(() => {
+    refreshPreferences();
+  }, [refreshPreferences]);
+
+  const setPreferences = useCallback(async (prefs: UserPreferences) => {
+    setPreferencesState(prefs);
+    savePreferences(prefs); // Always save to localStorage
+
+    // Sync to Supabase for authenticated users
+    if (user && !user.isDemo) {
+      console.log('💾 Syncing preferences to Supabase...');
+      try {
+        await supabaseSavePreferences(user.id, prefs);
+        console.log('✅ Preferences synced to cloud');
+      } catch (err) {
+        console.error('❌ Error syncing preferences to cloud:', err);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    document.documentElement.dir = preferences.language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = preferences.language;
+    document.documentElement.classList.add('dark');
+  }, [preferences.language]);
+
+  return (
+    <AppContext.Provider value={{ preferences, setPreferences, refreshPreferences }}>
+      {children}
+    </AppContext.Provider>
+  );
 };
 
 // --- App Routing and Protection ---
@@ -139,24 +196,9 @@ const AppRoutes = () => {
 
 // --- Main App Component ---
 const App: React.FC = () => {
-  const [preferences, setPreferencesState] = useState<UserPreferences>(getPreferences());
-
-  const setPreferences = (prefs: UserPreferences) => {
-    setPreferencesState(prefs);
-    savePreferences(prefs);
-  };
-
-  useEffect(() => {
-    document.documentElement.dir = preferences.language === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.lang = preferences.language;
-    
-    // Add dark mode class to html
-    document.documentElement.classList.add('dark');
-  }, [preferences.language]);
-
   return (
     <AuthProvider>
-      <AppContext.Provider value={{ preferences, setPreferences }}>
+      <PreferencesProvider>
         <DataProvider>
           <ToastProvider>
             <NotificationWrapper>
@@ -166,7 +208,7 @@ const App: React.FC = () => {
             </NotificationWrapper>
           </ToastProvider>
         </DataProvider>
-      </AppContext.Provider>
+      </PreferencesProvider>
     </AuthProvider>
   );
 };

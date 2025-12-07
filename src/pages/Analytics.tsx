@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { generateSpiritualInsights } from '../services/geminiService';
+import { generateDailyBriefing, getCachedBriefing, regenerateBriefing } from '../services/aiEngine';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, X } from 'lucide-react';
-import { HabitType, PrayerQuality, LogStatus, HabitLog } from '../../types';
+import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, X, Brain, Zap, RefreshCw } from 'lucide-react';
+import { HabitType, PrayerQuality, LogStatus, HabitLog, DailyBriefing } from '../../types';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, 
   isSameDay, differenceInDays, addYears, isWithinInterval, 
@@ -57,23 +57,46 @@ const Analytics: React.FC = () => {
   const [isDobModalOpen, setIsDobModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   
-  // AI Insight state
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
-  const [isLoadingInsight, setIsLoadingInsight] = useState(false);
+  // AI Daily Briefing state
+  const [dailyBriefing, setDailyBriefing] = useState<DailyBriefing | null>(null);
+  const [isLoadingBriefing, setIsLoadingBriefing] = useState(false);
 
-  const handleGenerateInsight = async () => {
-    setIsLoadingInsight(true);
-    setAiInsight(null);
+  // Fetch AI briefing on mount
+  useEffect(() => {
+    const fetchBriefing = async () => {
+      // Check cache first
+      const cached = getCachedBriefing();
+      if (cached) {
+        setDailyBriefing(cached);
+        return;
+      }
+      
+      // Generate new briefing
+      if (habits.length > 0 && logs.length > 0) {
+        setIsLoadingBriefing(true);
+        try {
+          const briefing = await generateDailyBriefing(habits, logs, preferences.language);
+          setDailyBriefing(briefing);
+        } catch (error) {
+          console.error('Error fetching briefing:', error);
+        } finally {
+          setIsLoadingBriefing(false);
+        }
+      }
+    };
+    
+    fetchBriefing();
+  }, [habits.length, logs.length, preferences.language]);
+
+  const handleRefreshBriefing = async () => {
+    setIsLoadingBriefing(true);
     try {
-      const result = await generateSpiritualInsights(habits, logs, preferences.language);
-      setAiInsight(result);
+      const briefing = await regenerateBriefing(habits, logs, preferences.language);
+      setDailyBriefing(briefing);
     } catch (error) {
-      console.error('AI Insight Error:', error);
-      setAiInsight(preferences.language === 'ar' 
-        ? 'عذراً، حدث خطأ. حاول مرة أخرى.' 
-        : 'Sorry, an error occurred. Please try again.');
+      console.error('Error refreshing briefing:', error);
     } finally {
-      setIsLoadingInsight(false);
+      setIsLoadingBriefing(false);
     }
   }; 
 
@@ -261,6 +284,71 @@ const Analytics: React.FC = () => {
     'maghrib_sunnah',        // 2 after Maghrib
     'isha_sunnah',           // 2 after Isha
   ];
+
+  // --- Top Obstacles Analysis ---
+  const obstacleColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'];
+  
+  const obstaclesData = useMemo(() => {
+    // Helper to extract top 5 reasons from logs
+    const extractTopReasons = (filteredLogs: HabitLog[]) => {
+      const reasonCounts: Record<string, number> = {};
+      filteredLogs.forEach(l => {
+        if (l.reason && l.reason.trim()) {
+          const reason = l.reason.trim();
+          reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+        }
+      });
+      
+      const total = Object.values(reasonCounts).reduce((sum, c) => sum + c, 0);
+      
+      return Object.entries(reasonCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([reason, count], idx) => ({
+          reason,
+          count,
+          pct: total > 0 ? Math.round((count / total) * 100) : 0,
+          color: obstacleColors[idx] || '#6b7280',
+        }));
+    };
+
+    // 5KP (Fard) - Non-Takbirah prayers with reasons
+    const fardLogs = logs.filter(l => 
+      prayerIds.includes(l.habitId) && 
+      l.value !== undefined && 
+      l.value < PrayerQuality.TAKBIRAH && 
+      l.reason && 
+      l.reason.trim()
+    );
+    
+    // Rawatib - Failed/not done with reasons
+    const rawatibLogs = logs.filter(l => 
+      rawatibIds.includes(l.habitId) && 
+      l.status !== LogStatus.DONE && 
+      l.reason && 
+      l.reason.trim()
+    );
+    
+    // Other habits - Failed with reasons
+    const otherLogs = logs.filter(l => {
+      const habit = habits.find(h => h.id === l.habitId);
+      if (!habit) return false;
+      return !prayerIds.includes(l.habitId) && 
+             !rawatibIds.includes(l.habitId) && 
+             l.status === LogStatus.FAIL && 
+             l.reason && 
+             l.reason.trim();
+    });
+
+    return {
+      fard: extractTopReasons(fardLogs),
+      rawatib: extractTopReasons(rawatibLogs),
+      other: extractTopReasons(otherLogs),
+      fardTotal: fardLogs.length,
+      rawatibTotal: rawatibLogs.length,
+      otherTotal: otherLogs.length,
+    };
+  }, [logs, habits, prayerIds, rawatibIds]);
 
   // --- Enhanced All Prayers Insight Card ---
   const renderAllPrayersInsightCard = () => {
@@ -667,90 +755,60 @@ const Analytics: React.FC = () => {
              </div>
            </div>
         </div>
-        {/* AI Insight Button & Result */}
+        {/* AI General Insight Card */}
         <AnimatePresence mode="wait">
-          {!aiInsight ? (
-            <motion.button
-              key="ai-button"
+          {isLoadingBriefing ? (
+            <motion.div
+              key="loading"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              onClick={handleGenerateInsight}
-              disabled={isLoadingInsight}
-              className={clsx(
-                "w-full p-4 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-3",
-                "bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600",
-                "hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500",
-                "shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40",
-                "disabled:opacity-70 disabled:cursor-wait",
-                "border border-purple-400/20"
-              )}
+              className="bg-gradient-to-br from-blue-950/80 to-slate-900/90 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4"
             >
-              {isLoadingInsight ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  <span>{preferences.language === 'ar' ? 'جاري التحليل...' : 'Analyzing...'}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={20} className="text-yellow-300" />
-                  <span>{preferences.language === 'ar' ? '✨ احصل على تحليل ذكي' : '✨ Get AI Insight'}</span>
-                </>
-              )}
-            </motion.button>
-          ) : (
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-blue-500/20 rounded animate-pulse w-32" />
+                  <div className="h-3 bg-blue-500/10 rounded animate-pulse w-full" />
+                  <div className="h-3 bg-blue-500/10 rounded animate-pulse w-4/5" />
+                  <div className="h-3 bg-blue-500/10 rounded animate-pulse w-3/4" />
+                </div>
+              </div>
+            </motion.div>
+          ) : dailyBriefing?.analytics_insight ? (
             <motion.div
-              key="ai-result"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 rounded-xl border border-purple-500/30 overflow-hidden"
+              key="content"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-gradient-to-br from-blue-950/80 to-slate-900/90 backdrop-blur-sm border border-blue-500/20 rounded-xl overflow-hidden shadow-lg shadow-blue-500/5"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-3 border-b border-purple-500/20 bg-purple-500/10">
+              <div className="flex items-center justify-between p-3 border-b border-blue-500/20 bg-blue-500/10">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={16} className="text-purple-400" />
-                  <span className="text-sm font-bold text-purple-300">
+                  <Sparkles size={16} className="text-blue-400" />
+                  <span className="text-sm font-bold text-blue-300">
                     {preferences.language === 'ar' ? 'التحليل الذكي' : 'AI Insight'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleGenerateInsight}
-                    disabled={isLoadingInsight}
-                    className="text-[10px] px-2 py-1 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors flex items-center gap-1"
-                  >
-                    {isLoadingInsight ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-                    {preferences.language === 'ar' ? 'تحديث' : 'Refresh'}
-                  </button>
-                  <button
-                    onClick={() => setAiInsight(null)}
-                    className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
+                <button
+                  onClick={handleRefreshBriefing}
+                  disabled={isLoadingBriefing}
+                  className="text-[10px] px-2 py-1 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors flex items-center gap-1"
+                >
+                  {isLoadingBriefing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+                  {preferences.language === 'ar' ? 'تحديث' : 'Refresh'}
+                </button>
               </div>
               
               {/* Content */}
               <div className="p-4">
-                <div 
-                  className="prose prose-invert prose-sm max-w-none text-gray-300 leading-relaxed
-                    prose-headings:text-purple-300 prose-headings:font-bold prose-headings:text-sm
-                    prose-strong:text-white prose-strong:font-semibold
-                    prose-ul:my-2 prose-li:my-0.5 prose-li:text-gray-300
-                    prose-p:my-2"
-                  dangerouslySetInnerHTML={{ 
-                    __html: aiInsight
-                      .replace(/\n/g, '<br/>')
-                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                      .replace(/^- /gm, '• ')
-                  }} 
-                />
+                <p className="text-sm text-white/90 leading-relaxed">
+                  {dailyBriefing.analytics_insight}
+                </p>
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
 
@@ -763,6 +821,29 @@ const Analytics: React.FC = () => {
         <div className="w-full">{renderAllPrayersInsightCard()}</div>
         {/* Individual Prayer Cards */}
         <div className="grid grid-cols-2 gap-2">{prayerIds.map(id => renderPrayerCard(id))}</div>
+        
+        {/* 5 Prayers AI Focus Card */}
+        {dailyBriefing?.five_prayers_focus && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-amber-950/60 to-orange-950/40 backdrop-blur-sm border border-amber-500/20 rounded-xl p-4 shadow-lg shadow-amber-500/5"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
+                <Zap size={16} className="text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-amber-400/70 font-semibold uppercase tracking-wider mb-1">
+                  {preferences.language === 'ar' ? 'تركيز الصلوات الخمس' : '5 Prayers Focus'}
+                </p>
+                <p className="text-sm text-white/90 leading-relaxed">
+                  {dailyBriefing.five_prayers_focus}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Top Prayer Streaks */}
@@ -922,6 +1003,29 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
+      {/* Rawatib AI Focus Card */}
+      {dailyBriefing?.rawatib_focus && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-purple-950/60 to-indigo-950/40 backdrop-blur-sm border border-purple-500/20 rounded-xl p-4 shadow-lg shadow-purple-500/5"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
+              <Brain size={16} className="text-purple-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-purple-400/70 font-semibold uppercase tracking-wider mb-1">
+                {preferences.language === 'ar' ? 'تركيز الرواتب' : 'Rawatib Focus'}
+              </p>
+              <p className="text-sm text-white/90 leading-relaxed">
+                {dailyBriefing.rawatib_focus}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Rawatib Prayers Monthly View */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -961,6 +1065,142 @@ const Analytics: React.FC = () => {
                   </div>
              ))}
            </div>
+        </div>
+      </div>
+
+      {/* Top Obstacles Card - 3 Column Layout */}
+      <div className="space-y-4">
+        <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">
+          {preferences.language === 'ar' ? 'أهم العوائق' : 'Top Obstacles'}
+        </h2>
+        <div className="bg-card rounded-xl border border-red-500/20 bg-gradient-to-br from-slate-900/90 to-red-950/20 shadow-lg overflow-hidden p-4">
+          <div className="grid grid-cols-3 gap-3" dir="ltr">
+            {/* Column 1: 5 Fard Prayers */}
+            <div className="flex flex-col items-center">
+              <h3 className="text-[10px] font-bold text-red-400 uppercase tracking-wide mb-2 text-center">
+                {preferences.language === 'ar' ? 'الصلوات الخمس' : '5 Fard'}
+              </h3>
+              {obstaclesData.fard.length > 0 ? (
+                <>
+                  <div className="relative h-20 w-20 mb-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie 
+                          data={obstaclesData.fard.map(d => ({ name: d.reason, value: d.count, color: d.color }))} 
+                          cx="50%" cy="50%" innerRadius={22} outerRadius={32} paddingAngle={2} dataKey="value" stroke="none"
+                        >
+                          {obstaclesData.fard.map((entry, index) => (
+                            <Cell key={`fard-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">{obstaclesData.fardTotal}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1 w-full">
+                    {obstaclesData.fard.slice(0, 5).map((item) => (
+                      <div key={`fard-${item.reason}`} className="flex items-center gap-1.5 text-[9px]">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-gray-400 truncate flex-1">{item.reason}</span>
+                        <span className="font-bold shrink-0" style={{ color: item.color }}>{item.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4 text-gray-600">
+                  <AlertTriangle size={16} className="mx-auto mb-1 opacity-50" />
+                  <p className="text-[9px]">{preferences.language === 'ar' ? 'لا توجد' : 'None'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Column 2: Rawatib */}
+            <div className="flex flex-col items-center border-x border-slate-800/50 px-2">
+              <h3 className="text-[10px] font-bold text-orange-400 uppercase tracking-wide mb-2 text-center">
+                {preferences.language === 'ar' ? 'الرواتب' : 'Rawatib'}
+              </h3>
+              {obstaclesData.rawatib.length > 0 ? (
+                <>
+                  <div className="relative h-20 w-20 mb-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie 
+                          data={obstaclesData.rawatib.map(d => ({ name: d.reason, value: d.count, color: d.color }))} 
+                          cx="50%" cy="50%" innerRadius={22} outerRadius={32} paddingAngle={2} dataKey="value" stroke="none"
+                        >
+                          {obstaclesData.rawatib.map((entry, index) => (
+                            <Cell key={`rawatib-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">{obstaclesData.rawatibTotal}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1 w-full">
+                    {obstaclesData.rawatib.slice(0, 5).map((item) => (
+                      <div key={`rawatib-${item.reason}`} className="flex items-center gap-1.5 text-[9px]">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-gray-400 truncate flex-1">{item.reason}</span>
+                        <span className="font-bold shrink-0" style={{ color: item.color }}>{item.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4 text-gray-600">
+                  <AlertTriangle size={16} className="mx-auto mb-1 opacity-50" />
+                  <p className="text-[9px]">{preferences.language === 'ar' ? 'لا توجد' : 'None'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Column 3: Other Habits */}
+            <div className="flex flex-col items-center">
+              <h3 className="text-[10px] font-bold text-yellow-400 uppercase tracking-wide mb-2 text-center">
+                {preferences.language === 'ar' ? 'العادات' : 'Habits'}
+              </h3>
+              {obstaclesData.other.length > 0 ? (
+                <>
+                  <div className="relative h-20 w-20 mb-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie 
+                          data={obstaclesData.other.map(d => ({ name: d.reason, value: d.count, color: d.color }))} 
+                          cx="50%" cy="50%" innerRadius={22} outerRadius={32} paddingAngle={2} dataKey="value" stroke="none"
+                        >
+                          {obstaclesData.other.map((entry, index) => (
+                            <Cell key={`other-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">{obstaclesData.otherTotal}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1 w-full">
+                    {obstaclesData.other.slice(0, 5).map((item) => (
+                      <div key={`other-${item.reason}`} className="flex items-center gap-1.5 text-[9px]">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-gray-400 truncate flex-1">{item.reason}</span>
+                        <span className="font-bold shrink-0" style={{ color: item.color }}>{item.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4 text-gray-600">
+                  <AlertTriangle size={16} className="mx-auto mb-1 opacity-50" />
+                  <p className="text-[9px]">{preferences.language === 'ar' ? 'لا توجد' : 'None'}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

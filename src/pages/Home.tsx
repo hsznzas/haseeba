@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { useAuth } from '../context/AuthContext';
@@ -6,12 +6,13 @@ import DateSelector from '../components/DateSelector';
 import HabitCard from '../components/HabitCard';
 import BottomNav from '../components/BottomNav';
 import { useData } from '../context/DataContext';
-import { HabitLog, LogStatus, HabitType, PrayerQuality, Habit } from '../../types';
+import { HabitLog, LogStatus, HabitType, PrayerQuality, Habit, DailyBriefing } from '../../types';
 import { format, subDays, getDay } from 'date-fns';
-import { Plus, User, RotateCw, ArrowUpDown } from 'lucide-react';
+import { Plus, User, RotateCw, ArrowUpDown, Brain } from 'lucide-react';
 import { AnimatePresence, motion, Reorder } from 'framer-motion';
 import AddHabitModal from '../components/AddHabitModal';
 import ReasonModal from '../components/ReasonModal';
+import { generateDailyBriefing, getCachedBriefing } from '../services/aiEngine';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -24,7 +25,38 @@ const Home: React.FC = () => {
   const [reasoningState, setReasoningState] = useState<{ id: string, val: number, status: LogStatus } | null>(null);
   const [isSortMode, setIsSortMode] = useState(false);
   
+  // AI Daily Briefing state
+  const [dailyBriefing, setDailyBriefing] = useState<DailyBriefing | null>(null);
+  const [isBriefingLoading, setIsBriefingLoading] = useState(false);
+  
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // Fetch AI briefing on mount
+  useEffect(() => {
+    const fetchBriefing = async () => {
+      // Check cache first (synchronous)
+      const cached = getCachedBriefing();
+      if (cached) {
+        setDailyBriefing(cached);
+        return;
+      }
+      
+      // Generate new briefing in background
+      if (habits.length > 0 && logs.length > 0) {
+        setIsBriefingLoading(true);
+        try {
+          const briefing = await generateDailyBriefing(habits, logs, preferences.language);
+          setDailyBriefing(briefing);
+        } catch (error) {
+          console.error('Error fetching briefing:', error);
+        } finally {
+          setIsBriefingLoading(false);
+        }
+      }
+    };
+    
+    fetchBriefing();
+  }, [habits.length, logs.length, preferences.language]);
 
   // ==========================================
   // ISLAMIC CALENDAR HELPER FUNCTION
@@ -368,7 +400,53 @@ const Home: React.FC = () => {
             </div>
         </div>
 
+        {/* Daily Focus Card - AI Insight */}
         <div className="px-4 mt-4">
+          <AnimatePresence mode="wait">
+            {isBriefingLoading ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-gradient-to-br from-blue-950/80 to-slate-900/90 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 mb-4"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-blue-500/20 rounded animate-pulse w-24" />
+                    <div className="h-4 bg-blue-500/10 rounded animate-pulse w-full" />
+                    <div className="h-4 bg-blue-500/10 rounded animate-pulse w-3/4" />
+                  </div>
+                </div>
+              </motion.div>
+            ) : dailyBriefing?.home_advice ? (
+              <motion.div
+                key="content"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-gradient-to-br from-blue-950/80 to-slate-900/90 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 mb-4 shadow-lg shadow-blue-500/5"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+                    <Brain size={16} className="text-blue-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-blue-400/70 font-semibold uppercase tracking-wider mb-1">
+                      {preferences.language === 'ar' ? 'تركيز اليوم' : 'Daily Focus'}
+                    </p>
+                    <p className="text-sm text-white/90 leading-relaxed">
+                      {dailyBriefing.home_advice}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+
+        <div className="px-4">
             {isSortMode ? (
               <Reorder.Group 
                 axis="y" 

@@ -88,3 +88,12 @@ export interface CustomReason {
   reason_text: string; // Column name in Supabase
   createdAt?: string;
 }
+
+// AI Daily Briefing - Generated once per day
+export interface DailyBriefing {
+  home_advice: string;
+  analytics_insight: string;
+  five_prayers_focus: string;
+  rawatib_focus: string;
+  timestamp: string;
+}

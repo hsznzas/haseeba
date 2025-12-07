@@ -111,6 +111,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
         daily_target: h.dailyTarget,
         preset_id: h.id, // Mark as preset using the habit ID
         is_active: h.isActive !== undefined ? h.isActive : true, // Default to true if not specified
+        require_reason: h.requireReason !== undefined ? h.requireReason : false, // Sync requireReason toggle
         order_index: h.order, // Frontend 'order' -> DB 'order_index'
         start_date: today, // Preset habits start from today for new users
       }));
@@ -136,6 +137,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
         dailyTarget: dbHabit.daily_target,
         presetId: dbHabit.preset_id,
         isActive: dbHabit.is_active,
+        requireReason: dbHabit.require_reason, // Sync requireReason toggle
         order: dbHabit.order_index, // DB 'order_index' -> Frontend 'order'
         startDate: dbHabit.start_date, // When habit tracking began
       }));
@@ -151,6 +153,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
       dailyTarget: dbHabit.daily_target,
       presetId: dbHabit.preset_id,
       isActive: dbHabit.is_active,
+      requireReason: dbHabit.require_reason, // Sync requireReason toggle
       order: dbHabit.order_index, // DB 'order_index' -> Frontend 'order'
       startDate: dbHabit.start_date, // When habit tracking began
     }));
@@ -162,7 +165,7 @@ export const supabaseGetHabits = async (userId: string): Promise<Habit[]> => {
 
 export const supabaseSaveHabit = async (userId: string, habit: Habit): Promise<void> => {
   try {
-    console.log('💾 Upserting habit to Supabase:', { id: habit.id, name: habit.name, isActive: habit.isActive, startDate: habit.startDate });
+    console.log('💾 Upserting habit to Supabase:', { id: habit.id, name: habit.name, isActive: habit.isActive, requireReason: habit.requireReason, startDate: habit.startDate });
     const { error } = await supabase
       .from('habits')
       .upsert({
@@ -175,6 +178,7 @@ export const supabaseSaveHabit = async (userId: string, habit: Habit): Promise<v
         daily_target: habit.dailyTarget,
         preset_id: habit.presetId,
         is_active: habit.isActive,
+        require_reason: habit.requireReason, // Sync requireReason toggle
         order_index: habit.order, // Frontend 'order' -> DB 'order_index'
         start_date: habit.startDate, // When the habit tracking began
       }, {
