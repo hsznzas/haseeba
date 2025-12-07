@@ -4,7 +4,7 @@ import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
 import { generateDailyBriefing, getCachedBriefing, regenerateBriefing } from '../services/aiEngine';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, X, Brain, Zap, RefreshCw } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, Brain, Zap, RefreshCw } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog, DailyBriefing } from '../../types';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, 

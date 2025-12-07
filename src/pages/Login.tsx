@@ -27,24 +27,6 @@ const AnimatedHourglass: React.FC<{ size?: number }> = ({ size = 24 }) => (
   </motion.div>
 );
 
-// Floating particles for background
-const FloatingParticle: React.FC<{ delay: number; duration: number; x: number }> = ({ delay, duration, x }) => (
-  <motion.div
-    className="absolute w-1 h-1 bg-emerald-500/30 rounded-full"
-    initial={{ y: "100vh", x: `${x}vw`, opacity: 0 }}
-    animate={{ 
-      y: "-10vh", 
-      opacity: [0, 1, 1, 0],
-    }}
-    transition={{ 
-      duration, 
-      delay, 
-      repeat: Infinity, 
-      ease: "linear" 
-    }}
-  />
-);
-
 // 2. UPDATED COMPONENT: Handles Parallax + Levitation + Wobble
 const DustParticle: React.FC<{ 
   x: number; 

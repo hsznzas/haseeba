@@ -6,7 +6,7 @@ import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import UpdatePassword from './pages/UpdatePassword';
-import { UserPreferences } from '@/index';
+import { UserPreferences } from '../types';
 import { getPreferences, savePreferences } from './services/storage';
 import { supabaseGetPreferences, supabaseSavePreferences } from './services/api';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -111,7 +111,10 @@ export const usePreferences = () => {
 // Preferences Provider that syncs with Supabase for authenticated users
 const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
-  const [preferences, setPreferencesState] = useState<UserPreferences>(getPreferences());
+  const [preferences, setPreferencesState] = useState<UserPreferences>(() => {
+    const stored = getPreferences();
+    return stored as UserPreferences;
+  });
 
   // Load preferences from Supabase when user is authenticated
   const refreshPreferences = useCallback(async () => {
@@ -121,8 +124,8 @@ const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('📥 Loading preferences from Supabase...');
       try {
         const cloudPrefs = await supabaseGetPreferences(user.id);
-        setPreferencesState(cloudPrefs);
-        savePreferences(cloudPrefs); // Also update local cache
+        setPreferencesState(cloudPrefs as UserPreferences);
+        savePreferences(cloudPrefs as any); // Also update local cache
         console.log('✅ Preferences loaded from cloud:', cloudPrefs);
       } catch (err) {
         console.error('❌ Error loading preferences from cloud:', err);
@@ -136,7 +139,7 @@ const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setPreferences = useCallback(async (prefs: UserPreferences) => {
     setPreferencesState(prefs);
-    savePreferences(prefs); // Always save to localStorage
+    savePreferences(prefs as any); // Always save to localStorage
 
     // Sync to Supabase for authenticated users
     if (user && !user.isDemo) {

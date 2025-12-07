@@ -1,5 +1,5 @@
 import { COACH_PERSONA } from './personas';
-import { Habit, HabitLog, HabitType, PrayerQuality, LogStatus } from '../../types';
+import { Habit, HabitLog, PrayerQuality, LogStatus } from '../../types';
 
 // Rawatib prayer IDs
 const RAWATIB_IDS = [
@@ -116,6 +116,10 @@ function aggregateData(habits: Habit[], logs: HabitLog[]): DataSummary {
     return `- ${h.name}: ${rate}% (${done}/${total})`;
   });
 
+  const weakestPrayerName = weakestPrayer !== null ? (weakestPrayer as { name: string; pct: number }).name : null;
+  const strongestPrayerName = strongestPrayer !== null ? (strongestPrayer as { name: string; pct: number }).name : null;
+  const weakestRawatibName = weakestRawatib !== null ? (weakestRawatib as { name: string; pct: number }).name : null;
+
   return {
     prayerSummary: prayerStats.join('\n'),
     rawatibSummary: rawatibStats.join('\n'),
@@ -123,9 +127,9 @@ function aggregateData(habits: Habit[], logs: HabitLog[]): DataSummary {
     topObstacles,
     overallTakbirahPct,
     rawatibCompletionPct,
-    weakestPrayer: weakestPrayer?.name || null,
-    strongestPrayer: strongestPrayer?.name || null,
-    weakestRawatib: weakestRawatib?.name || null,
+    weakestPrayer: weakestPrayerName,
+    strongestPrayer: strongestPrayerName,
+    weakestRawatib: weakestRawatibName,
   };
 }
 
