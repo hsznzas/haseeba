@@ -87,21 +87,21 @@ const DustParticle: React.FC<{
   );
 };
 
-// Mock prayer data for the demo with different quality levels to demonstrate
+// Demo prayer data for Section 2 animation
 const DEMO_PRAYERS = [
-  { id: 'fajr', name: 'Fajr', nameAr: 'الفجر', icon: Sunrise, logQuality: 0 }, // Takbirah
-  { id: 'dhuhr', name: 'Dhuhr', nameAr: 'الظهر', icon: Sun, logQuality: 1 },   // Jamaa
-  { id: 'asr', name: 'Asr', nameAr: 'العصر', icon: CloudSun, logQuality: 0 },  // Takbirah
-  { id: 'maghrib', name: 'Maghrib', nameAr: 'المغرب', icon: Sunset, logQuality: 2 }, // On Time
-  { id: 'isha', name: 'Isha', nameAr: 'العشاء', icon: Moon, logQuality: 3 },   // Missed
+  { id: 'fajr', name: 'Fajr', nameAr: 'الفجر', icon: Sunrise },
+  { id: 'dhuhr', name: 'Dhuhr', nameAr: 'الظهر', icon: Sun },
+  { id: 'asr', name: 'Asr', nameAr: 'العصر', icon: CloudSun },
+  { id: 'maghrib', name: 'Maghrib', nameAr: 'المغرب', icon: Sunset },
+  { id: 'isha', name: 'Isha', nameAr: 'العشاء', icon: Moon },
 ];
 
-// Quality level config for demo buttons (matching real PrayerCard icons)
+// Quality levels matching real PrayerCard
 const QUALITY_LEVELS = [
-  { id: 0, label: '1st', labelAr: 'تكبيرة', icon: Sparkles, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
-  { id: 1, label: 'Grp', labelAr: 'جماعة', icon: Users, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' },
-  { id: 2, label: 'Solo', labelAr: 'وقت', icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/30' },
-  { id: 3, label: 'Miss', labelAr: 'فات', icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
+  { id: 0, icon: Sparkles, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' },
+  { id: 1, icon: Users, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/40' },
+  { id: 2, icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/40' },
+  { id: 3, icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/40' },
 ];
 
 // Demo Prayer Card Component (matches real PrayerCard styling)
@@ -109,9 +109,8 @@ const DemoPrayerCard: React.FC<{
   prayer: typeof DEMO_PRAYERS[0];
   isArabic: boolean;
   isLogging: boolean;
-  isLogged: boolean;
   activeButton: number | null;
-}> = ({ prayer, isArabic, isLogging, isLogged, activeButton }) => {
+}> = ({ prayer, isArabic, isLogging, activeButton }) => {
   const Icon = prayer.icon;
   const activeQuality = activeButton !== null ? QUALITY_LEVELS[activeButton] : null;
   
@@ -121,31 +120,30 @@ const DemoPrayerCard: React.FC<{
       initial={{ opacity: 1, y: 0, scale: 1 }}
       animate={isLogging ? {
         opacity: 0,
-        y: -80,
-        scale: 0.8,
-        filter: "blur(4px)",
+        y: -60,
+        scale: 0.9,
       } : {
-        opacity: isLogged ? 0.5 : 1,
+        opacity: 1,
         y: 0,
         scale: 1,
       }}
       exit={{
         opacity: 0,
-        y: -100,
-        scale: 0.7,
+        y: -80,
+        scale: 0.85,
       }}
       transition={{ 
-        duration: 0.6, 
+        duration: 0.5, 
         ease: "easeOut",
-        layout: { duration: 0.4 }
+        layout: { duration: 0.3 }
       }}
       className={`
         relative overflow-hidden rounded-2xl mb-2
         flex items-stretch
-        bg-gradient-to-r from-slate-900/80 to-slate-800/50
+        bg-gradient-to-r from-slate-900/90 to-slate-800/60
         border transition-all duration-300
         ${isLogging && activeQuality ? activeQuality.border : 'border-white/10'}
-        ${isLogging ? 'shadow-lg' : ''}
+        ${isLogging ? 'shadow-lg shadow-emerald-500/10' : ''}
       `}
     >
       {/* Glow effect when logging */}
@@ -169,18 +167,18 @@ const DemoPrayerCard: React.FC<{
       
       {/* Right side - Quality Buttons */}
       <div className="flex items-center gap-1 px-2 py-2 border-l border-white/5">
-        {QUALITY_LEVELS.map((level, idx) => {
+        {QUALITY_LEVELS.map((level) => {
           const LevelIcon = level.icon;
-          const isActive = activeButton === idx;
+          const isActive = activeButton === level.id;
           return (
             <div
               key={level.id}
               className={`
-                w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold
+                w-8 h-8 rounded-lg flex items-center justify-center
                 transition-all duration-200
                 ${isActive 
                   ? `${level.bg} ${level.color} scale-110 ${level.border} border` 
-                  : 'text-white/30 hover:text-white/50 bg-white/5'
+                  : 'text-white/30 bg-white/5'
                 }
               `}
             >
@@ -206,24 +204,24 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [recoverySuccess, setRecoverySuccess] = useState(false);
   
-  // Demo animation state
+  // Demo animation state for Section 2
   const [loggedPrayers, setLoggedPrayers] = useState<string[]>([]);
   const [currentlyLogging, setCurrentlyLogging] = useState<string | null>(null);
-  const [activeButtonForPrayer, setActiveButtonForPrayer] = useState<Record<string, number>>({});
+  const [activeButtons, setActiveButtons] = useState<Record<string, number>>({});
 
   const isArabic = language === "ar";
   
-  // Auto-animate the prayer demo
+  // Auto-animate the prayer demo with random quality selection
   useEffect(() => {
     const unloggedPrayers = DEMO_PRAYERS.filter(p => !loggedPrayers.includes(p.id));
     
     if (unloggedPrayers.length === 0) {
-      // All prayers logged, reset after a pause
+      // All prayers logged, reset after showing completion message
       const resetTimer = setTimeout(() => {
         setLoggedPrayers([]);
         setCurrentlyLogging(null);
-        setActiveButtonForPrayer({});
-      }, 2000);
+        setActiveButtons({});
+      }, 2500);
       return () => clearTimeout(resetTimer);
     }
     
@@ -231,8 +229,11 @@ const Login: React.FC = () => {
     const logTimer = setTimeout(() => {
       const nextPrayer = unloggedPrayers[0];
       if (nextPrayer) {
+        // Pick a random quality level (0-3)
+        const randomQuality = Math.floor(Math.random() * 4);
+        
         // First highlight the button
-        setActiveButtonForPrayer(prev => ({ ...prev, [nextPrayer.id]: nextPrayer.logQuality }));
+        setActiveButtons(prev => ({ ...prev, [nextPrayer.id]: randomQuality }));
         
         // Then start the logging animation
         setTimeout(() => {
@@ -242,8 +243,8 @@ const Login: React.FC = () => {
           setTimeout(() => {
             setLoggedPrayers(prev => [...prev, nextPrayer.id]);
             setCurrentlyLogging(null);
-          }, 600);
-        }, 400); // Delay to show button highlight first
+          }, 500);
+        }, 400);
       }
     }, 1500);
     
@@ -542,7 +543,7 @@ const Login: React.FC = () => {
           <motion.section
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.8 }}
             className="mb-16"
           >
@@ -552,9 +553,9 @@ const Login: React.FC = () => {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-center mb-8"
+              className="text-center mb-6"
             >
-              <h2 className="text-3xl font-black text-white mb-3">
+              <h2 className="text-3xl font-black text-white mb-2">
                 {isArabic ? 'الخطة' : 'The Plan'}
               </h2>
               <p className="text-white/50 text-base">
@@ -564,27 +565,10 @@ const Login: React.FC = () => {
               </p>
             </motion.div>
 
-            {/* Interactive Prayer Demo */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="relative p-4 overflow-hidden h-[340px]"
-            >
-              {/* Feathered top edge - cards fade into nothing */}
-              <div 
-                className="absolute inset-x-0 top-0 h-20 z-10 pointer-events-none"
-                style={{ background: 'linear-gradient(to bottom, rgb(2 6 23) 0%, transparent 100%)' }}
-              />
-              {/* Feathered bottom edge - cards rise from transparency */}
-              <div 
-                className="absolute inset-x-0 bottom-0 h-16 z-10 pointer-events-none"
-                style={{ background: 'linear-gradient(to top, rgb(2 6 23) 0%, transparent 100%)' }}
-              />
-              
+            {/* Interactive Prayer Demo - Fixed Height, Transparent Background */}
+            <div className="relative h-[320px] overflow-hidden">
               {/* Prayer Cards */}
-              <div className="relative space-y-0">
+              <div className="relative">
                 <AnimatePresence mode="popLayout">
                   {DEMO_PRAYERS.filter(p => !loggedPrayers.includes(p.id)).map((prayer) => (
                     <DemoPrayerCard
@@ -592,57 +576,48 @@ const Login: React.FC = () => {
                       prayer={prayer}
                       isArabic={isArabic}
                       isLogging={currentlyLogging === prayer.id}
-                      isLogged={loggedPrayers.includes(prayer.id)}
-                      activeButton={activeButtonForPrayer[prayer.id] ?? null}
+                      activeButton={activeButtons[prayer.id] ?? null}
                     />
                   ))}
                 </AnimatePresence>
-                
-                {/* All Done Message */}
-                <AnimatePresence>
-                  {loggedPrayers.length === 5 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      className="absolute inset-0 flex flex-col items-center justify-center text-center"
-                    >
-                      <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
-                        className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-3"
-                      >
-                        <Sparkles size={28} className="text-emerald-400" />
-                      </motion.div>
-                      <p className="text-emerald-400 font-bold text-lg">
-                        {isArabic ? 'أحسنت! يوم مكتمل' : 'Well done! Day complete'}
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
-            </motion.div>
-
-            {/* Bottom Copy */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="text-center text-white/40 text-sm mt-6 leading-relaxed"
-            >
-              {isArabic 
-                ? 'تتبع الصلوات الخمس والرواتب. مجرد نقرة — سجّلها كمنجزة.' 
-                : 'Track the 5 Daily Prayers & Rawatib. Just tick a box — log it as done.'}
-            </motion.p>
+              
+              {/* Completion Message */}
+              <AnimatePresence>
+                {loggedPrayers.length === 5 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center text-center"
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 0.8 }}
+                      className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4 border border-emerald-500/30"
+                    >
+                      <Sparkles size={28} className="text-emerald-400" />
+                    </motion.div>
+                    <p className="text-white/80 font-medium text-lg leading-relaxed">
+                      {isArabic ? (
+                        <>للصلوات. للرواتب.<br />لكل أعمالك.</>
+                      ) : (
+                        <>For Prayers. For Rawatib.<br />For all of your work.</>
+                      )}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Decorative Divider */}
             <motion.div
               initial={{ opacity: 0, scaleX: 0 }}
               whileInView={{ opacity: 1, scaleX: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="mt-12 flex items-center justify-center gap-3"
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="mt-8 flex items-center justify-center gap-3"
             >
               <div className="h-px w-16 bg-gradient-to-r from-transparent to-emerald-500/50" />
               <Sparkles size={16} className="text-emerald-500/50" />
