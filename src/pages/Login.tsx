@@ -663,7 +663,7 @@ const Login: React.FC = () => {
             </motion.div>
 
             {/* Interactive Prayer Demo - Fixed Height, Transparent Background */}
-            <div className="relative h-[320px] overflow-hidden">
+            <div className="relative h-[360px] overflow-hidden">
               {/* Prayer Cards */}
               <div className="relative">
                 <AnimatePresence mode="popLayout">
@@ -689,7 +689,7 @@ const Login: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="absolute inset-0 flex flex-col items-center justify-center text-center"
+                    className="absolute inset-0 flex flex-col items-center justify-center text-center bg-slate-950/80 backdrop-blur-sm"
                   >
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
@@ -698,7 +698,10 @@ const Login: React.FC = () => {
                     >
                       <Sparkles size={28} className="text-emerald-400" />
                     </motion.div>
-                    <p className="text-white/80 font-medium text-lg leading-relaxed">
+                    <p 
+                      className="text-white font-bold text-xl leading-relaxed"
+                      style={{ textShadow: '0 2px 20px rgba(0,0,0,0.9), 0 4px 40px rgba(0,0,0,0.8)' }}
+                    >
                       {isArabic ? (
                         <>للصلوات. للرواتب.<br />لكل أعمالك.</>
                       ) : (
@@ -1651,14 +1654,26 @@ const Login: React.FC = () => {
         </div>
       </main>
 
-      {/* Footer - Secret Easter Egg */}
-      <footer className="py-8 text-center relative z-10">
+      {/* Footer - Corporate + Easter Egg */}
+      <footer className="py-8 relative z-10 border-t border-white/[0.03]">
+        {/* Easter Egg Line */}
         <p 
           onClick={handleFooterClick}
-          className="text-white/15 text-xs font-medium tracking-wide select-none"
+          className="text-white/20 text-xs font-medium tracking-wide select-none text-center mb-4"
         >
           {isArabic ? `صُنع بـ 💙 ${currentFooterEnding}` : `Built with 💙 for ${currentFooterEnding}`}
         </p>
+        
+        {/* Corporate Footer */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-white/15 text-[10px] tracking-wide">
+          <span>© Hseeb 2025</span>
+          <span className="hidden sm:inline">•</span>
+          <span>{isArabic ? 'صُنع في المدينة المنورة' : 'Made in AlMadinah'}</span>
+          <span className="hidden sm:inline">•</span>
+          <a href="mailto:Admin@hseeb.com" className="hover:text-white/30 transition-colors">Admin@hseeb.com</a>
+          <span className="hidden sm:inline">•</span>
+          <span>v3.5</span>
+        </div>
       </footer>
     </div>
   );
