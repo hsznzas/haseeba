@@ -663,12 +663,17 @@ const Login: React.FC = () => {
                   transition={{ duration: 0.5, delay: 0.1 }}
                   className="snap-start w-[280px] shrink-0 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5"
                 >
-                  {/* Card Explanation */}
-                  <p className="text-white/50 text-[11px] mb-5">
-                    {isArabic 
-                      ? 'تحليل شامل لجودة صلواتك الخمس'
-                      : 'Full breakdown of your 5 daily prayers'}
-                  </p>
+                  {/* Card Explanation - 25% of card */}
+                  <div className="mb-4 pb-3 border-b border-white/[0.06]">
+                    <h3 className="text-white font-bold text-sm mb-1.5">
+                      {isArabic ? 'تحليل الصلوات' : 'Prayer Analytics'}
+                    </h3>
+                    <p className="text-white/50 text-xs leading-relaxed">
+                      {isArabic 
+                        ? 'تحليل شامل لجودة صلواتك الخمس اليومية. تتبع نسبة التكبيرة والجماعة والفائتة.'
+                        : 'Full breakdown of your 5 daily prayers. Track Takbirah rate, Jamaa, and missed prayers.'}
+                    </p>
+                  </div>
                   
                   {/* Donut Chart + Stats - Centered Layout */}
                   <div className="flex flex-col items-center">
@@ -743,12 +748,17 @@ const Login: React.FC = () => {
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className="snap-start w-[280px] shrink-0 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5"
                 >
-                  {/* Card Explanation */}
-                  <p className="text-white/50 text-[11px] mb-5">
-                    {isArabic 
-                      ? 'عرض شهري - كل حلقة تمثل يوم بألوان الجودة'
-                      : 'Monthly view - each ring shows prayer quality'}
-                  </p>
+                  {/* Card Explanation - 25% of card */}
+                  <div className="mb-4 pb-3 border-b border-white/[0.06]">
+                    <h3 className="text-white font-bold text-sm mb-1.5">
+                      {isArabic ? 'العرض الشهري' : 'Monthly View'}
+                    </h3>
+                    <p className="text-white/50 text-xs leading-relaxed">
+                      {isArabic 
+                        ? 'كل حلقة تمثل يوم كامل. الألوان تدل على جودة كل صلاة من الخمس.'
+                        : 'Each ring represents one day. Colors show the quality of each of the 5 prayers.'}
+                    </p>
+                  </div>
                   
                   {/* Mini Calendar Grid */}
                   <div className="grid grid-cols-7 gap-1">
@@ -815,12 +825,17 @@ const Login: React.FC = () => {
                   transition={{ duration: 0.5, delay: 0.3 }}
                   className="snap-start w-[280px] shrink-0 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5"
                 >
-                  {/* Card Explanation */}
-                  <p className="text-white/50 text-[11px] mb-5">
-                    {isArabic 
-                      ? 'تتبع نموك أسبوعياً وشهرياً وسنوياً'
-                      : 'Track your growth over time periods'}
-                  </p>
+                  {/* Card Explanation - 25% of card */}
+                  <div className="mb-4 pb-3 border-b border-white/[0.06]">
+                    <h3 className="text-white font-bold text-sm mb-1.5">
+                      {isArabic ? 'جدول النمو' : 'Growth Table'}
+                    </h3>
+                    <p className="text-white/50 text-xs leading-relaxed">
+                      {isArabic 
+                        ? 'تتبع تقدمك أسبوعياً وشهرياً وربع سنوياً وسنوياً. الأرقام الخضراء تعني تحسن.'
+                        : 'Track progress weekly, monthly, quarterly & yearly. Green numbers mean improvement.'}
+                    </p>
+                  </div>
                   
                   {/* Growth Table */}
                   <div className="bg-white/[0.02] rounded-lg border border-white/[0.06] overflow-hidden">
@@ -861,12 +876,17 @@ const Login: React.FC = () => {
                   transition={{ duration: 0.5, delay: 0.4 }}
                   className="snap-start w-[280px] shrink-0 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5"
                 >
-                  {/* Card Explanation */}
-                  <p className="text-white/50 text-[11px] mb-5">
-                    {isArabic 
-                      ? 'تتبع الرواتب - كل بيت يمثل ٦ سنن'
-                      : 'Rawatib tracker - each house = 6 Sunnahs'}
-                  </p>
+                  {/* Card Explanation - 25% of card */}
+                  <div className="mb-4 pb-3 border-b border-white/[0.06]">
+                    <h3 className="text-white font-bold text-sm mb-1.5">
+                      {isArabic ? 'تتبع الرواتب' : 'Rawatib Tracker'}
+                    </h3>
+                    <p className="text-white/50 text-xs leading-relaxed">
+                      {isArabic 
+                        ? 'كل بيت يمثل ٦ سنن راتبة. الأزرق يعني جزئي، الأخضر يعني مكتمل.'
+                        : 'Each house = 6 Sunnah prayers. Blue means partial, green means complete.'}
+                    </p>
+                  </div>
                   
                   {/* Mini Rawatib Calendar Grid */}
                   <div className="grid grid-cols-7 gap-1">
