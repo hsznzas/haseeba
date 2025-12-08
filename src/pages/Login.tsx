@@ -661,78 +661,74 @@ const Login: React.FC = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: 0.1 }}
-                  className="snap-start w-[300px] shrink-0 bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm rounded-2xl p-4"
+                  className="snap-start w-[280px] shrink-0 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5"
                 >
                   {/* Card Explanation */}
-                  <p className="text-white/60 text-xs mb-4 leading-relaxed">
+                  <p className="text-white/50 text-[11px] mb-5">
                     {isArabic 
-                      ? 'تحليل شامل لجودة صلواتك الخمس اليومية'
-                      : 'Comprehensive breakdown of your 5 daily prayer quality'}
+                      ? 'تحليل شامل لجودة صلواتك الخمس'
+                      : 'Full breakdown of your 5 daily prayers'}
                   </p>
                   
-                  {/* Donut Chart + Stats */}
-                  <div className="flex gap-4">
-                    {/* CSS Donut Chart */}
-                    <div className="relative w-20 h-20 shrink-0">
+                  {/* Donut Chart + Stats - Centered Layout */}
+                  <div className="flex flex-col items-center">
+                    {/* CSS Donut Chart - Larger */}
+                    <div className="relative w-28 h-28 mb-4">
                       <svg viewBox="0 0 36 36" className="w-full h-full rotate-[-90deg]">
-                        {/* Background circle */}
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#1e293b" strokeWidth="4" />
-                        {/* Takbirah - 68% (green) */}
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4" 
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#1e293b" strokeWidth="3.5" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="3.5" 
                           strokeDasharray="60 100" strokeLinecap="round" />
-                        {/* Jamaa - 15% (yellow) */}
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="4" 
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="3.5" 
                           strokeDasharray="13 100" strokeDashoffset="-60" strokeLinecap="round" />
-                        {/* On Time - 10% (orange) */}
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#f97316" strokeWidth="4" 
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#f97316" strokeWidth="3.5" 
                           strokeDasharray="9 100" strokeDashoffset="-73" strokeLinecap="round" />
-                        {/* Missed - 7% (red) */}
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#ef4444" strokeWidth="4" 
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#ef4444" strokeWidth="3.5" 
                           strokeDasharray="6 100" strokeDashoffset="-82" strokeLinecap="round" />
                       </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-lg font-bold text-amber-400">68%</span>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-2xl font-black text-amber-400">68%</span>
+                        <span className="text-[8px] text-gray-500">{isArabic ? 'تكبيرة' : 'Takbirah'}</span>
                       </div>
                     </div>
                     
-                    {/* Quality Breakdown */}
-                    <div className="flex-1 space-y-1.5">
+                    {/* Quality Breakdown - Horizontal */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                       <div className="flex items-center gap-2 text-[10px]">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                        <span className="text-gray-400 flex-1">{isArabic ? 'تكبيرة' : 'Takbirah'}</span>
-                        <span className="font-bold text-emerald-400">68%</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="text-gray-400">{isArabic ? 'تكبيرة' : 'Takbirah'}</span>
+                        <span className="font-bold text-emerald-400 ml-auto">68%</span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px]">
-                        <span className="w-2 h-2 rounded-full bg-yellow-500 shrink-0" />
-                        <span className="text-gray-400 flex-1">{isArabic ? 'جماعة' : 'Jamaa'}</span>
-                        <span className="font-bold text-yellow-400">15%</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shrink-0" />
+                        <span className="text-gray-400">{isArabic ? 'جماعة' : 'Jamaa'}</span>
+                        <span className="font-bold text-yellow-400 ml-auto">15%</span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px]">
-                        <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-                        <span className="text-gray-400 flex-1">{isArabic ? 'في الوقت' : 'On Time'}</span>
-                        <span className="font-bold text-orange-400">10%</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
+                        <span className="text-gray-400">{isArabic ? 'في الوقت' : 'On Time'}</span>
+                        <span className="font-bold text-orange-400 ml-auto">10%</span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px]">
-                        <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-                        <span className="text-gray-400 flex-1">{isArabic ? 'فائتة' : 'Missed'}</span>
-                        <span className="font-bold text-red-400">7%</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                        <span className="text-gray-400">{isArabic ? 'فائتة' : 'Missed'}</span>
+                        <span className="font-bold text-red-400 ml-auto">7%</span>
                       </div>
                     </div>
                   </div>
                   
                   {/* Top Obstacles */}
-                  <div className="mt-4 pt-3 border-t border-white/5">
+                  <div className="mt-4 pt-3 border-t border-white/[0.06]">
                     <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">
                       {isArabic ? 'أهم العوائق' : 'Top Obstacles'}
                     </p>
-                    <div className="flex flex-wrap gap-1">
-                      <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[9px] rounded-full border border-red-500/20">
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="px-2 py-1 bg-red-500/10 text-red-400 text-[9px] rounded-full border border-red-500/20">
                         {isArabic ? 'النوم' : 'Sleep'}
                       </span>
-                      <span className="px-2 py-0.5 bg-orange-500/10 text-orange-400 text-[9px] rounded-full border border-orange-500/20">
+                      <span className="px-2 py-1 bg-orange-500/10 text-orange-400 text-[9px] rounded-full border border-orange-500/20">
                         {isArabic ? 'العمل' : 'Work'}
                       </span>
-                      <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 text-[9px] rounded-full border border-yellow-500/20">
+                      <span className="px-2 py-1 bg-yellow-500/10 text-yellow-400 text-[9px] rounded-full border border-yellow-500/20">
                         {isArabic ? 'الكسل' : 'Laziness'}
                       </span>
                     </div>
@@ -745,41 +741,47 @@ const Login: React.FC = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: 0.2 }}
-                  className="snap-start w-[300px] shrink-0 bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm rounded-2xl p-4"
+                  className="snap-start w-[280px] shrink-0 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5"
                 >
                   {/* Card Explanation */}
-                  <p className="text-white/60 text-xs mb-4 leading-relaxed">
+                  <p className="text-white/50 text-[11px] mb-5">
                     {isArabic 
-                      ? 'عرض شهري لصلواتك - كل حلقة تمثل يوم'
-                      : 'Monthly prayer view - each ring represents a day'}
+                      ? 'عرض شهري - كل حلقة تمثل يوم بألوان الجودة'
+                      : 'Monthly view - each ring shows prayer quality'}
                   </p>
                   
                   {/* Mini Calendar Grid */}
-                  <div className="grid grid-cols-7 gap-1.5">
+                  <div className="grid grid-cols-7 gap-1">
                     {/* Day headers */}
                     {['S','M','T','W','T','F','S'].map((d, i) => (
-                      <div key={i} className="text-[8px] text-gray-500 text-center font-bold">{d}</div>
+                      <div key={i} className="text-[7px] text-gray-500 text-center font-bold mb-1">{d}</div>
                     ))}
                     {/* Empty cells for offset */}
                     {[...Array(3)].map((_, i) => <div key={`empty-${i}`} />)}
-                    {/* Day rings - 28 days, ~70% filled */}
+                    {/* Day rings - 28 days with varied quality colors */}
                     {[...Array(28)].map((_, i) => {
                       const dayNum = i + 1;
-                      // Simulated data: 70% good days
-                      const patterns = [
-                        [1,1,1,1,1], [1,1,1,0,1], [1,0,1,1,1], [0,1,1,1,1], [1,1,0,1,1],
-                        [1,1,1,1,0], [0,0,1,1,1], [1,1,1,0,0], [0,0,0,0,0], [1,1,1,1,1],
+                      // Quality patterns: 0=Takbirah(green), 1=Jamaa(yellow), 2=OnTime(orange), 3=Missed(red), 4=NotLogged(gray)
+                      const qualityColors = ['#10b981', '#f59e0b', '#f97316', '#ef4444', '#1e293b'];
+                      // Simulated data per day - 5 prayers with different qualities
+                      const dayPatterns = [
+                        [0,0,1,0,0], [0,1,0,1,0], [0,0,0,2,0], [1,0,0,0,1], [0,0,0,0,0],
+                        [0,1,1,0,0], [2,0,0,3,0], [0,0,0,0,0], [3,3,4,4,4], [0,0,0,0,0],
+                        [0,1,0,0,1], [0,0,2,0,0], [1,1,0,0,0], [0,0,0,1,0], [0,0,0,0,0],
+                        [2,0,0,0,2], [0,0,0,0,0], [0,1,0,1,0], [0,0,0,0,0], [0,2,0,0,1],
+                        [0,0,0,0,0], [1,0,0,0,0], [0,0,1,0,0], [0,0,0,0,0], [3,0,0,2,0],
+                        [0,0,0,0,0], [0,1,0,0,0], [0,0,0,0,0],
                       ];
-                      const pattern = patterns[i % patterns.length] || [0,0,0,0,0];
+                      const qualities = dayPatterns[i] || [4,4,4,4,4];
                       return (
                         <div key={dayNum} className="relative w-full aspect-square">
                           <svg viewBox="0 0 40 40" className="w-full h-full rotate-[-90deg]">
-                            {pattern.map((filled, j) => {
+                            {qualities.map((q, j) => {
                               const startAngle = j * 72;
                               const endAngle = startAngle + 67;
                               const startRad = (startAngle * Math.PI) / 180;
                               const endRad = (endAngle * Math.PI) / 180;
-                              const r = 16, cx = 20, cy = 20;
+                              const r = 15, cx = 20, cy = 20;
                               const x1 = cx + r * Math.cos(startRad);
                               const y1 = cy + r * Math.sin(startRad);
                               const x2 = cx + r * Math.cos(endRad);
@@ -789,14 +791,14 @@ const Login: React.FC = () => {
                                   key={j} 
                                   d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
                                   fill="none" 
-                                  stroke={filled ? '#10b981' : '#1e293b'} 
-                                  strokeWidth={4} 
+                                  stroke={qualityColors[q]} 
+                                  strokeWidth={3.5} 
                                   strokeLinecap="round"
                                 />
                               );
                             })}
                           </svg>
-                          <span className="absolute inset-0 flex items-center justify-center text-[8px] text-gray-500 font-bold">
+                          <span className="absolute inset-0 flex items-center justify-center text-[7px] text-gray-500 font-bold">
                             {dayNum}
                           </span>
                         </div>
@@ -811,19 +813,19 @@ const Login: React.FC = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: 0.3 }}
-                  className="snap-start w-[300px] shrink-0 bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm rounded-2xl p-4"
+                  className="snap-start w-[280px] shrink-0 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5"
                 >
                   {/* Card Explanation */}
-                  <p className="text-white/60 text-xs mb-4 leading-relaxed">
+                  <p className="text-white/50 text-[11px] mb-5">
                     {isArabic 
-                      ? 'تتبع نموك أسبوعياً وشهرياً وربع سنوياً وسنوياً'
-                      : 'Track growth weekly, monthly, quarterly & yearly'}
+                      ? 'تتبع نموك أسبوعياً وشهرياً وسنوياً'
+                      : 'Track your growth over time periods'}
                   </p>
                   
                   {/* Growth Table */}
-                  <div className="bg-slate-900/50 rounded-lg border border-slate-800 overflow-hidden">
+                  <div className="bg-white/[0.02] rounded-lg border border-white/[0.06] overflow-hidden">
                     {/* Header */}
-                    <div className="grid grid-cols-5 bg-slate-800/50 p-2 text-[8px] font-bold text-gray-400 uppercase text-center">
+                    <div className="grid grid-cols-5 bg-white/[0.03] p-2.5 text-[8px] font-bold text-gray-400 uppercase text-center">
                       <div className="text-start">{isArabic ? 'صلاة' : 'Prayer'}</div>
                       <div>WoW</div><div>MoM</div><div>QoQ</div><div>YoY</div>
                     </div>
@@ -835,7 +837,7 @@ const Login: React.FC = () => {
                       { name: isArabic ? 'المغرب' : 'Maghrib', data: ['+3', '+4', '+9', '+14'] },
                       { name: isArabic ? 'العشاء' : 'Isha', data: ['0', '+1', '+4', '+8'] },
                     ].map((row, i) => (
-                      <div key={i} className="grid grid-cols-5 border-t border-slate-800 p-2 text-center items-center">
+                      <div key={i} className="grid grid-cols-5 border-t border-white/[0.04] p-2.5 text-center items-center">
                         <div className="text-start text-[9px] font-medium text-white/80">{row.name}</div>
                         {row.data.map((val, j) => {
                           const isPos = val.startsWith('+');
@@ -857,20 +859,20 @@ const Login: React.FC = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: 0.4 }}
-                  className="snap-start w-[300px] shrink-0 bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm rounded-2xl p-4"
+                  className="snap-start w-[280px] shrink-0 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5"
                 >
                   {/* Card Explanation */}
-                  <p className="text-white/60 text-xs mb-4 leading-relaxed">
+                  <p className="text-white/50 text-[11px] mb-5">
                     {isArabic 
-                      ? 'تتبع صلوات الرواتب - كل بيت يمثل ٦ سنن'
-                      : 'Track Rawatib prayers - each house represents 6 Sunnahs'}
+                      ? 'تتبع الرواتب - كل بيت يمثل ٦ سنن'
+                      : 'Rawatib tracker - each house = 6 Sunnahs'}
                   </p>
                   
                   {/* Mini Rawatib Calendar Grid */}
-                  <div className="grid grid-cols-7 gap-1.5">
+                  <div className="grid grid-cols-7 gap-1">
                     {/* Day headers */}
                     {['S','M','T','W','T','F','S'].map((d, i) => (
-                      <div key={i} className="text-[8px] text-gray-500 text-center font-bold">{d}</div>
+                      <div key={i} className="text-[7px] text-gray-500 text-center font-bold mb-1">{d}</div>
                     ))}
                     {/* Empty cells */}
                     {[...Array(3)].map((_, i) => <div key={`empty-r-${i}`} />)}
