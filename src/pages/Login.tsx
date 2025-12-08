@@ -625,6 +625,312 @@ const Login: React.FC = () => {
             </motion.div>
           </motion.section>
 
+          {/* Section 3: The Results - Analytics Carousel */}
+          <motion.section
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8 }}
+            className="mb-16"
+          >
+            {/* Section Title */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-center mb-6"
+            >
+              <h2 className="text-3xl font-black text-white mb-2">
+                {isArabic ? 'النتائج' : 'The Results'}
+              </h2>
+              <p className="text-white/50 text-base">
+                {isArabic 
+                  ? 'تحليلات ورؤى لتتبع تقدمك' 
+                  : 'Analytics & insights to track your progress'}
+              </p>
+            </motion.div>
+
+            {/* Horizontal Carousel */}
+            <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-4 px-4">
+              <div className="flex gap-4 w-max pb-4">
+                
+                {/* Card 1: Consolidated Prayer Analytics */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="snap-start w-[300px] shrink-0 bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm rounded-2xl p-4"
+                >
+                  {/* Card Explanation */}
+                  <p className="text-white/60 text-xs mb-4 leading-relaxed">
+                    {isArabic 
+                      ? 'تحليل شامل لجودة صلواتك الخمس اليومية'
+                      : 'Comprehensive breakdown of your 5 daily prayer quality'}
+                  </p>
+                  
+                  {/* Donut Chart + Stats */}
+                  <div className="flex gap-4">
+                    {/* CSS Donut Chart */}
+                    <div className="relative w-20 h-20 shrink-0">
+                      <svg viewBox="0 0 36 36" className="w-full h-full rotate-[-90deg]">
+                        {/* Background circle */}
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#1e293b" strokeWidth="4" />
+                        {/* Takbirah - 68% (green) */}
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4" 
+                          strokeDasharray="60 100" strokeLinecap="round" />
+                        {/* Jamaa - 15% (yellow) */}
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="4" 
+                          strokeDasharray="13 100" strokeDashoffset="-60" strokeLinecap="round" />
+                        {/* On Time - 10% (orange) */}
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#f97316" strokeWidth="4" 
+                          strokeDasharray="9 100" strokeDashoffset="-73" strokeLinecap="round" />
+                        {/* Missed - 7% (red) */}
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#ef4444" strokeWidth="4" 
+                          strokeDasharray="6 100" strokeDashoffset="-82" strokeLinecap="round" />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg font-bold text-amber-400">68%</span>
+                      </div>
+                    </div>
+                    
+                    {/* Quality Breakdown */}
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="text-gray-400 flex-1">{isArabic ? 'تكبيرة' : 'Takbirah'}</span>
+                        <span className="font-bold text-emerald-400">68%</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <span className="w-2 h-2 rounded-full bg-yellow-500 shrink-0" />
+                        <span className="text-gray-400 flex-1">{isArabic ? 'جماعة' : 'Jamaa'}</span>
+                        <span className="font-bold text-yellow-400">15%</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                        <span className="text-gray-400 flex-1">{isArabic ? 'في الوقت' : 'On Time'}</span>
+                        <span className="font-bold text-orange-400">10%</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                        <span className="text-gray-400 flex-1">{isArabic ? 'فائتة' : 'Missed'}</span>
+                        <span className="font-bold text-red-400">7%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Top Obstacles */}
+                  <div className="mt-4 pt-3 border-t border-white/5">
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">
+                      {isArabic ? 'أهم العوائق' : 'Top Obstacles'}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[9px] rounded-full border border-red-500/20">
+                        {isArabic ? 'النوم' : 'Sleep'}
+                      </span>
+                      <span className="px-2 py-0.5 bg-orange-500/10 text-orange-400 text-[9px] rounded-full border border-orange-500/20">
+                        {isArabic ? 'العمل' : 'Work'}
+                      </span>
+                      <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 text-[9px] rounded-full border border-yellow-500/20">
+                        {isArabic ? 'الكسل' : 'Laziness'}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Card 2: Monthly View */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="snap-start w-[300px] shrink-0 bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm rounded-2xl p-4"
+                >
+                  {/* Card Explanation */}
+                  <p className="text-white/60 text-xs mb-4 leading-relaxed">
+                    {isArabic 
+                      ? 'عرض شهري لصلواتك - كل حلقة تمثل يوم'
+                      : 'Monthly prayer view - each ring represents a day'}
+                  </p>
+                  
+                  {/* Mini Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {/* Day headers */}
+                    {['S','M','T','W','T','F','S'].map((d, i) => (
+                      <div key={i} className="text-[8px] text-gray-500 text-center font-bold">{d}</div>
+                    ))}
+                    {/* Empty cells for offset */}
+                    {[...Array(3)].map((_, i) => <div key={`empty-${i}`} />)}
+                    {/* Day rings - 28 days, ~70% filled */}
+                    {[...Array(28)].map((_, i) => {
+                      const dayNum = i + 1;
+                      // Simulated data: 70% good days
+                      const patterns = [
+                        [1,1,1,1,1], [1,1,1,0,1], [1,0,1,1,1], [0,1,1,1,1], [1,1,0,1,1],
+                        [1,1,1,1,0], [0,0,1,1,1], [1,1,1,0,0], [0,0,0,0,0], [1,1,1,1,1],
+                      ];
+                      const pattern = patterns[i % patterns.length] || [0,0,0,0,0];
+                      return (
+                        <div key={dayNum} className="relative w-full aspect-square">
+                          <svg viewBox="0 0 40 40" className="w-full h-full rotate-[-90deg]">
+                            {pattern.map((filled, j) => {
+                              const startAngle = j * 72;
+                              const endAngle = startAngle + 67;
+                              const startRad = (startAngle * Math.PI) / 180;
+                              const endRad = (endAngle * Math.PI) / 180;
+                              const r = 16, cx = 20, cy = 20;
+                              const x1 = cx + r * Math.cos(startRad);
+                              const y1 = cy + r * Math.sin(startRad);
+                              const x2 = cx + r * Math.cos(endRad);
+                              const y2 = cy + r * Math.sin(endRad);
+                              return (
+                                <path 
+                                  key={j} 
+                                  d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+                                  fill="none" 
+                                  stroke={filled ? '#10b981' : '#1e293b'} 
+                                  strokeWidth={4} 
+                                  strokeLinecap="round"
+                                />
+                              );
+                            })}
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-[8px] text-gray-500 font-bold">
+                            {dayNum}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+
+                {/* Card 3: Growth Table */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="snap-start w-[300px] shrink-0 bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm rounded-2xl p-4"
+                >
+                  {/* Card Explanation */}
+                  <p className="text-white/60 text-xs mb-4 leading-relaxed">
+                    {isArabic 
+                      ? 'تتبع نموك أسبوعياً وشهرياً وربع سنوياً وسنوياً'
+                      : 'Track growth weekly, monthly, quarterly & yearly'}
+                  </p>
+                  
+                  {/* Growth Table */}
+                  <div className="bg-slate-900/50 rounded-lg border border-slate-800 overflow-hidden">
+                    {/* Header */}
+                    <div className="grid grid-cols-5 bg-slate-800/50 p-2 text-[8px] font-bold text-gray-400 uppercase text-center">
+                      <div className="text-start">{isArabic ? 'صلاة' : 'Prayer'}</div>
+                      <div>WoW</div><div>MoM</div><div>QoQ</div><div>YoY</div>
+                    </div>
+                    {/* Rows */}
+                    {[
+                      { name: isArabic ? 'الفجر' : 'Fajr', data: ['+2', '+5', '+12', '+18'] },
+                      { name: isArabic ? 'الظهر' : 'Dhuhr', data: ['+1', '+3', '+8', '+15'] },
+                      { name: isArabic ? 'العصر' : 'Asr', data: ['-1', '+2', '+6', '+10'] },
+                      { name: isArabic ? 'المغرب' : 'Maghrib', data: ['+3', '+4', '+9', '+14'] },
+                      { name: isArabic ? 'العشاء' : 'Isha', data: ['0', '+1', '+4', '+8'] },
+                    ].map((row, i) => (
+                      <div key={i} className="grid grid-cols-5 border-t border-slate-800 p-2 text-center items-center">
+                        <div className="text-start text-[9px] font-medium text-white/80">{row.name}</div>
+                        {row.data.map((val, j) => {
+                          const isPos = val.startsWith('+');
+                          const isZero = val === '0';
+                          return (
+                            <div key={j} className={`text-[9px] font-bold ${isZero ? 'text-gray-500' : isPos ? 'text-green-400' : 'text-red-400'}`}>
+                              {val}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* Card 4: Rawatib View */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="snap-start w-[300px] shrink-0 bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm rounded-2xl p-4"
+                >
+                  {/* Card Explanation */}
+                  <p className="text-white/60 text-xs mb-4 leading-relaxed">
+                    {isArabic 
+                      ? 'تتبع صلوات الرواتب - كل بيت يمثل ٦ سنن'
+                      : 'Track Rawatib prayers - each house represents 6 Sunnahs'}
+                  </p>
+                  
+                  {/* Mini Rawatib Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {/* Day headers */}
+                    {['S','M','T','W','T','F','S'].map((d, i) => (
+                      <div key={i} className="text-[8px] text-gray-500 text-center font-bold">{d}</div>
+                    ))}
+                    {/* Empty cells */}
+                    {[...Array(3)].map((_, i) => <div key={`empty-r-${i}`} />)}
+                    {/* House shapes - 28 days */}
+                    {[...Array(28)].map((_, i) => {
+                      const dayNum = i + 1;
+                      // Simulated: ~70% completion patterns
+                      const completedSegments = [6,4,5,3,6,5,2,6,4,5,1,6,3,4,6,5,4,6,0,5,4,6,3,5,6,4,2,6][i] || 0;
+                      const allComplete = completedSegments === 6;
+                      const segments = [
+                        'M 20,6 L 6,18',   // roof-left
+                        'M 20,6 L 34,18',  // roof-right
+                        'M 6,18 L 9,34',   // wall-left
+                        'M 34,18 L 31,34', // wall-right
+                        'M 9,34 L 20,34',  // floor-left
+                        'M 20,34 L 31,34', // floor-right
+                      ];
+                      return (
+                        <div key={dayNum} className="relative w-full aspect-square">
+                          <svg viewBox="0 0 40 40" className="w-full h-full">
+                            {/* Base house */}
+                            {segments.map((d, j) => (
+                              <path key={`base-${j}`} d={d} fill="none" stroke="#1e293b" strokeWidth={2.5} strokeLinecap="round" />
+                            ))}
+                            {/* Active segments */}
+                            {segments.slice(0, completedSegments).map((d, j) => (
+                              <path key={`active-${j}`} d={d} fill="none" stroke={allComplete ? '#22c55e' : '#3b82f6'} strokeWidth={3} strokeLinecap="round" />
+                            ))}
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-[7px] text-gray-500 font-bold mt-1">
+                            {dayNum}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+                
+              </div>
+            </div>
+
+            {/* Scroll hint */}
+            <p className="text-center text-white/30 text-[10px] mt-2">
+              {isArabic ? '← اسحب لرؤية المزيد →' : '← Swipe to see more →'}
+            </p>
+
+            {/* Decorative Divider */}
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0 }}
+              whileInView={{ opacity: 1, scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="mt-8 flex items-center justify-center gap-3"
+            >
+              <div className="h-px w-16 bg-gradient-to-r from-transparent to-emerald-500/50" />
+              <Sparkles size={16} className="text-emerald-500/50" />
+              <div className="h-px w-16 bg-gradient-to-l from-transparent to-emerald-500/50" />
+            </motion.div>
+          </motion.section>
+
           <AnimatePresence mode="wait">
             {mode === "recovery" ? (
               /* Recovery Mode */
