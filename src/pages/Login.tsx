@@ -135,7 +135,7 @@ const DemoPrayerCard: React.FC<{
       transition={{ 
         duration: 0.5, 
         ease: "easeOut",
-        layout: { duration: 0.3 }
+        layout: { duration: 0.3, ease: "easeInOut", type: "tween" }
       }}
       className={`
         relative overflow-hidden rounded-2xl mb-2
