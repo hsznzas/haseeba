@@ -40,7 +40,8 @@ const DustParticle: React.FC<{
   wobble: number;
   depth: number; // Needed for parallax speed calculation
   scrollY: MotionValue<number>; // Needed to track scroll
-}> = ({ x, y, size, blur, opacity, duration, delay, wobble, depth, scrollY }) => {
+  isPaused?: boolean; // Pause animation when not in viewport
+}> = ({ x, y, size, blur, opacity, duration, delay, wobble, depth, scrollY, isPaused = false }) => {
   
   // Parallax Logic: Maps scroll position to vertical movement
   // Depth 1 (Close) moves fast (-200px), Depth 0 (Far) moves slow
@@ -65,7 +66,7 @@ const DustParticle: React.FC<{
           filter: `blur(${blur}px)`,
           boxShadow: `0 0 ${size * 2}px rgba(255,255,255,0.4)`
         }}
-        animate={{
+        animate={isPaused ? { opacity: 0 } : {
           y: [0, -200], // Levitation Upwards
           x: [0, wobble, -wobble, 0], // Wobble Left/Right
           opacity: [0, opacity, opacity, 0], // Long life fade
@@ -264,6 +265,10 @@ const Login: React.FC = () => {
   // 3. Initialize Scroll Hook
   const { scrollY } = useScroll();
   
+  // Ref for particle container to pause animations when not in view
+  const particleContainerRef = useRef<HTMLDivElement>(null);
+  const particlesInView = useInView(particleContainerRef, { margin: "200px" });
+  
   const { signInWithEmail, signUpWithEmail, startDemo, resetPasswordForEmail } = useAuth();
   const [language, setLanguage] = useState<"en" | "ar">("ar");
   const [mode, setMode] = useState<FormMode>("signin");
@@ -455,7 +460,7 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col relative overflow-y-auto" dir={isArabic ? "rtl" : "ltr"}>
       {/* Animated Background Effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div ref={particleContainerRef} className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Gradient orbs */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[128px] animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-teal-500/10 rounded-full blur-[100px]" />
@@ -470,12 +475,13 @@ const Login: React.FC = () => {
           }}
         />
         
-        {/* 5. UPDATED RENDER: Passed scrollY prop and cleaned up duplicates */}
+        {/* 5. UPDATED RENDER: Particles pause when not in viewport for performance */}
         {dustParticles.map((p, i) => (
           <DustParticle 
             key={`dust-${i}`} 
             {...p} 
-            scrollY={scrollY} 
+            scrollY={scrollY}
+            isPaused={!particlesInView}
           />
         ))}
       </div>
