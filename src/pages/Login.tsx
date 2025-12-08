@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone, Sunrise, Sun, CloudSun, Sunset, Moon, Clock, XCircle } from "lucide-react";
+import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone, Sunrise, Sun, CloudSun, Sunset, Moon, Clock, XCircle, Brain } from "lucide-react";
 import { DemoPersona } from "../services/storage";
 // 1. Updated Imports to include Scroll hooks
 import { motion, AnimatePresence, useScroll, useTransform, MotionValue } from "framer-motion";
@@ -950,6 +950,98 @@ const Login: React.FC = () => {
               <div className="h-px w-16 bg-gradient-to-r from-transparent to-emerald-500/50" />
               <Sparkles size={16} className="text-emerald-500/50" />
               <div className="h-px w-16 bg-gradient-to-l from-transparent to-emerald-500/50" />
+            </motion.div>
+          </motion.section>
+
+          {/* Section 4: The Intelligence - AI Coaching */}
+          <motion.section
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8 }}
+            className="mb-16"
+          >
+            {/* Section Title */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-center mb-6"
+            >
+              <h2 className="text-3xl font-black text-white mb-2">
+                {isArabic ? 'الذكاء' : 'The Intelligence'}
+              </h2>
+              <p className="text-white/50 text-base">
+                {isArabic 
+                  ? 'إخلاص وتحسين مستمر' 
+                  : 'Sincerity & Continuous Improvement'}
+              </p>
+            </motion.div>
+
+            {/* AI Feature Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="bg-white/[0.03] backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 relative overflow-hidden"
+            >
+              {/* Purple glow background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-violet-500/5 pointer-events-none" />
+              
+              {/* Content */}
+              <div className="relative flex flex-col items-center text-center">
+                {/* Glowing Brain Icon */}
+                <motion.div
+                  animate={{ 
+                    boxShadow: [
+                      '0 0 20px rgba(168, 85, 247, 0.3)',
+                      '0 0 40px rgba(168, 85, 247, 0.5)',
+                      '0 0 20px rgba(168, 85, 247, 0.3)'
+                    ]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="w-16 h-16 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center mb-5"
+                >
+                  <Brain size={32} className="text-purple-400" />
+                </motion.div>
+                
+                {/* Main Text */}
+                <p className="text-white/90 text-base leading-relaxed mb-4">
+                  {isArabic 
+                    ? 'ذكاء اصطناعي يفهم نمطك الروحي. لا يكتفي بالعد، بل يوجهك.'
+                    : "AI that understands your spiritual patterns. It doesn't just count; it coaches."}
+                </p>
+                
+                {/* Example Insight Card */}
+                <div className="w-full bg-white/[0.03] border border-purple-500/10 rounded-xl p-4 mt-2">
+                  <p className="text-[10px] text-purple-400 uppercase tracking-wider font-bold mb-2">
+                    {isArabic ? 'مثال على الرؤية' : 'Example Insight'}
+                  </p>
+                  <p className="text-white/70 text-sm leading-relaxed italic">
+                    {isArabic 
+                      ? '"دائماً تضيع عنك فجر الجمعة، انتبه لها غداً."'
+                      : '"There is a pattern of missing Fajr on Fridays. Pay attention, make sure to pray tomorrow."'}
+                  </p>
+                  <p className="text-purple-400/60 text-[10px] mt-2">
+                    {isArabic ? '— يوم الخميس' : '— Thursday'}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Decorative Divider */}
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0 }}
+              whileInView={{ opacity: 1, scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mt-10 flex items-center justify-center gap-3"
+            >
+              <div className="h-px w-16 bg-gradient-to-r from-transparent to-purple-500/50" />
+              <Brain size={16} className="text-purple-500/50" />
+              <div className="h-px w-16 bg-gradient-to-l from-transparent to-purple-500/50" />
             </motion.div>
           </motion.section>
 
