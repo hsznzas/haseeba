@@ -165,7 +165,7 @@ const Analytics: React.FC = () => {
   
   const globalRateColor = getRateColorStyle(globalScoreRate);
 
-  // --- Growth Rate Logic ---
+  // --- Growth Logic (Absolute Takbirah Count Difference) ---
   const calculateGrowth = (habitId: string, intervalType: 'week' | 'month' | 'quarter' | 'year'): number | null => {
     const today = new Date();
     let currStart: Date, currEnd: Date, prevStart: Date, prevEnd: Date;
@@ -184,37 +184,37 @@ const Analytics: React.FC = () => {
       prevStart = startOfYear(addYears(today, -1)); prevEnd = endOfYear(addYears(today, -1));
     }
 
-    const getRateAndCount = (start: Date, end: Date) => {
+    // Returns the raw count of Takbirahs (not percentage)
+    const getTakbirahCount = (start: Date, end: Date): number | null => {
       const rangeLogs = logs.filter(l => {
         if (l.habitId !== habitId) return false;
         const d = parseLocalISO(l.date);
         return isWithinInterval(d, { start, end });
       });
       if (rangeLogs.length === 0) return null; // No data
-      const perfectCount = rangeLogs.filter(l => l.value === PrayerQuality.TAKBIRAH).length;
-      return (perfectCount / rangeLogs.length) * 100;
+      return rangeLogs.filter(l => l.value === PrayerQuality.TAKBIRAH).length;
     };
 
-    const currRate = getRateAndCount(currStart, currEnd);
-    const prevRate = getRateAndCount(prevStart, prevEnd);
+    const currCount = getTakbirahCount(currStart, currEnd);
+    const prevCount = getTakbirahCount(prevStart, prevEnd);
 
     // Handle edge cases
-    if (currRate === null && prevRate === null) return null; // No data at all
-    if (currRate === null) return null; // No current data, can't calc growth
-    if (prevRate === null) return null; // No previous data to compare against
+    if (currCount === null && prevCount === null) return null; // No data at all
+    if (currCount === null) return null; // No current data, can't calc growth
+    if (prevCount === null) return null; // No previous data to compare against
 
-    return Math.round(currRate - prevRate);
+    return currCount - prevCount; // Simple difference: +1 means 1 more Takbirah
   };
 
   const renderGrowthCell = (val: number | null) => {
     if (val === null) return <span className="text-gray-700 flex justify-center text-[10px]">--</span>;
-    if (val === 0) return <span className="text-gray-500 flex justify-center font-medium text-[10px]">0%</span>;
+    if (val === 0) return <span className="text-gray-500 flex justify-center font-medium text-[10px]">0</span>;
     
     const isPos = val > 0;
     return (
       <div className={clsx("flex items-center justify-center gap-1 font-bold text-xs", isPos ? "text-green-500" : "text-red-500")}>
         {isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-        {Math.abs(val)}%
+        {isPos ? '+' : ''}{val}
       </div>
     );
   };
@@ -957,7 +957,10 @@ const Analytics: React.FC = () => {
       <div className="space-y-3">
         <div className="flex items-center gap-1">
             <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">{t.growth}</h2>
-            <Tooltip text="Percentage point change in perfect logs over time periods." />
+            <Tooltip text={preferences.language === 'ar' 
+              ? "يُظهر عدد التكبيرات الإضافية (أو الأقل) مقارنة بالفترة السابقة. مثال: إذا حققت 6 تكبيرات في الأسبوع الأول و7 في الأسبوع الثاني، يُعرض +1. الرقم الموجب يعني تحسن، والسالب يعني تراجع."
+              : "Shows how many more (or fewer) Takbirahs you achieved vs. the previous period. Example: 6 Takbirahs in Week 1, 7 in Week 2 = +1. Positive = improvement, negative = decline."
+            } />
         </div>
         <div className="bg-card rounded-lg border border-slate-800 overflow-hidden">
            <div className="grid grid-cols-5 bg-slate-900/50 border-b border-slate-800 p-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">
