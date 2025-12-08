@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone, Sunrise, Sun, CloudSun, Sunset, Moon, Check } from "lucide-react";
+import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone, Sunrise, Sun, CloudSun, Sunset, Moon, Clock, XCircle } from "lucide-react";
 import { DemoPersona } from "../services/storage";
 // 1. Updated Imports to include Scroll hooks
 import { motion, AnimatePresence, useScroll, useTransform, MotionValue } from "framer-motion";
@@ -96,12 +96,12 @@ const DEMO_PRAYERS = [
   { id: 'isha', name: 'Isha', nameAr: 'العشاء', icon: Moon, logQuality: 3 },   // Missed
 ];
 
-// Quality level config for demo buttons
+// Quality level config for demo buttons (matching real PrayerCard icons)
 const QUALITY_LEVELS = [
   { id: 0, label: '1st', labelAr: 'تكبيرة', icon: Sparkles, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
   { id: 1, label: 'Grp', labelAr: 'جماعة', icon: Users, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' },
-  { id: 2, label: 'Solo', labelAr: 'وقت', icon: Check, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/30' },
-  { id: 3, label: 'Miss', labelAr: 'فات', icon: Zap, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
+  { id: 2, label: 'Solo', labelAr: 'وقت', icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/30' },
+  { id: 3, label: 'Miss', labelAr: 'فات', icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
 ];
 
 // Demo Prayer Card Component (matches real PrayerCard styling)
@@ -570,10 +570,18 @@ const Login: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="relative p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm overflow-hidden min-h-[340px]"
+              className="relative p-4 overflow-hidden h-[340px]"
             >
-              {/* Subtle background glow */}
-              <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent pointer-events-none" />
+              {/* Feathered top edge - cards fade into nothing */}
+              <div 
+                className="absolute inset-x-0 top-0 h-20 z-10 pointer-events-none"
+                style={{ background: 'linear-gradient(to bottom, rgb(2 6 23) 0%, transparent 100%)' }}
+              />
+              {/* Feathered bottom edge - cards rise from transparency */}
+              <div 
+                className="absolute inset-x-0 bottom-0 h-16 z-10 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgb(2 6 23) 0%, transparent 100%)' }}
+              />
               
               {/* Prayer Cards */}
               <div className="relative space-y-0">
