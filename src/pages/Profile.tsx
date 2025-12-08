@@ -11,6 +11,34 @@ import { differenceInMonths, differenceInYears, addYears } from 'date-fns';
 import { HabitType, CustomReason } from '../../types';
 import { ICON_MAP, IconName } from '../utils/iconMap';
 
+// Footer easter egg endings library
+const FOOTER_ENDINGS = {
+  en: [
+    "the Ummah", "the Hereafter", "your awakening", "your clarity", "your heart",
+    "your accountability", "your growth", "your sincerity", "your journey", "your nearness to God",
+    "your discipline", "your peace", "your inner light", "your salvation", "your purpose",
+    "your resilience", "your soul", "your record", "your mindful days", "your intentions",
+    "your truth", "the seekers of goodness", "the sincere ones", "the mindful", "the disciplined",
+    "the ones striving", "the ones returning", "the ones who rise after falling", "the ones who refuse heedlessness", "the ones who walk with purpose",
+    "the ones who guard their deeds", "a clearer heart", "a stronger soul", "self-reflection", "the courageous",
+    "the ones who change", "the ones who begin today", "the ones who choose the right path", "those who seek the unseen reward", "a better tomorrow",
+    "a better you", "conscious living", "spiritual growth", "inner honesty", "moral clarity",
+    "your higher calling", "your final moment", "the Day of Reckoning", "overcoming the self", "defeating the whisper", "walking toward the Light"
+  ],
+  ar: [
+    "للأمة", "للآخرة", "لنجاتك", "لطمأنينة قلبك", "لمحاسبة النفس",
+    "لليقظة", "لتهذيب النفس", "لقربك من الله", "لاستقامة الطريق", "للروح التي تبحث عن نور",
+    "لمجاهدة الهوى", "لصفاء السريرة", "لمن أراد الحق", "لمن يسعى للازدياد", "لمن يراقب قلبه",
+    "لحياة أعمق", "لميزانك", "ليوم لا ينفع فيه مال ولا بنون", "لصلاح السر والعلن", "لزيادة بصيرتك",
+    "للنفس اللوَّامة", "للذاكرين الله كثيرًا", "لمن يخشى مقام ربه", "لمن أراد التغيير", "لمن يبحث عن النجاة",
+    "لمن يخطو أول خطوة", "لقلوب تستحي من التقصير", "لقلوب تحب الله", "لمن يريد أن يبدأ", "لمن يريد ألا يغفل",
+    "ليوم الحسرة والندامة", "لمستقبلٍ لا ينطفئ نوره", "لمن يراجع أعماله", "لمن يفرح بالطاعة", "لمن يخاف من الغفلة",
+    "لمن يصلح عيوبه", "لمن يتوب ويعود", "لمن يعرف قدر نفسه", "لمن يحب النجاة", "لمن يعمل بصمت",
+    "لرحلة الاستقامة", "لطهارة الداخل", "لمن أرهقه البعد", "لمن أراد القرب", "لمن يطلب الهداية",
+    "لمن يعمل للقاء الله", "لقلوب تخشى سوء الخاتمة", "لمن يختار طريق الحق", "لتجديد همّتك", "لصيانة أعمالك", "لمن يكتب كتابه بيده"
+  ]
+};
+
 // Inline Tooltip for column headers
 const ColumnTooltip: React.FC<{ text: string }> = ({ text }) => (
   <div className="group relative inline-flex items-center ml-1">
@@ -239,6 +267,14 @@ const Profile: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
   const [showDobModal, setShowDobModal] = useState(false);
   const [dobInput, setDobInput] = useState(preferences.dateOfBirth || '');
+  
+  // Footer easter egg state
+  const [footerEndingIndex, setFooterEndingIndex] = useState(0);
+  const isArabic = preferences.language === 'ar';
+  const currentFooterEnding = isArabic 
+    ? FOOTER_ENDINGS.ar[footerEndingIndex % FOOTER_ENDINGS.ar.length]
+    : FOOTER_ENDINGS.en[footerEndingIndex % FOOTER_ENDINGS.en.length];
+  const handleFooterClick = () => setFooterEndingIndex(prev => prev + 1);
 
   // Lifetime Countdown calculation with more metrics
   const lifetimeStats = useMemo(() => {
@@ -802,6 +838,16 @@ const Profile: React.FC = () => {
          <Home size={24} />
          {t.home}
        </button>
+       
+       {/* Footer - Secret Easter Egg */}
+       <footer className="py-8 text-center">
+         <p 
+           onClick={handleFooterClick}
+           className="text-white/15 text-xs font-medium tracking-wide select-none"
+         >
+           {isArabic ? `صُنع بـ 💙 ${currentFooterEnding}` : `Built with 💙 for ${currentFooterEnding}`}
+         </p>
+       </footer>
     </div>
   );
 };
