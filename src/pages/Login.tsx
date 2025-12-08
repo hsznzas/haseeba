@@ -1143,8 +1143,8 @@ const Login: React.FC = () => {
                   </div>
                   <div className="text-4xl font-black text-white mb-1">
                     <AnimatedCounter 
-                      value={globalStats.totalHabitsLogged || 12500} 
-                      suffix="+" 
+                      value={globalStats.totalHabitsLogged} 
+                      suffix={globalStats.totalHabitsLogged > 0 ? "+" : ""} 
                     />
                   </div>
                   <p className="text-white/50 text-sm">
@@ -1170,8 +1170,8 @@ const Login: React.FC = () => {
                   </div>
                   <div className="text-4xl font-black text-white mb-1">
                     <AnimatedCounter 
-                      value={globalStats.totalAiInsights || 850} 
-                      suffix="+" 
+                      value={globalStats.totalAiInsights} 
+                      suffix={globalStats.totalAiInsights > 0 ? "+" : ""} 
                     />
                   </div>
                   <p className="text-white/50 text-sm">

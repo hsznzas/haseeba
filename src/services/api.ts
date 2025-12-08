@@ -14,7 +14,7 @@ export interface GlobalStats {
 
 export const getGlobalStats = async (): Promise<GlobalStats> => {
   try {
-    // Get total habit logs count
+    // Get total habit logs count (real number from database)
     const { count: logsCount, error: logsError } = await supabase
       .from('habit_logs')
       .select('*', { count: 'exact', head: true });
@@ -23,23 +23,37 @@ export const getGlobalStats = async (): Promise<GlobalStats> => {
       console.error('Error fetching logs count:', logsError);
     }
 
-    // For AI insights, we can estimate based on unique user-days with logs
-    // Each user gets ~1 insight per day they use the app
-    const { count: uniqueDaysCount, error: daysError } = await supabase
-      .from('habit_logs')
-      .select('user_id, date', { count: 'exact', head: true });
+    // Get total AI insight generations (real number from database)
+    const { count: insightsCount, error: insightsError } = await supabase
+      .from('ai_insight_logs')
+      .select('*', { count: 'exact', head: true });
 
-    if (daysError) {
-      console.error('Error fetching days count:', daysError);
+    if (insightsError) {
+      console.error('Error fetching insights count:', insightsError);
     }
 
     return {
-      totalHabitsLogged: logsCount || 0,
-      totalAiInsights: Math.floor((uniqueDaysCount || 0) / 5), // Rough estimate: 1 insight per 5 logs
+      totalHabitsLogged: logsCount ?? 0,
+      totalAiInsights: insightsCount ?? 0,
     };
   } catch (err) {
     console.error('Error fetching global stats:', err);
     return { totalHabitsLogged: 0, totalAiInsights: 0 };
+  }
+};
+
+// --- AI INSIGHT TRACKING ---
+export const logAiInsightGeneration = async (userId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('ai_insight_logs')
+      .insert({ user_id: userId });
+
+    if (error) {
+      console.error('Error logging AI insight:', error);
+    }
+  } catch (err) {
+    console.error('Error in logAiInsightGeneration:', err);
   }
 };
 

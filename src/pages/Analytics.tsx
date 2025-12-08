@@ -2,7 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { generateDailyBriefing, getCachedBriefing, regenerateBriefing } from '../services/aiEngine';
+import { logAiInsightGeneration } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, Brain, Zap, RefreshCw } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog, DailyBriefing } from '../../types';
@@ -49,6 +51,7 @@ const getRateColorStyle = (percentage: number) => {
 
 const Analytics: React.FC = () => {
   const { preferences } = usePreferences();
+  const { user } = useAuth();
   const t = TRANSLATIONS[preferences.language];
   const locale = preferences.language === 'ar' ? ar : enUS;
   
@@ -93,6 +96,11 @@ const Analytics: React.FC = () => {
     try {
       const briefing = await regenerateBriefing(habits, logs, preferences.language);
       setDailyBriefing(briefing);
+      
+      // Track AI insight generation for real users
+      if (user && !user.isDemo) {
+        await logAiInsightGeneration(user.id);
+      }
     } catch (error) {
       console.error('Error refreshing briefing:', error);
     } finally {
