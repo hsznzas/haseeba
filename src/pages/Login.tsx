@@ -206,7 +206,7 @@ const Login: React.FC = () => {
   const [installTab, setInstallTab] = useState<'iphone' | 'android'>('iphone');
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col relative overflow-hidden" dir={isArabic ? "rtl" : "ltr"}>
+    <div className="min-h-screen bg-slate-950 flex flex-col relative overflow-y-auto" dir={isArabic ? "rtl" : "ltr"}>
       {/* Animated Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Gradient orbs */}
@@ -257,8 +257,8 @@ const Login: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-16 relative z-10">
-        <div className="w-full max-w-sm">
+      <main className="flex-1 flex flex-col items-center px-6 pt-8 pb-16 relative z-10">
+        <div className="w-full max-w-md">
           
           {/* Hero */}
           <motion.div 
@@ -280,6 +280,119 @@ const Login: React.FC = () => {
                 : "Track worship • Improve yourself • Get closer to Allah"}
             </p>
           </motion.div>
+
+          {/* Section 1: The Why - Spiritual Anchor */}
+          <motion.section
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="mb-16 text-center"
+          >
+            {/* Opening Text - The Book Metaphor */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1, delay: 0.5 }}
+              className="mb-10"
+            >
+              <p className="text-white/60 text-base leading-loose font-light italic" style={{ fontFamily: 'Georgia, serif' }}>
+                {isArabic ? (
+                  <>
+                    هناك كتابٌ معلَّقٌ على كتفك،
+                    <br />
+                    يُزاد فيه كلَّ يومٍ ما كُتِب من غفلةٍ أو يقظة،
+                    <br />
+                    من تقصيرٍ أو مجاهدة…
+                    <br /><br />
+                    كتابٌ لم تُقلَّب صفحاته بعد،
+                    <br />
+                    ولكنك ستقف عليه يومًا لا مفر منه،
+                    <br />
+                    يوم يُقال لك:
+                  </>
+                ) : (
+                  <>
+                    There is a book upon your shoulder,
+                    <br />
+                    A record that grows each day with moments
+                    <br />
+                    of heedlessness or awareness, neglect or striving.
+                    <br /><br />
+                    A book whose pages you have not yet seen…
+                    <br />
+                    But one day you will stand before it,
+                    <br />
+                    And it will be said to you:
+                  </>
+                )}
+              </p>
+            </motion.div>
+
+            {/* The Verse Image */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="relative mx-auto mb-10"
+            >
+              <div className="relative p-6 rounded-2xl bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/[0.08] backdrop-blur-sm shadow-2xl">
+                {/* Decorative glow behind image */}
+                <div className="absolute inset-0 rounded-2xl bg-emerald-500/5 blur-xl" />
+                <img 
+                  src="/verse.png" 
+                  alt={isArabic ? "آية قرآنية" : "Quranic Verse"}
+                  className="relative w-full max-w-[280px] mx-auto rounded-lg"
+                />
+              </div>
+            </motion.div>
+
+            {/* Closing Text - Call to Awakening */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1, delay: 1.1 }}
+            >
+              <p className="text-white/60 text-base leading-loose font-light italic" style={{ fontFamily: 'Georgia, serif' }}>
+                {isArabic ? (
+                  <>
+                    فإن لم تُحاسِب نفسك اليوم، فمتى ينفعك الحساب؟
+                    <br />
+                    وإن لم تُوقِف قلبك وقفة صدق، فمتى يستيقظ من رقدته؟
+                    <br /><br />
+                    قِف مع ذاتك وقفة حق…
+                    <br />
+                    فالطريق إلى النجاة يبدأ من اليقظة،
+                    <br />
+                    ومن أدرك نفسه اليوم، نجا غدًا.
+                  </>
+                ) : (
+                  <>
+                    If you do not hold your soul accountable now,
+                    <br />
+                    then when will accountability benefit you?
+                    <br /><br />
+                    Stand with yourself in truth…
+                    <br />
+                    for the path to salvation begins with awakening.
+                    <br />
+                    Whoever grasps his soul today will be saved tomorrow.
+                  </>
+                )}
+              </p>
+            </motion.div>
+
+            {/* Decorative Divider */}
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0 }}
+              animate={{ opacity: 1, scaleX: 1 }}
+              transition={{ duration: 0.6, delay: 1.4 }}
+              className="mt-12 flex items-center justify-center gap-3"
+            >
+              <div className="h-px w-16 bg-gradient-to-r from-transparent to-emerald-500/50" />
+              <Sparkles size={16} className="text-emerald-500/50" />
+              <div className="h-px w-16 bg-gradient-to-l from-transparent to-emerald-500/50" />
+            </motion.div>
+          </motion.section>
 
           <AnimatePresence mode="wait">
             {mode === "recovery" ? (
