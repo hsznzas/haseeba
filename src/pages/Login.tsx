@@ -87,13 +87,21 @@ const DustParticle: React.FC<{
   );
 };
 
-// Mock prayer data for the demo
+// Mock prayer data for the demo with different quality levels to demonstrate
 const DEMO_PRAYERS = [
-  { id: 'fajr', name: 'Fajr', nameAr: 'الفجر', icon: Sunrise },
-  { id: 'dhuhr', name: 'Dhuhr', nameAr: 'الظهر', icon: Sun },
-  { id: 'asr', name: 'Asr', nameAr: 'العصر', icon: CloudSun },
-  { id: 'maghrib', name: 'Maghrib', nameAr: 'المغرب', icon: Sunset },
-  { id: 'isha', name: 'Isha', nameAr: 'العشاء', icon: Moon },
+  { id: 'fajr', name: 'Fajr', nameAr: 'الفجر', icon: Sunrise, logQuality: 0 }, // Takbirah
+  { id: 'dhuhr', name: 'Dhuhr', nameAr: 'الظهر', icon: Sun, logQuality: 1 },   // Jamaa
+  { id: 'asr', name: 'Asr', nameAr: 'العصر', icon: CloudSun, logQuality: 0 },  // Takbirah
+  { id: 'maghrib', name: 'Maghrib', nameAr: 'المغرب', icon: Sunset, logQuality: 2 }, // On Time
+  { id: 'isha', name: 'Isha', nameAr: 'العشاء', icon: Moon, logQuality: 3 },   // Missed
+];
+
+// Quality level config for demo buttons
+const QUALITY_LEVELS = [
+  { id: 0, label: '1st', labelAr: 'تكبيرة', icon: Sparkles, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
+  { id: 1, label: 'Grp', labelAr: 'جماعة', icon: Users, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' },
+  { id: 2, label: 'Solo', labelAr: 'وقت', icon: Check, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/30' },
+  { id: 3, label: 'Miss', labelAr: 'فات', icon: Zap, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
 ];
 
 // Demo Prayer Card Component (matches real PrayerCard styling)
@@ -102,8 +110,10 @@ const DemoPrayerCard: React.FC<{
   isArabic: boolean;
   isLogging: boolean;
   isLogged: boolean;
-}> = ({ prayer, isArabic, isLogging, isLogged }) => {
+  activeButton: number | null;
+}> = ({ prayer, isArabic, isLogging, isLogged, activeButton }) => {
   const Icon = prayer.icon;
+  const activeQuality = activeButton !== null ? QUALITY_LEVELS[activeButton] : null;
   
   return (
     <motion.div
@@ -131,44 +141,54 @@ const DemoPrayerCard: React.FC<{
       }}
       className={`
         relative overflow-hidden rounded-2xl mb-2
-        h-14 flex items-center px-4
+        flex items-stretch
         bg-gradient-to-r from-slate-900/80 to-slate-800/50
         border transition-all duration-300
-        ${isLogging ? 'border-emerald-500/50 shadow-[0_0_20px_-5px_rgba(16,185,129,0.4)]' : 'border-white/10'}
-        ${isLogged ? 'opacity-50' : ''}
+        ${isLogging && activeQuality ? activeQuality.border : 'border-white/10'}
+        ${isLogging ? 'shadow-lg' : ''}
       `}
     >
       {/* Glow effect when logging */}
-      {isLogging && (
+      {isLogging && activeQuality && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-teal-500/10 pointer-events-none"
+          className={`absolute inset-0 ${activeQuality.bg} pointer-events-none`}
         />
       )}
       
-      {/* Icon */}
-      <div className={`w-10 h-10 flex items-center justify-center mr-3 transition-colors ${isLogging ? 'text-emerald-400' : 'text-emerald-500/70'}`}>
-        <Icon size={22} strokeWidth={1.5} />
-      </div>
-      
-      {/* Prayer Name */}
-      <div className="flex-1">
-        <h3 className={`font-bold text-base ${isLogging ? 'text-emerald-300' : 'text-white/90'}`}>
+      {/* Left side - Icon & Name */}
+      <div className="flex items-center px-4 py-3 flex-1 min-w-0">
+        <div className={`w-9 h-9 flex items-center justify-center mr-3 transition-colors ${isLogging && activeQuality ? activeQuality.color : 'text-emerald-500/70'}`}>
+          <Icon size={20} strokeWidth={1.5} />
+        </div>
+        <h3 className={`font-bold text-sm truncate ${isLogging && activeQuality ? activeQuality.color : 'text-white/90'}`}>
           {isArabic ? prayer.nameAr : prayer.name}
         </h3>
       </div>
       
-      {/* Check indicator when logging */}
-      {isLogging && (
-        <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center"
-        >
-          <Check size={16} className="text-emerald-400" />
-        </motion.div>
-      )}
+      {/* Right side - Quality Buttons */}
+      <div className="flex items-center gap-1 px-2 py-2 border-l border-white/5">
+        {QUALITY_LEVELS.map((level, idx) => {
+          const LevelIcon = level.icon;
+          const isActive = activeButton === idx;
+          return (
+            <div
+              key={level.id}
+              className={`
+                w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold
+                transition-all duration-200
+                ${isActive 
+                  ? `${level.bg} ${level.color} scale-110 ${level.border} border` 
+                  : 'text-white/30 hover:text-white/50 bg-white/5'
+                }
+              `}
+            >
+              <LevelIcon size={14} />
+            </div>
+          );
+        })}
+      </div>
     </motion.div>
   );
 };
@@ -189,6 +209,7 @@ const Login: React.FC = () => {
   // Demo animation state
   const [loggedPrayers, setLoggedPrayers] = useState<string[]>([]);
   const [currentlyLogging, setCurrentlyLogging] = useState<string | null>(null);
+  const [activeButtonForPrayer, setActiveButtonForPrayer] = useState<Record<string, number>>({});
 
   const isArabic = language === "ar";
   
@@ -201,6 +222,7 @@ const Login: React.FC = () => {
       const resetTimer = setTimeout(() => {
         setLoggedPrayers([]);
         setCurrentlyLogging(null);
+        setActiveButtonForPrayer({});
       }, 2000);
       return () => clearTimeout(resetTimer);
     }
@@ -209,13 +231,19 @@ const Login: React.FC = () => {
     const logTimer = setTimeout(() => {
       const nextPrayer = unloggedPrayers[0];
       if (nextPrayer) {
-        setCurrentlyLogging(nextPrayer.id);
+        // First highlight the button
+        setActiveButtonForPrayer(prev => ({ ...prev, [nextPrayer.id]: nextPrayer.logQuality }));
         
-        // After animation, mark as logged
+        // Then start the logging animation
         setTimeout(() => {
-          setLoggedPrayers(prev => [...prev, nextPrayer.id]);
-          setCurrentlyLogging(null);
-        }, 600);
+          setCurrentlyLogging(nextPrayer.id);
+          
+          // After animation, mark as logged
+          setTimeout(() => {
+            setLoggedPrayers(prev => [...prev, nextPrayer.id]);
+            setCurrentlyLogging(null);
+          }, 600);
+        }, 400); // Delay to show button highlight first
       }
     }, 1500);
     
@@ -542,7 +570,7 @@ const Login: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="relative p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm overflow-hidden"
+              className="relative p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-800/50 border border-white/10 backdrop-blur-sm overflow-hidden min-h-[340px]"
             >
               {/* Subtle background glow */}
               <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent pointer-events-none" />
@@ -557,6 +585,7 @@ const Login: React.FC = () => {
                       isArabic={isArabic}
                       isLogging={currentlyLogging === prayer.id}
                       isLogged={loggedPrayers.includes(prayer.id)}
+                      activeButton={activeButtonForPrayer[prayer.id] ?? null}
                     />
                   ))}
                 </AnimatePresence>
@@ -568,7 +597,7 @@ const Login: React.FC = () => {
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
-                      className="flex flex-col items-center justify-center py-8 text-center"
+                      className="absolute inset-0 flex flex-col items-center justify-center text-center"
                     >
                       <motion.div
                         animate={{ scale: [1, 1.1, 1] }}
