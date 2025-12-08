@@ -139,31 +139,24 @@ const DemoPrayerCard: React.FC<{
   prayer: typeof DEMO_PRAYERS[0];
   isArabic: boolean;
   isLogging: boolean;
+  isLogged: boolean;
+  loggedQuality: number | null;
   activeButton: number | null;
-}> = ({ prayer, isArabic, isLogging, activeButton }) => {
+}> = ({ prayer, isArabic, isLogging, isLogged, loggedQuality, activeButton }) => {
   const Icon = prayer.icon;
   const activeQuality = activeButton !== null ? QUALITY_LEVELS[activeButton] : null;
+  const finalQuality = loggedQuality !== null ? QUALITY_LEVELS[loggedQuality] : null;
+  
+  // Determine which quality to show (logging animation or final logged state)
+  const displayQuality = isLogged ? finalQuality : (isLogging ? activeQuality : null);
   
   return (
     <motion.div
       layout
-      initial={{ opacity: 1, y: 0, scale: 1 }}
-      animate={isLogging ? {
-        opacity: 0,
-        y: -60,
-        scale: 0.9,
-      } : {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-      }}
-      exit={{
-        opacity: 0,
-        y: -80,
-        scale: 0.85,
-      }}
+      initial={{ opacity: 1, scale: 1 }}
+      animate={{ opacity: 1, scale: 1 }}
       transition={{ 
-        duration: 0.5, 
+        duration: 0.3, 
         ease: "easeOut",
         layout: { duration: 0.3, ease: "easeInOut", type: "tween" }
       }}
@@ -172,25 +165,25 @@ const DemoPrayerCard: React.FC<{
         flex items-stretch
         bg-gradient-to-r from-slate-900/90 to-slate-800/60
         border transition-all duration-300
-        ${isLogging && activeQuality ? activeQuality.border : 'border-white/10'}
-        ${isLogging ? 'shadow-lg shadow-emerald-500/10' : ''}
+        ${displayQuality ? displayQuality.border : 'border-white/10'}
+        ${displayQuality ? 'shadow-lg shadow-emerald-500/10' : ''}
       `}
     >
-      {/* Glow effect when logging */}
-      {isLogging && activeQuality && (
+      {/* Glow effect when logging or logged */}
+      {displayQuality && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className={`absolute inset-0 ${activeQuality.bg} pointer-events-none`}
+          className={`absolute inset-0 ${displayQuality.bg} pointer-events-none`}
         />
       )}
       
       {/* Left side - Icon & Name */}
       <div className="flex items-center px-4 py-3 flex-1 min-w-0">
-        <div className={`w-9 h-9 flex items-center justify-center mr-3 transition-colors ${isLogging && activeQuality ? activeQuality.color : 'text-emerald-500/70'}`}>
+        <div className={`w-9 h-9 flex items-center justify-center mr-3 transition-colors ${displayQuality ? displayQuality.color : 'text-emerald-500/70'}`}>
           <Icon size={20} strokeWidth={1.5} />
         </div>
-        <h3 className={`font-bold text-sm truncate ${isLogging && activeQuality ? activeQuality.color : 'text-white/90'}`}>
+        <h3 className={`font-bold text-sm truncate ${displayQuality ? displayQuality.color : 'text-white/90'}`}>
           {isArabic ? prayer.nameAr : prayer.name}
         </h3>
       </div>
@@ -199,7 +192,7 @@ const DemoPrayerCard: React.FC<{
       <div className="flex items-center gap-1 px-2 py-2 border-l border-white/5">
         {QUALITY_LEVELS.map((level) => {
           const LevelIcon = level.icon;
-          const isActive = activeButton === level.id;
+          const isActive = activeButton === level.id || (isLogged && loggedQuality === level.id);
           return (
             <div
               key={level.id}
@@ -279,7 +272,7 @@ const Login: React.FC = () => {
   const [recoverySuccess, setRecoverySuccess] = useState(false);
   
   // Demo animation state for Section 2
-  const [loggedPrayers, setLoggedPrayers] = useState<string[]>([]);
+  const [loggedPrayers, setLoggedPrayers] = useState<Record<string, number>>({}); // prayerId -> qualityIndex
   const [currentlyLogging, setCurrentlyLogging] = useState<string | null>(null);
   const [activeButtons, setActiveButtons] = useState<Record<string, number>>({});
   
@@ -316,15 +309,15 @@ const Login: React.FC = () => {
   
   // Auto-animate the prayer demo with random quality selection
   useEffect(() => {
-    const unloggedPrayers = DEMO_PRAYERS.filter(p => !loggedPrayers.includes(p.id));
+    const unloggedPrayers = DEMO_PRAYERS.filter(p => !(p.id in loggedPrayers));
     
     if (unloggedPrayers.length === 0) {
       // All prayers logged, reset after showing completion message
       const resetTimer = setTimeout(() => {
-        setLoggedPrayers([]);
+        setLoggedPrayers({});
         setCurrentlyLogging(null);
         setActiveButtons({});
-      }, 2500);
+      }, 3000);
       return () => clearTimeout(resetTimer);
     }
     
@@ -342,9 +335,9 @@ const Login: React.FC = () => {
         setTimeout(() => {
           setCurrentlyLogging(nextPrayer.id);
           
-          // After animation, mark as logged
+          // After animation, mark as logged with quality level
           setTimeout(() => {
-            setLoggedPrayers(prev => [...prev, nextPrayer.id]);
+            setLoggedPrayers(prev => ({ ...prev, [nextPrayer.id]: randomQuality }));
             setCurrentlyLogging(null);
           }, 500);
         }, 400);
@@ -674,12 +667,14 @@ const Login: React.FC = () => {
               {/* Prayer Cards */}
               <div className="relative">
                 <AnimatePresence mode="popLayout">
-                  {DEMO_PRAYERS.filter(p => !loggedPrayers.includes(p.id)).map((prayer) => (
+                  {DEMO_PRAYERS.map((prayer) => (
                     <DemoPrayerCard
                       key={prayer.id}
                       prayer={prayer}
                       isArabic={isArabic}
                       isLogging={currentlyLogging === prayer.id}
+                      isLogged={prayer.id in loggedPrayers}
+                      loggedQuality={loggedPrayers[prayer.id] ?? null}
                       activeButton={activeButtons[prayer.id] ?? null}
                     />
                   ))}
@@ -688,7 +683,7 @@ const Login: React.FC = () => {
               
               {/* Completion Message */}
               <AnimatePresence>
-                {loggedPrayers.length === 5 && (
+                {Object.keys(loggedPrayers).length === 5 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
