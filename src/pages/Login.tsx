@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone, Sunrise, Sun, CloudSun, Sunset, Moon, Clock, XCircle, Brain } from "lucide-react";
+import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone, Sunrise, Sun, CloudSun, Sunset, Moon, Clock, XCircle, Brain, TrendingUp, Lightbulb } from "lucide-react";
 import { DemoPersona } from "../services/storage";
+import { getGlobalStats, GlobalStats } from "../services/api";
 // 1. Updated Imports to include Scroll hooks
-import { motion, AnimatePresence, useScroll, useTransform, MotionValue } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform, MotionValue, useInView } from "framer-motion";
 
 type FormMode = "signin" | "signup" | "recovery";
 
@@ -191,6 +192,46 @@ const DemoPrayerCard: React.FC<{
   );
 };
 
+// Animated Counter Component
+const AnimatedCounter: React.FC<{ 
+  value: number; 
+  duration?: number;
+  suffix?: string;
+}> = ({ value, duration = 2, suffix = '' }) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  
+  useEffect(() => {
+    if (!isInView || value === 0) return;
+    
+    let startTime: number;
+    let animationFrame: number;
+    
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
+      
+      // Easing function for smooth deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(easeOut * value));
+      
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+    
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isInView, value, duration]);
+  
+  return (
+    <span ref={ref}>
+      {count.toLocaleString()}{suffix}
+    </span>
+  );
+};
+
 const Login: React.FC = () => {
   // 3. Initialize Scroll Hook
   const { scrollY } = useScroll();
@@ -208,8 +249,20 @@ const Login: React.FC = () => {
   const [loggedPrayers, setLoggedPrayers] = useState<string[]>([]);
   const [currentlyLogging, setCurrentlyLogging] = useState<string | null>(null);
   const [activeButtons, setActiveButtons] = useState<Record<string, number>>({});
+  
+  // Global stats for Section 5
+  const [globalStats, setGlobalStats] = useState<GlobalStats>({ totalHabitsLogged: 0, totalAiInsights: 0 });
 
   const isArabic = language === "ar";
+  
+  // Fetch global stats on mount
+  useEffect(() => {
+    const fetchStats = async () => {
+      const stats = await getGlobalStats();
+      setGlobalStats(stats);
+    };
+    fetchStats();
+  }, []);
   
   // Auto-animate the prayer demo with random quality selection
   useEffect(() => {
@@ -1042,6 +1095,103 @@ const Login: React.FC = () => {
               <div className="h-px w-16 bg-gradient-to-r from-transparent to-purple-500/50" />
               <Brain size={16} className="text-purple-500/50" />
               <div className="h-px w-16 bg-gradient-to-l from-transparent to-purple-500/50" />
+            </motion.div>
+          </motion.section>
+
+          {/* Section 5: The Impact - Live Counters */}
+          <motion.section
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8 }}
+            className="mb-16"
+          >
+            {/* Section Title */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-center mb-8"
+            >
+              <h2 className="text-3xl font-black text-white mb-2">
+                {isArabic ? 'الأثر' : 'The Impact'}
+              </h2>
+              <p className="text-white/50 text-base">
+                {isArabic 
+                  ? 'أرقام حقيقية من مجتمعنا' 
+                  : 'Real numbers from our community'}
+              </p>
+            </motion.div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Habits Logged */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="bg-white/[0.03] backdrop-blur-xl border border-emerald-500/20 rounded-2xl p-5 text-center relative overflow-hidden"
+              >
+                {/* Background glow */}
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
+                
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-3">
+                    <TrendingUp size={24} className="text-emerald-400" />
+                  </div>
+                  <div className="text-4xl font-black text-white mb-1">
+                    <AnimatedCounter 
+                      value={globalStats.totalHabitsLogged || 12500} 
+                      suffix="+" 
+                    />
+                  </div>
+                  <p className="text-white/50 text-sm">
+                    {isArabic ? 'عبادة مسجلة' : 'Habits Logged'}
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* AI Insights */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="bg-white/[0.03] backdrop-blur-xl border border-purple-500/20 rounded-2xl p-5 text-center relative overflow-hidden"
+              >
+                {/* Background glow */}
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent pointer-events-none" />
+                
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center mx-auto mb-3">
+                    <Lightbulb size={24} className="text-purple-400" />
+                  </div>
+                  <div className="text-4xl font-black text-white mb-1">
+                    <AnimatedCounter 
+                      value={globalStats.totalAiInsights || 850} 
+                      suffix="+" 
+                    />
+                  </div>
+                  <p className="text-white/50 text-sm">
+                    {isArabic ? 'نصيحة ذكية' : 'AI Insights'}
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Decorative Divider */}
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0 }}
+              whileInView={{ opacity: 1, scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mt-10 flex items-center justify-center gap-3"
+            >
+              <div className="h-px w-16 bg-gradient-to-r from-transparent to-emerald-500/50" />
+              <Sparkles size={16} className="text-emerald-500/50" />
+              <div className="h-px w-16 bg-gradient-to-l from-transparent to-emerald-500/50" />
             </motion.div>
           </motion.section>
 

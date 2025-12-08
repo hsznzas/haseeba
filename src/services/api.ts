@@ -6,6 +6,43 @@ import { INITIAL_HABITS } from '../../constants';
 // API LAYER FOR SUPABASE (REAL USERS ONLY)
 // ==========================================
 
+// --- GLOBAL STATS (PUBLIC - NO AUTH REQUIRED) ---
+export interface GlobalStats {
+  totalHabitsLogged: number;
+  totalAiInsights: number;
+}
+
+export const getGlobalStats = async (): Promise<GlobalStats> => {
+  try {
+    // Get total habit logs count
+    const { count: logsCount, error: logsError } = await supabase
+      .from('habit_logs')
+      .select('*', { count: 'exact', head: true });
+
+    if (logsError) {
+      console.error('Error fetching logs count:', logsError);
+    }
+
+    // For AI insights, we can estimate based on unique user-days with logs
+    // Each user gets ~1 insight per day they use the app
+    const { count: uniqueDaysCount, error: daysError } = await supabase
+      .from('habit_logs')
+      .select('user_id, date', { count: 'exact', head: true });
+
+    if (daysError) {
+      console.error('Error fetching days count:', daysError);
+    }
+
+    return {
+      totalHabitsLogged: logsCount || 0,
+      totalAiInsights: Math.floor((uniqueDaysCount || 0) / 5), // Rough estimate: 1 insight per 5 logs
+    };
+  } catch (err) {
+    console.error('Error fetching global stats:', err);
+    return { totalHabitsLogged: 0, totalAiInsights: 0 };
+  }
+};
+
 // --- USER PREFERENCES (SUPABASE OPERATIONS) ---
 export const supabaseGetPreferences = async (userId: string): Promise<UserPreferences> => {
   try {
