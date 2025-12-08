@@ -272,9 +272,16 @@ const Profile: React.FC = () => {
   const [footerEndingIndex, setFooterEndingIndex] = useState(0);
   const isArabic = preferences.language === 'ar';
   const currentFooterEnding = isArabic 
-    ? FOOTER_ENDINGS.ar[footerEndingIndex % FOOTER_ENDINGS.ar.length]
-    : FOOTER_ENDINGS.en[footerEndingIndex % FOOTER_ENDINGS.en.length];
-  const handleFooterClick = () => setFooterEndingIndex(prev => prev + 1);
+    ? FOOTER_ENDINGS.ar[footerEndingIndex]
+    : FOOTER_ENDINGS.en[footerEndingIndex];
+  const handleFooterClick = () => {
+    const endings = isArabic ? FOOTER_ENDINGS.ar : FOOTER_ENDINGS.en;
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * endings.length);
+    } while (newIndex === footerEndingIndex);
+    setFooterEndingIndex(newIndex);
+  };
 
   // Lifetime Countdown calculation with more metrics
   const lifetimeStats = useMemo(() => {

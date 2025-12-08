@@ -288,11 +288,16 @@ const Login: React.FC = () => {
   
   // Get current footer ending based on language
   const currentFooterEnding = isArabic 
-    ? FOOTER_ENDINGS.ar[footerEndingIndex % FOOTER_ENDINGS.ar.length]
-    : FOOTER_ENDINGS.en[footerEndingIndex % FOOTER_ENDINGS.en.length];
+    ? FOOTER_ENDINGS.ar[footerEndingIndex]
+    : FOOTER_ENDINGS.en[footerEndingIndex];
   
   const handleFooterClick = () => {
-    setFooterEndingIndex(prev => prev + 1);
+    const endings = isArabic ? FOOTER_ENDINGS.ar : FOOTER_ENDINGS.en;
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * endings.length);
+    } while (newIndex === footerEndingIndex); // Ensure it's different
+    setFooterEndingIndex(newIndex);
   };
   
   // Fetch global stats on mount
