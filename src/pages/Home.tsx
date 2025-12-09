@@ -8,11 +8,13 @@ import BottomNav from '../components/BottomNav';
 import { useData } from '../context/DataContext';
 import { HabitLog, LogStatus, HabitType, PrayerQuality, Habit, DailyBriefing } from '../../types';
 import { format, subDays, getDay } from 'date-fns';
-import { Plus, User, RotateCw, ArrowUpDown, Brain } from 'lucide-react';
+import { Plus, User, RotateCw, ArrowUpDown, Brain, Info, Hourglass } from 'lucide-react';
 import { AnimatePresence, motion, Reorder } from 'framer-motion';
 import AddHabitModal from '../components/AddHabitModal';
 import ReasonModal from '../components/ReasonModal';
+import ActionButtonsKeyCard from '../components/ActionButtonsKeyCard';
 import { generateDailyBriefing, getCachedBriefing } from '../services/aiEngine';
+import { isOnboardingComplete, setOnboardingComplete } from '../services/storage';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ const Home: React.FC = () => {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [reasoningState, setReasoningState] = useState<{ id: string, val: number, status: LogStatus } | null>(null);
   const [isSortMode, setIsSortMode] = useState(false);
+  const [showKeyCard, setShowKeyCard] = useState(false);
   
   // AI Daily Briefing state
   const [dailyBriefing, setDailyBriefing] = useState<DailyBriefing | null>(null);
@@ -57,6 +60,22 @@ const Home: React.FC = () => {
     
     fetchBriefing();
   }, [habits.length, logs.length, preferences.language]);
+
+  // Show onboarding key card for first-time logged-in users
+  useEffect(() => {
+    if (user && !user.isDemo && !isOnboardingComplete()) {
+      // Small delay to let the page render first
+      const timer = setTimeout(() => {
+        setShowKeyCard(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  const handleKeyCardClose = () => {
+    setShowKeyCard(false);
+    setOnboardingComplete();
+  };
 
   // ==========================================
   // ISLAMIC CALENDAR HELPER FUNCTION
@@ -103,7 +122,8 @@ const Home: React.FC = () => {
     const dateStrLocal = format(date, 'yyyy-MM-dd');
     const dayLogs = logs.filter(l => l.date === dateStrLocal);
     let done = 0;
-    let missed = 0;
+    let failed = 0;
+    let pending = 0;
     
     // Get habits that existed on this date
     const habitsForDate = habits.filter(h => {
@@ -115,23 +135,24 @@ const Home: React.FC = () => {
     habitsForDate.forEach(habit => {
       const log = dayLogs.find(l => l.habitId === habit.id);
       if (!log) {
-        missed++;
+        // Not logged yet = pending
+        pending++;
         return;
       }
       
       if (habit.type === HabitType.PRAYER) {
         if (log.value >= PrayerQuality.ON_TIME) done++;
-        else missed++;
+        else failed++; // Missed prayer
       } else if (habit.type === HabitType.COUNTER) {
         if ((log.value || 0) >= (habit.dailyTarget || 1) || log.status === LogStatus.DONE) done++;
-        else missed++;
+        else failed++;
       } else {
         if (log.status === LogStatus.DONE) done++;
-        else missed++;
+        else failed++;
       }
     });
     
-    return { done, missed };
+    return { done, failed, pending };
   };
 
   // Stats for selectedDate and day before
@@ -362,6 +383,13 @@ const Home: React.FC = () => {
                 {/* Right: Action buttons */}
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => setShowKeyCard(true)}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 active:scale-95 transition-transform"
+                    title={preferences.language === 'ar' ? 'دليل' : 'Guide'}
+                  >
+                    <Info size={16} className="text-slate-500 dark:text-gray-400" />
+                  </button>
+                  <button
                     onClick={toggleSortMode}
                     className={`w-9 h-9 flex items-center justify-center rounded-lg border active:scale-95 transition-all ${
                       isSortMode 
@@ -388,13 +416,15 @@ const Home: React.FC = () => {
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-emerald-500 font-semibold">{headerStats.selectedDayName}</span>
                   <span className="text-emerald-500">{headerStats.selected.done}✓</span>
-                  <span className="text-red-400">{headerStats.selected.missed}✗</span>
+                  <span className="text-red-400">{headerStats.selected.failed}✗</span>
+                  <span className="text-yellow-400 inline-flex items-center gap-0.5">{headerStats.selected.pending}<Hourglass size={10} /></span>
                 </div>
                 <div className="w-px h-4 bg-slate-300 dark:bg-white/10" />
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-gray-500">{headerStats.dayBeforeName}</span>
                   <span className="text-emerald-500/60">{headerStats.dayBefore.done}✓</span>
-                  <span className="text-red-400/60">{headerStats.dayBefore.missed}✗</span>
+                  <span className="text-red-400/60">{headerStats.dayBefore.failed}✗</span>
+                  <span className="text-yellow-400/60 inline-flex items-center gap-0.5">{headerStats.dayBefore.pending}<Hourglass size={10} /></span>
                 </div>
               </div>
             </div>
@@ -534,6 +564,11 @@ const Home: React.FC = () => {
           isOpen={!!reasoningState} 
           onClose={() => setReasoningState(null)} 
           onConfirm={handleReasonConfirm} 
+        />
+
+        <ActionButtonsKeyCard 
+          isOpen={showKeyCard} 
+          onClose={handleKeyCardClose} 
         />
     </div>
   );

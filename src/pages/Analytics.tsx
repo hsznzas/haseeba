@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { generateDailyBriefing, getCachedBriefing, regenerateBriefing } from '../services/aiEngine';
 import { logAiInsightGeneration } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, Brain, Zap, RefreshCw } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, Brain, Zap, RefreshCw, Info, X } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog, DailyBriefing } from '../../types';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, 
@@ -20,6 +20,7 @@ import DobModal from '../components/DobModal';
 import Tooltip from '../components/Tooltip';
 import BottomNav from '../components/BottomNav';
 import DateSelector from '../components/DateSelector';
+import GeneralHabitAnalyticsCard from '../components/GeneralHabitAnalyticsCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Helper to parse YYYY-MM-DD strings locally without UTC shifting
@@ -59,6 +60,7 @@ const Analytics: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isDobModalOpen, setIsDobModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showHadithInfo, setShowHadithInfo] = useState(false);
   
   // AI Daily Briefing state
   const [dailyBriefing, setDailyBriefing] = useState<DailyBriefing | null>(null);
@@ -905,9 +907,17 @@ const Analytics: React.FC = () => {
                       ✓
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-base font-bold text-white truncate">
-                        {preferences.language === 'ar' ? 'جميع الصلوات كاملة' : 'All Prayers Perfect'}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-base font-bold text-white truncate">
+                          {preferences.language === 'ar' ? 'مؤشر البراءة' : 'Innocence Index'}
+                        </p>
+                        <button 
+                          onClick={() => setShowHadithInfo(true)}
+                          className="p-1 text-emerald-300/70 hover:text-emerald-300 hover:bg-white/10 rounded-full transition-colors"
+                        >
+                          <Info size={14} />
+                        </button>
+                      </div>
                       <p className="text-[11px] text-emerald-300/80">
                         {preferences.language === 'ar' ? 'الخمس صلوات بتكبيرة الإحرام' : 'All 5 prayers at Takbirah level'}
                       </p>
@@ -919,6 +929,67 @@ const Analytics: React.FC = () => {
                       </span>
                     </div>
                   </div>
+                  
+                  {/* Hadith Info Modal */}
+                  <AnimatePresence>
+                    {showHadithInfo && (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
+                          onClick={() => setShowHadithInfo(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                          className="fixed inset-x-4 top-1/4 z-[9999] max-w-lg mx-auto"
+                        >
+                          <div className="glass-card rounded-2xl p-5 border border-emerald-500/30 shadow-2xl">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                <Info size={20} className="text-emerald-400" />
+                              </div>
+                              <button
+                                onClick={() => setShowHadithInfo(false)}
+                                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                              >
+                                <X size={20} />
+                              </button>
+                            </div>
+                            
+                            <h3 className="text-lg font-bold text-white mb-3">
+                              {preferences.language === 'ar' ? 'حديث البراءتين' : 'Hadith of the Two Immunities'}
+                            </h3>
+                            
+                            <div className={clsx(
+                              "text-sm leading-relaxed mb-4 p-4 bg-slate-900/50 rounded-xl border border-slate-700",
+                              preferences.language === 'ar' ? "text-right font-arabic" : "text-left"
+                            )}>
+                              {preferences.language === 'ar' ? (
+                                <p className="text-white/90">
+                                  «مَن صَلَّى لِلَّهِ أَرْبَعِينَ يَوْمًا فِي جَمَاعَةٍ يُدْرِكُ التَّكْبِيرَةَ الأُولَى، كُتِبَتْ لَهُ بَرَاءَتَانِ: بَرَاءَةٌ مِنَ النَّارِ، وَبَرَاءَةٌ مِنَ النِّفَاقِ»
+                                </p>
+                              ) : (
+                                <p className="text-white/90">
+                                  "Whoever prays to Allah for forty days in congregation, catching the first takbir, two immunities will be written for him: immunity from the Fire and immunity from hypocrisy."
+                                </p>
+                              )}
+                            </div>
+                            
+                            <p className="text-xs text-gray-400">
+                              {preferences.language === 'ar' 
+                                ? 'رواه الترمذي عن أنس بن مالك رضي الله عنه'
+                                : 'Narrated by Anas ibn Malik (RA) - Sunan al-Tirmidhi'
+                              }
+                            </p>
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Individual Prayer Streaks */}
@@ -1214,6 +1285,29 @@ const Analytics: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* General Habits Analytics Cards */}
+      {habits.filter(h => h.isActive && h.type !== HabitType.PRAYER && h.presetId !== 'rawatib').length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">
+            {preferences.language === 'ar' ? 'تحليلات العادات' : 'Habits Analytics'}
+          </h2>
+          <div className="space-y-4">
+            {habits
+              .filter(h => h.isActive && h.type !== HabitType.PRAYER && h.presetId !== 'rawatib')
+              .sort((a, b) => a.order - b.order)
+              .map(habit => (
+                <GeneralHabitAnalyticsCard 
+                  key={habit.id} 
+                  habit={habit} 
+                  logs={logs} 
+                  language={preferences.language} 
+                />
+              ))
+            }
+          </div>
+        </div>
+      )}
 
       <DobModal isOpen={isDobModalOpen} onClose={() => setIsDobModalOpen(false)} />
 

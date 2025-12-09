@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check } from 'lucide-react';
+import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
 import { differenceInMonths, differenceInYears, addYears } from 'date-fns';
 import { HabitType, CustomReason } from '../../types';
 import { ICON_MAP, IconName } from '../utils/iconMap';
+import { supabase } from '../services/supabaseClient';
 
 // Footer easter egg endings library
 const FOOTER_ENDINGS = {
@@ -267,6 +268,10 @@ const Profile: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
   const [showDobModal, setShowDobModal] = useState(false);
   const [dobInput, setDobInput] = useState(preferences.dateOfBirth || '');
+  const [habitsExpanded, setHabitsExpanded] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.full_name || user?.user_metadata?.name || '');
+  const [isSavingName, setIsSavingName] = useState(false);
   
   // Footer easter egg state
   const [footerEndingIndex, setFooterEndingIndex] = useState(0);
@@ -281,6 +286,28 @@ const Profile: React.FC = () => {
       newIndex = Math.floor(Math.random() * endings.length);
     } while (newIndex === footerEndingIndex);
     setFooterEndingIndex(newIndex);
+  };
+
+  // Handle saving display name
+  const handleSaveName = async () => {
+    if (!displayName.trim() || user?.isDemo) return;
+    
+    setIsSavingName(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: displayName.trim() }
+      });
+      
+      if (error) {
+        console.error('Error updating name:', error);
+      } else {
+        setIsEditingName(false);
+      }
+    } catch (err) {
+      console.error('Error updating name:', err);
+    } finally {
+      setIsSavingName(false);
+    }
   };
 
   // Lifetime Countdown calculation with more metrics
@@ -429,14 +456,57 @@ const Profile: React.FC = () => {
             <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 overflow-hidden">
                 <User size={32} className="text-gray-400" />
             </div>
-            <div>
-                <h2 className="font-bold text-lg text-white">{user?.email || 'User'}</h2>
-                <p className="text-xs text-gray-500">{user?.isDemo ? 'Demo Account' : 'Logged In'}</p>
+            <div className="flex-1 min-w-0">
+                {isEditingName ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                      className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder={preferences.language === 'ar' ? 'أدخل اسمك' : 'Enter your name'}
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      disabled={isSavingName || !displayName.trim()}
+                      className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {isSavingName ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingName(false);
+                        setDisplayName(user?.user_metadata?.full_name || user?.user_metadata?.name || '');
+                      }}
+                      className="p-1.5 text-gray-400 hover:bg-gray-500/10 rounded-lg transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-lg text-white truncate">
+                      {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'User'}
+                    </h2>
+                    {!user?.isDemo && (
+                      <button
+                        onClick={() => setIsEditingName(true)}
+                        className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0"
+                        title={preferences.language === 'ar' ? 'تعديل الاسم' : 'Edit name'}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-gray-500">{user?.isDemo ? 'Demo Account' : user?.email}</p>
             </div>
          </div>
          <button 
             onClick={signOut}
-            className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
+            className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors shrink-0"
             title="Sign Out"
          >
             <LogOut size={20} />
@@ -705,111 +775,140 @@ const Profile: React.FC = () => {
                 </div>
          </div>
          
-         <div className="space-y-1">
-           {/* Rawatib Master Toggle */}
-           <div className="flex items-center gap-2 p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-             <div className="flex-1 min-w-0 flex items-center gap-2">
-               {(() => {
-                 const IconComp = ICON_MAP.Star;
-                 return <IconComp size={18} style={{ color: '#38bdf8' }} className="shrink-0" />;
-               })()}
-               <div>
-                 <h4 className="text-sm font-bold text-white">Rawatib</h4>
-                 <p className="text-[10px] text-gray-500">{preferences.language === 'ar' ? '٦ سنن مؤكدة' : '6 confirmed Sunnahs'}</p>
-       </div>
-             </div>
-             {/* Activity Toggle */}
-             <div className="w-14 flex justify-center">
-               <button 
-                 onClick={() => toggleHabit('rawatib_master')} 
-                 className={clsx("w-9 h-5 rounded-full transition-colors relative", isRawatibActive ? "bg-emerald-500" : "bg-slate-700")}
-               >
-                 <div className={clsx("w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all", isRawatibActive ? "right-[3px]" : "left-[3px]")} />
-               </button>
-             </div>
-             {/* Reason Toggle - affects all rawatib */}
-             <div className="w-14 flex justify-center">
-               <button 
-                 onClick={() => {
-                   const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
-                   const allRequireReason = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.requireReason !== false);
-                   habits.filter(h => rawatibIds.includes(h.id)).forEach(h => {
-                     handleSaveHabit({ ...h, requireReason: !allRequireReason });
-                   });
-                 }}
-                 className={clsx(
-                   "w-9 h-5 rounded-full transition-colors relative",
-                   habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "bg-cyan-500" : "bg-slate-700"
-                 )}
-               >
-                 <div className={clsx(
-                   "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all",
-                   habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "right-[3px]" : "left-[3px]"
-                 )} />
-               </button>
-             </div>
-           </div>
-
-           {/* All Non-Prayer Habits (excluding rawatib which are handled above) */}
-           {habits
-             .filter(h => h.type !== HabitType.PRAYER && h.presetId !== 'rawatib')
-             .sort((a, b) => a.order - b.order)
-             .map(habit => {
-               const displayName = preferences.language === 'ar' ? (habit.nameAr || habit.name) : habit.name;
-               const IconComp = getHabitIcon(habit);
-               const iconColor = getHabitColor(habit);
-               
-               return (
-                 <div 
-                   key={habit.id} 
-                   className="flex items-center gap-2 p-2.5 hover:bg-slate-900/50 rounded-xl transition-colors"
+         {/* Collapsible Habits Container */}
+         <div className="relative">
+           <div className={clsx(
+             "space-y-1 transition-all duration-300 overflow-hidden",
+             habitsExpanded ? "max-h-none" : "max-h-[200px]"
+           )}>
+             {/* Rawatib Master Toggle */}
+             <div className="flex items-center gap-2 p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+               <div className="flex-1 min-w-0 flex items-center gap-2">
+                 {(() => {
+                   const IconComp = ICON_MAP.Star;
+                   return <IconComp size={18} style={{ color: '#38bdf8' }} className="shrink-0" />;
+                 })()}
+                 <div>
+                   <h4 className="text-sm font-bold text-white">Rawatib</h4>
+                   <p className="text-[10px] text-gray-500">{preferences.language === 'ar' ? '٦ سنن مؤكدة' : '6 confirmed Sunnahs'}</p>
+                 </div>
+               </div>
+               {/* Activity Toggle */}
+               <div className="w-14 flex justify-center">
+                 <button 
+                   onClick={() => toggleHabit('rawatib_master')} 
+                   className={clsx("w-9 h-5 rounded-full transition-colors relative", isRawatibActive ? "bg-emerald-500" : "bg-slate-700")}
                  >
-                   {/* Habit Name with Icon */}
-                   <div className="flex-1 min-w-0 flex items-center gap-2">
-                     <IconComp size={18} style={{ color: habit.isActive ? iconColor : '#6b7280' }} className="shrink-0" />
-                     <span className={clsx(
-                       "text-sm font-medium truncate",
-                       habit.isActive ? "text-gray-200" : "text-gray-500"
-                     )}>
-                       {displayName}
-                     </span>
+                   <div className={clsx("w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all", isRawatibActive ? "right-[3px]" : "left-[3px]")} />
+                 </button>
+               </div>
+               {/* Reason Toggle - affects all rawatib */}
+               <div className="w-14 flex justify-center">
+                 <button 
+                   onClick={() => {
+                     const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
+                     const allRequireReason = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.requireReason !== false);
+                     habits.filter(h => rawatibIds.includes(h.id)).forEach(h => {
+                       handleSaveHabit({ ...h, requireReason: !allRequireReason });
+                     });
+                   }}
+                   className={clsx(
+                     "w-9 h-5 rounded-full transition-colors relative",
+                     habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "bg-cyan-500" : "bg-slate-700"
+                   )}
+                 >
+                   <div className={clsx(
+                     "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all",
+                     habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "right-[3px]" : "left-[3px]"
+                   )} />
+                 </button>
+               </div>
              </div>
-                   
-                   {/* Activity Toggle */}
-                   <div className="w-14 flex justify-center">
-                     <button 
-                       onClick={() => handleSaveHabit({ ...habit, isActive: !habit.isActive })}
-                       className={clsx(
-                         "w-9 h-5 rounded-full transition-colors relative",
-                         habit.isActive ? "bg-emerald-500" : "bg-slate-700"
-                       )}
-                     >
-                       <div className={clsx(
-                         "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all",
-                         habit.isActive ? "right-[3px]" : "left-[3px]"
-                       )} />
-                     </button>
-             </div>
-                   
-                   {/* Reason Toggle */}
-                   <div className="w-14 flex justify-center">
-                     <button 
-                       onClick={() => handleSaveHabit({ ...habit, requireReason: habit.requireReason === false ? true : false })}
-                       className={clsx(
-                         "w-9 h-5 rounded-full transition-colors relative",
-                         habit.requireReason !== false ? "bg-cyan-500" : "bg-slate-700"
-                       )}
-                     >
-                       <div className={clsx(
-                         "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all",
-                         habit.requireReason !== false ? "right-[3px]" : "left-[3px]"
-                       )} />
-                     </button>
-             </div>
+
+             {/* All Non-Prayer Habits (excluding rawatib which are handled above) */}
+             {habits
+               .filter(h => h.type !== HabitType.PRAYER && h.presetId !== 'rawatib')
+               .sort((a, b) => a.order - b.order)
+               .map(habit => {
+                 const displayName = preferences.language === 'ar' ? (habit.nameAr || habit.name) : habit.name;
+                 const IconComp = getHabitIcon(habit);
+                 const iconColor = getHabitColor(habit);
+                 
+                 return (
+                   <div 
+                     key={habit.id} 
+                     className="flex items-center gap-2 p-2.5 hover:bg-slate-900/50 rounded-xl transition-colors"
+                   >
+                     {/* Habit Name with Icon */}
+                     <div className="flex-1 min-w-0 flex items-center gap-2">
+                       <IconComp size={18} style={{ color: habit.isActive ? iconColor : '#6b7280' }} className="shrink-0" />
+                       <span className={clsx(
+                         "text-sm font-medium truncate",
+                         habit.isActive ? "text-gray-200" : "text-gray-500"
+                       )}>
+                         {displayName}
+                       </span>
+                     </div>
+                     
+                     {/* Activity Toggle */}
+                     <div className="w-14 flex justify-center">
+                       <button 
+                         onClick={() => handleSaveHabit({ ...habit, isActive: !habit.isActive })}
+                         className={clsx(
+                           "w-9 h-5 rounded-full transition-colors relative",
+                           habit.isActive ? "bg-emerald-500" : "bg-slate-700"
+                         )}
+                       >
+                         <div className={clsx(
+                           "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all",
+                           habit.isActive ? "right-[3px]" : "left-[3px]"
+                         )} />
+                       </button>
+                     </div>
+                     
+                     {/* Reason Toggle */}
+                     <div className="w-14 flex justify-center">
+                       <button 
+                         onClick={() => handleSaveHabit({ ...habit, requireReason: habit.requireReason === false ? true : false })}
+                         className={clsx(
+                           "w-9 h-5 rounded-full transition-colors relative",
+                           habit.requireReason !== false ? "bg-cyan-500" : "bg-slate-700"
+                         )}
+                       >
+                         <div className={clsx(
+                           "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all",
+                           habit.requireReason !== false ? "right-[3px]" : "left-[3px]"
+                         )} />
+                       </button>
+                     </div>
+                   </div>
+                 );
+               })}
            </div>
-               );
-             })}
+           
+           {/* Fade overlay when collapsed */}
+           {!habitsExpanded && (
+             <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent pointer-events-none" />
+           )}
          </div>
+         
+         {/* Expand/Collapse Button */}
+         <button
+           onClick={() => setHabitsExpanded(!habitsExpanded)}
+           className="w-full mt-3 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-gray-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 rounded-xl border border-slate-700 transition-all"
+         >
+           {habitsExpanded ? (
+             <>
+               <ChevronUp size={16} />
+               {preferences.language === 'ar' ? 'إغلاق القائمة' : 'Collapse'}
+             </>
+           ) : (
+             <>
+               <ChevronDown size={16} />
+               {preferences.language === 'ar' ? 'عرض الكل' : 'Show All'}
+             </>
+           )}
+         </button>
          
          {habits.filter(h => h.type !== HabitType.PRAYER).length === 0 && (
            <p className="text-xs text-gray-500 text-center py-4">

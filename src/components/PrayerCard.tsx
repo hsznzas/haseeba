@@ -4,8 +4,9 @@ import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Sunrise, Sun, CloudSun, Sunset, Moon, Users, Clock, XCircle, RotateCcw, GripVertical } from 'lucide-react';
+import { Sunrise, Sun, CloudSun, Sunset, Moon, Users, Clock, XCircle, RotateCcw, GripVertical } from 'lucide-react';
 import AnimatedFlame from './AnimatedFlame';
+import RaisedHandsIcon from './icons/RaisedHandsIcon';
 // import { getDailyHadith } from '../utils/hadithRotator'; // Hadith feature disabled
 
 interface PrayerCardProps {
@@ -77,7 +78,7 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
     {
       val: PrayerQuality.TAKBIRAH,
       label: t.takbirah,
-      icon: Sparkles,
+      icon: RaisedHandsIcon,
       base: "text-primary hover:bg-primary/20",
       color: "text-primary"
     },
@@ -172,9 +173,9 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: [0, 1.8, 1.2], rotate: 0, opacity: [0, 1, 0] }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="z-20 relative"
+                className="z-20 relative text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]"
             >
-              <span className="font-black text-6xl text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)] italic">1st</span>
+              <RaisedHandsIcon size={64} strokeWidth={2.5} />
             </motion.div>
             
              <motion.div
@@ -216,11 +217,7 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
                 {preferences.language === 'ar' ? habit.nameAr : habit.name}
               </h3>
               {isLogged && statusIcon && (
-                statusIcon.isTakbirah ? (
-                  <span className={clsx("text-[9px] font-black italic shrink-0", statusIcon.color)}>1st</span>
-                ) : (
-                  <statusIcon.Icon size={10} strokeWidth={2.5} className={clsx("shrink-0", statusIcon.color)} />
-                )
+                <statusIcon.Icon size={statusIcon.isTakbirah ? 12 : 10} strokeWidth={2.5} className={clsx("shrink-0", statusIcon.color)} />
               )}
             </div>
             
@@ -267,14 +264,14 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
         </motion.button>
       ) : (
         <div className="h-full flex items-stretch flex-none">
-          {/* Takbirah button (1st/best) */}
+          {/* Takbirah button (best - raised hands) */}
           <motion.button
             onClick={handleTakbirah}
             whileTap={{ scale: 0.9 }}
             className="h-full flex-1 w-11 flex items-center justify-center font-bold transition-all duration-300 border-s border-white/10 relative z-10 text-primary hover:bg-primary/20 bg-transparent"
             aria-label={t.takbirah}
           >
-            <span className="font-black italic text-sm">1st</span>
+            <RaisedHandsIcon size={18} />
           </motion.button>
           
           {/* Other levels: Jamaa, OnTime, Missed */}

@@ -219,36 +219,36 @@ export const TRANSLATIONS = {
 export const INITIAL_HABITS: Habit[] = [
   // Fajr Block
   { id: 'fajr', name: 'Fajr', nameAr: 'الفجر', type: HabitType.PRAYER, isActive: true, order: 100 },
-  { id: 'fajr_sunnah', name: 'Fajr Sunnah', nameAr: 'سنة الفجر', type: HabitType.REGULAR, icon: 'Sun', color: '#f59e0b', isActive: true, order: 110, presetId: 'rawatib' },
+  { id: 'fajr_sunnah', name: 'Fajr Sunnah', nameAr: 'سنة الفجر', type: HabitType.REGULAR, icon: 'Sun', color: '#f59e0b', isActive: true, order: 110, presetId: 'rawatib', requireReason: true },
   
   // Morning
-  { id: 'morning_athkar', name: 'Morning Athkar', nameAr: 'أذكار الصباح', type: HabitType.REGULAR, icon: 'Sun', color: '#fbbf24', isActive: true, order: 120 },
+  { id: 'morning_athkar', name: 'Morning Athkar', nameAr: 'أذكار الصباح', type: HabitType.REGULAR, icon: 'Sun', color: '#fbbf24', isActive: false, order: 120 },
   { id: 'dhuha', name: 'Dhuha Prayer', nameAr: 'صلاة الضحى', type: HabitType.REGULAR, icon: 'Sparkles', color: '#fcd34d', isActive: false, order: 130 },
 
   // Dhuhr Block
   { id: 'dhuhr', name: 'Dhuhr', nameAr: 'الظهر', type: HabitType.PRAYER, isActive: true, order: 200 },
-  { id: 'dhuhr_sunnah_before_1', name: 'Dhuhr Sunnah Before (2)', nameAr: 'سنة الظهر القبلية (٢)', type: HabitType.REGULAR, icon: 'Star', color: '#38bdf8', isActive: true, order: 210, presetId: 'rawatib' },
-  { id: 'dhuhr_sunnah_before_2', name: 'Dhuhr Sunnah Before (2)', nameAr: 'سنة الظهر القبلية (٢)', type: HabitType.REGULAR, icon: 'Star', color: '#38bdf8', isActive: true, order: 220, presetId: 'rawatib' },
-  { id: 'dhuhr_sunnah_after', name: 'Dhuhr Sunnah After (2)', nameAr: 'سنة الظهر البعدية (٢)', type: HabitType.REGULAR, icon: 'Star', color: '#38bdf8', isActive: true, order: 230, presetId: 'rawatib' },
+  { id: 'dhuhr_sunnah_before_1', name: 'Dhuhr Sunnah Before (2)', nameAr: 'سنة الظهر القبلية (٢)', type: HabitType.REGULAR, icon: 'Star', color: '#38bdf8', isActive: true, order: 210, presetId: 'rawatib', requireReason: true },
+  { id: 'dhuhr_sunnah_before_2', name: 'Dhuhr Sunnah Before (2)', nameAr: 'سنة الظهر القبلية (٢)', type: HabitType.REGULAR, icon: 'Star', color: '#38bdf8', isActive: true, order: 220, presetId: 'rawatib', requireReason: true },
+  { id: 'dhuhr_sunnah_after', name: 'Dhuhr Sunnah After (2)', nameAr: 'سنة الظهر البعدية (٢)', type: HabitType.REGULAR, icon: 'Star', color: '#38bdf8', isActive: true, order: 230, presetId: 'rawatib', requireReason: true },
 
   // Asr Block
   { id: 'asr', name: 'Asr', nameAr: 'العصر', type: HabitType.PRAYER, isActive: true, order: 300 },
 
   // Maghrib Block
   { id: 'maghrib', name: 'Maghrib', nameAr: 'المغرب', type: HabitType.PRAYER, isActive: true, order: 400 },
-  { id: 'maghrib_sunnah', name: 'Maghrib Sunnah', nameAr: 'سنة المغرب', type: HabitType.REGULAR, icon: 'Star', color: '#fb923c', isActive: true, order: 410, presetId: 'rawatib' },
-  { id: 'evening_athkar', name: 'Evening Athkar', nameAr: 'أذكار المساء', type: HabitType.REGULAR, icon: 'Moon', color: '#a78bfa', isActive: true, order: 420 },
+  { id: 'maghrib_sunnah', name: 'Maghrib Sunnah', nameAr: 'سنة المغرب', type: HabitType.REGULAR, icon: 'Star', color: '#fb923c', isActive: true, order: 410, presetId: 'rawatib', requireReason: true },
+  { id: 'evening_athkar', name: 'Evening Athkar', nameAr: 'أذكار المساء', type: HabitType.REGULAR, icon: 'Moon', color: '#a78bfa', isActive: false, order: 420 },
 
   // Isha Block
   { id: 'isha', name: 'Isha', nameAr: 'العشاء', type: HabitType.PRAYER, isActive: true, order: 500 },
-  { id: 'isha_sunnah', name: 'Isha Sunnah', nameAr: 'سنة العشاء', type: HabitType.REGULAR, icon: 'Star', color: '#818cf8', isActive: true, order: 510, presetId: 'rawatib' },
+  { id: 'isha_sunnah', name: 'Isha Sunnah', nameAr: 'سنة العشاء', type: HabitType.REGULAR, icon: 'Star', color: '#818cf8', isActive: true, order: 510, presetId: 'rawatib', requireReason: true },
 
   // Night / Sleep
-  { id: 'witr', name: 'Witr', nameAr: 'الوتر', type: HabitType.REGULAR, icon: 'Heart', color: '#f472b6', isActive: true, order: 600 },
+  { id: 'witr', name: 'Witr', nameAr: 'الوتر', type: HabitType.REGULAR, icon: 'Heart', color: '#f472b6', isActive: false, order: 600 },
   { id: 'qiyam', name: 'Qiyam (Night Prayer)', nameAr: 'قيام الليل', type: HabitType.REGULAR, icon: 'Sparkles', color: '#c084fc', isActive: false, order: 610 },
   { id: 'surat_mulk', name: 'Surat Al-Mulk', nameAr: 'سورة الملك', type: HabitType.REGULAR, icon: 'BookOpen', color: '#4ade80', isActive: false, order: 620 },
   { id: 'sleep_athkar', name: 'Sleep Athkar', nameAr: 'أذكار النوم', type: HabitType.REGULAR, icon: 'BedDouble', color: '#60a5fa', isActive: false, order: 630 },
-  { id: 'quran', name: 'Quran Recitation', nameAr: 'تلاوة القرآن', type: HabitType.REGULAR, icon: 'Book', color: '#34d399', isActive: true, order: 640 },
+  { id: 'quran', name: 'Quran Recitation', nameAr: 'تلاوة القرآن', type: HabitType.REGULAR, icon: 'Book', color: '#34d399', isActive: false, order: 640 },
 
   // Fasting (Conditional Visibility)
   { id: 'fasting_monday', name: 'Fasting Monday', nameAr: 'صيام الإثنين', type: HabitType.REGULAR, icon: 'Utensils', color: '#f97316', isActive: false, order: 700 },

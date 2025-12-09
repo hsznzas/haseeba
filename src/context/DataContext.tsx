@@ -14,7 +14,7 @@ const PRAYER_LEVEL_NAMES: Record<number, { en: string; ar: string }> = {
 import * as storage from '../services/storage';
 import * as api from '../services/api';
 
-// Helper to enrich loaded habits with icon/color from INITIAL_HABITS
+// Helper to enrich loaded habits with icon/color/presetId from INITIAL_HABITS
 const enrichHabitsWithIcons = (loadedHabits: Habit[]): Habit[] => {
   return loadedHabits.map(habit => {
     // Find matching preset habit by ID
@@ -24,6 +24,7 @@ const enrichHabitsWithIcons = (loadedHabits: Habit[]): Habit[] => {
         ...habit,
         icon: habit.icon || presetHabit.icon,
         color: habit.color || presetHabit.color,
+        presetId: habit.presetId || presetHabit.presetId,
       };
     }
     return habit;
