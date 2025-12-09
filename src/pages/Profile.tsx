@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check, ChevronDown, ChevronUp, Smartphone, Share, MoreVertical } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,7 @@ import { supabase } from '../services/supabaseClient';
 // Footer easter egg endings library
 const FOOTER_ENDINGS = {
   en: [
-    "the Ummah", "the Hereafter", "your awakening", "your clarity", "your heart",
+    "the Afterlife", "the Hereafter", "your awakening", "your clarity", "your heart",
     "your accountability", "your growth", "your sincerity", "your journey", "your nearness to God",
     "your discipline", "your peace", "your inner light", "your salvation", "your purpose",
     "your resilience", "your soul", "your record", "your mindful days", "your intentions",
@@ -27,7 +27,7 @@ const FOOTER_ENDINGS = {
     "your higher calling", "your final moment", "the Day of Reckoning", "overcoming the self", "defeating the whisper", "walking toward the Light"
   ],
   ar: [
-    "للأمة", "للآخرة", "لنجاتك", "لطمأنينة قلبك", "لمحاسبة النفس",
+    "لآخرتك", "للآخرة", "لنجاتك", "لطمأنينة قلبك", "لمحاسبة النفس",
     "لليقظة", "لتهذيب النفس", "لقربك من الله", "لاستقامة الطريق", "للروح التي تبحث عن نور",
     "لمجاهدة الهوى", "لصفاء السريرة", "لمن أراد الحق", "لمن يسعى للازدياد", "لمن يراقب قلبه",
     "لحياة أعمق", "لميزانك", "ليوم لا ينفع فيه مال ولا بنون", "لصلاح السر والعلن", "لزيادة بصيرتك",
@@ -275,6 +275,7 @@ const Profile: React.FC = () => {
   
   // Footer easter egg state
   const [footerEndingIndex, setFooterEndingIndex] = useState(0);
+  const [installTab, setInstallTab] = useState<'iphone' | 'android'>('iphone');
   const isArabic = preferences.language === 'ar';
   const currentFooterEnding = isArabic 
     ? FOOTER_ENDINGS.ar[footerEndingIndex]
@@ -945,14 +946,110 @@ const Profile: React.FC = () => {
          {t.home}
        </button>
        
-       {/* Footer - Secret Easter Egg */}
-       <footer className="py-8 text-center">
+       {/* Add to Home Screen */}
+       <div className="mt-8 mb-4 px-4">
+         <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.04] rounded-xl p-4">
+           {/* Header */}
+           <div className={`flex items-center gap-2 mb-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
+             <Smartphone size={14} className="text-white/40" />
+             <span className="text-white/40 text-xs font-medium">
+               {isArabic ? 'أضف إلى الشاشة الرئيسية' : 'Add to Home Screen'}
+             </span>
+           </div>
+
+           {/* Tab Switcher */}
+           <div className="flex bg-white/[0.03] rounded-lg p-0.5 mb-3 border border-white/[0.04]">
+             <button
+               onClick={() => setInstallTab('iphone')}
+               className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                 installTab === 'iphone'
+                   ? 'bg-white/[0.08] text-white'
+                   : 'text-white/30 hover:text-white/50'
+               }`}
+             >
+               <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor">
+                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+               </svg>
+               iPhone
+             </button>
+             <button
+               onClick={() => setInstallTab('android')}
+               className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                 installTab === 'android'
+                   ? 'bg-white/[0.08] text-white'
+                   : 'text-white/30 hover:text-white/50'
+               }`}
+             >
+               <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor">
+                 <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24c-2.86-1.21-6.08-1.21-8.94 0L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.83L6.4 9.48C3.3 11.25 1.28 14.44 1 18h22c-.28-3.56-2.3-6.75-5.4-8.52zM7 15.25c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zm10 0c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z"/>
+               </svg>
+               Android
+             </button>
+           </div>
+
+           {/* Instructions */}
+           {installTab === 'iphone' ? (
+             <div className="space-y-2">
+               <div className={`flex items-center gap-2.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                 <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/50 font-bold shrink-0">1</div>
+                 <div className={`flex items-center gap-1.5 text-white/50 text-xs ${isArabic ? 'flex-row-reverse' : ''}`}>
+                   <span>{isArabic ? 'اضغط على' : 'Tap'}</span>
+                   <Share size={12} className="text-emerald-400" />
+                   <span>{isArabic ? 'في Safari' : 'in Safari'}</span>
+                 </div>
+               </div>
+               <div className={`flex items-center gap-2.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                 <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/50 font-bold shrink-0">2</div>
+                 <div className={`flex items-center gap-1.5 text-white/50 text-xs ${isArabic ? 'flex-row-reverse' : ''}`}>
+                   <span>{isArabic ? 'اختر' : 'Select'}</span>
+                   <Plus size={12} className="text-emerald-400" />
+                   <span>{isArabic ? '"إضافة إلى الشاشة"' : '"Add to Home Screen"'}</span>
+                 </div>
+               </div>
+             </div>
+           ) : (
+             <div className="space-y-2">
+               <div className={`flex items-center gap-2.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                 <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/50 font-bold shrink-0">1</div>
+                 <div className={`flex items-center gap-1.5 text-white/50 text-xs ${isArabic ? 'flex-row-reverse' : ''}`}>
+                   <span>{isArabic ? 'اضغط على' : 'Tap'}</span>
+                   <MoreVertical size={12} className="text-emerald-400" />
+                   <span>{isArabic ? 'في Chrome' : 'in Chrome'}</span>
+                 </div>
+               </div>
+               <div className={`flex items-center gap-2.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                 <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/50 font-bold shrink-0">2</div>
+                 <div className={`flex items-center gap-1.5 text-white/50 text-xs ${isArabic ? 'flex-row-reverse' : ''}`}>
+                   <span>{isArabic ? 'اختر' : 'Select'}</span>
+                   <Smartphone size={12} className="text-emerald-400" />
+                   <span>{isArabic ? '"تثبيت التطبيق"' : '"Install App"'}</span>
+                 </div>
+               </div>
+             </div>
+           )}
+         </div>
+       </div>
+       
+       {/* Footer - Corporate + Easter Egg */}
+       <footer className="py-8 border-t border-white/[0.03]">
+         {/* Easter Egg Line */}
          <p 
            onClick={handleFooterClick}
-           className="text-white/15 text-xs font-medium tracking-wide select-none"
+           className="text-white/20 text-xs font-medium tracking-wide select-none text-center mb-4"
          >
            {isArabic ? `صُنع بـ 💙 ${currentFooterEnding}` : `Built with 💙 for ${currentFooterEnding}`}
          </p>
+         
+         {/* Corporate Footer */}
+         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-white/15 text-[10px] tracking-wide">
+           <span>© Hseeb 2025</span>
+           <span className="hidden sm:inline">•</span>
+           <span>{isArabic ? 'صُنع في المدينة المنورة' : 'Made in AlMadinah'}</span>
+           <span className="hidden sm:inline">•</span>
+           <a href="mailto:Admin@hseeb.com" className="hover:text-white/30 transition-colors">Admin@hseeb.com</a>
+           <span className="hidden sm:inline">•</span>
+           <span>v3.5</span>
+         </div>
        </footer>
     </div>
   );

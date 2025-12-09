@@ -101,7 +101,7 @@ const DEMO_PRAYERS = [
 // Footer easter egg endings library
 const FOOTER_ENDINGS = {
   en: [
-    "the Ummah", "the Hereafter", "your awakening", "your clarity", "your heart",
+    "the Afterlife", "the Hereafter", "your awakening", "your clarity", "your heart",
     "your accountability", "your growth", "your sincerity", "your journey", "your nearness to God",
     "your discipline", "your peace", "your inner light", "your salvation", "your purpose",
     "your resilience", "your soul", "your record", "your mindful days", "your intentions",
@@ -113,7 +113,7 @@ const FOOTER_ENDINGS = {
     "your higher calling", "your final moment", "the Day of Reckoning", "overcoming the self", "defeating the whisper", "walking toward the Light"
   ],
   ar: [
-    "للأمة", "للآخرة", "لنجاتك", "لطمأنينة قلبك", "لمحاسبة النفس",
+    "لآخرتك", "للآخرة", "لنجاتك", "لطمأنينة قلبك", "لمحاسبة النفس",
     "لليقظة", "لتهذيب النفس", "لقربك من الله", "لاستقامة الطريق", "للروح التي تبحث عن نور",
     "لمجاهدة الهوى", "لصفاء السريرة", "لمن أراد الحق", "لمن يسعى للازدياد", "لمن يراقب قلبه",
     "لحياة أعمق", "لميزانك", "ليوم لا ينفع فيه مال ولا بنون", "لصلاح السر والعلن", "لزيادة بصيرتك",
