@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Habit, HabitLog, LogStatus } from '../../types';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, isSameDay, addDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, isSameDay } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { X, Flame, TrendingDown, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
