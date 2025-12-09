@@ -49,7 +49,7 @@ const DustParticle: React.FC<{
 
   return (
     // OUTER DIV: Handles Scroll Parallax & Position
-    <motion.div
+  <motion.div
       className="absolute pointer-events-none"
       style={{
         left: `${x}%`,
@@ -70,11 +70,11 @@ const DustParticle: React.FC<{
           y: [0, -200], // Levitation Upwards
           x: [0, wobble, -wobble, 0], // Wobble Left/Right
           opacity: [0, opacity, opacity, 0], // Long life fade
-        }}
-        transition={{
+    }}
+    transition={{ 
           duration: duration,
           delay: delay,
-          repeat: Infinity,
+      repeat: Infinity, 
           ease: "linear",
           times: [0, 0.1, 0.8, 1], // Fade in fast, stay visible long, fade out end
           x: {
@@ -270,6 +270,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recoverySuccess, setRecoverySuccess] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   
   // Demo animation state for Section 2
   const [loggedPrayers, setLoggedPrayers] = useState<Record<string, number>>({}); // prayerId -> qualityIndex
@@ -351,6 +352,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSignupSuccess(false);
 
     const { error: authError } =
       mode === "signin"
@@ -361,6 +363,8 @@ const Login: React.FC = () => {
 
     if (authError) {
       setError(authError.message);
+    } else if (mode === "signup") {
+      setSignupSuccess(true);
     }
   };
 
@@ -388,12 +392,14 @@ const Login: React.FC = () => {
     setMode("recovery");
     setError(null);
     setRecoverySuccess(false);
+    setSignupSuccess(false);
   };
 
   const switchToLogin = () => {
     setMode("signin");
     setError(null);
     setRecoverySuccess(false);
+    setSignupSuccess(false);
   };
 
   const personas = [
@@ -437,7 +443,7 @@ const Login: React.FC = () => {
     const depth = Math.random(); 
     return {
       depth, // <--- Passing this is crucial for parallax calculation
-      x: Math.random() * 100,
+    x: Math.random() * 100,
       y: Math.random() * 100, 
       size: 1 + depth * 2.5, 
       blur: (1 - depth) * 2, 
@@ -1427,7 +1433,7 @@ const Login: React.FC = () => {
                   {/* Tab Switcher */}
                   <div className="flex bg-white/[0.03] rounded-xl p-1 mb-6 border border-white/[0.04]">
                     <button
-                      onClick={() => setMode("signin")}
+                      onClick={() => { setMode("signin"); setError(null); setSignupSuccess(false); }}
                       className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-all ${
                         mode === "signin"
                           ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-400 border border-emerald-500/30"
@@ -1437,7 +1443,7 @@ const Login: React.FC = () => {
                       {isArabic ? "تسجيل الدخول" : "Sign In"}
                     </button>
                     <button
-                      onClick={() => setMode("signup")}
+                      onClick={() => { setMode("signup"); setError(null); setSignupSuccess(false); }}
                       className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-all ${
                         mode === "signup"
                           ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-400 border border-emerald-500/30"
@@ -1487,9 +1493,20 @@ const Login: React.FC = () => {
                       </div>
                     )}
 
+                    {signupSuccess && (
+                      <motion.div
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-center flex items-center justify-center gap-2"
+                      >
+                        <Mail size={16} />
+                        <span>{isArabic ? "تم إرسال رابط التحقق إلى بريدك!" : "Verification link sent to your email!"}</span>
+                      </motion.div>
+                    )}
+
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || signupSuccess}
                       className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {loading && <AnimatedHourglass size={18} />}
@@ -1642,7 +1659,7 @@ const Login: React.FC = () => {
                               <Smartphone size={12} className="text-emerald-400" />
                               <span>{isArabic ? '"تثبيت التطبيق"' : '"Install App"'}</span>
                             </div>
-                          </div>
+                </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
