@@ -56,6 +56,7 @@ For cloud sync functionality, create a `.env` file:
 cp .env.example .env
 ```
 
+
 Then add your Supabase credentials:
 
 ```env
