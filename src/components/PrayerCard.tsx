@@ -16,11 +16,11 @@ interface PrayerCardProps {
   onUpdate: (val: number, reason?: string) => void;
   onReasonNeeded: (val: number) => void;
   onDelete: () => void;
-  onEdit?: (habit: Habit) => void;
+  onViewDetails?: () => void;
   isSortMode?: boolean;
 }
 
-const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, onReasonNeeded, onDelete, onEdit, isSortMode }) => {
+const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, onReasonNeeded, onDelete, onViewDetails, isSortMode }) => {
   const { preferences } = usePreferences();
   const t = TRANSLATIONS[preferences.language];
   const [showSparkle, setShowSparkle] = useState(false);
@@ -61,8 +61,8 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
 
   const handleTextAreaClick = (_e: React.MouseEvent) => {
     if (isSortMode) return;
-    if (onEdit) {
-      onEdit(habit);
+    if (onViewDetails) {
+      onViewDetails();
     }
   };
 
@@ -197,7 +197,7 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
         onClick={handleTextAreaClick}
         className={clsx(
           "flex items-center flex-1 min-w-0 overflow-hidden relative z-10",
-          onEdit && "cursor-pointer hover:bg-white/5"
+          onViewDetails && "cursor-pointer hover:bg-white/5"
         )}
       >
         <div className={clsx(

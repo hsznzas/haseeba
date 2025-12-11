@@ -7,6 +7,7 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import UpdatePassword from './pages/UpdatePassword';
 import Welcome from './pages/Welcome';
+import HabitDetails from './pages/HabitDetails';
 import { UserPreferences } from '../types';
 import { getPreferences, savePreferences } from './services/storage';
 import { supabaseGetPreferences, supabaseSavePreferences } from './services/api';
@@ -187,6 +188,7 @@ const AppRoutes = () => {
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/analytics" element={<Layout><Analytics /></Layout>} />
           <Route path="/profile" element={<Layout><Profile /></Layout>} />
+          <Route path="/habit/:habitId" element={<HabitDetails />} />
           <Route path="/welcome" element={<Welcome />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>

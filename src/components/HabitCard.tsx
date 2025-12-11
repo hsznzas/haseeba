@@ -15,12 +15,12 @@ interface HabitCardProps {
   streak: number;
   onUpdate: (val: number, status?: LogStatus) => void;
   onDeleteLog: () => void;
-  onEdit?: (habit: Habit) => void;
+  onViewDetails?: () => void;
   onReasonNeeded?: (val: number, status: LogStatus) => void;
   isSortMode?: boolean;
 }
 
-const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onDeleteLog, onEdit, onReasonNeeded }) => {
+const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onDeleteLog, onViewDetails, onReasonNeeded, isSortMode }) => {
   const { preferences } = usePreferences();
 
   const forcePartyVisible = () => {
@@ -44,7 +44,9 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
         streak={streak}
         onUpdate={(val) => onUpdate(val, LogStatus.DONE)}
         onDelete={onDeleteLog}
-        onReasonNeeded={(val) => onReasonNeeded?.(val, LogStatus.DONE)} 
+        onReasonNeeded={(val) => onReasonNeeded?.(val, LogStatus.DONE)}
+        onViewDetails={onViewDetails}
+        isSortMode={isSortMode}
       />
     );
   }
@@ -133,13 +135,13 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
       };
 
       return (
-        <motion.div 
-            className={clsx(
-                "h-auto min-h-[5rem] bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 mb-3 relative overflow-hidden transition-all",
-                onEdit && "cursor-pointer hover:bg-white/10"
-            )}
-            onClick={() => onEdit && onEdit(habit)}
-            animate={isTargetMet ? successVariant : {}}
+    <motion.div 
+        className={clsx(
+            "h-auto min-h-[5rem] bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 mb-3 relative overflow-hidden transition-all",
+            onViewDetails && "cursor-pointer hover:bg-white/10"
+        )}
+        onClick={() => onViewDetails && onViewDetails()}
+        animate={isTargetMet ? successVariant : {}}
         >
             <div className="flex items-center justify-between">
                  {/* Circular Progress + Icon */}
@@ -220,10 +222,10 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
     <motion.div 
         className={clsx(
             "h-14 bg-white/5 backdrop-blur-md border border-white/5 rounded-xl flex items-center pl-3 pr-0 py-0 relative overflow-hidden transition-all",
-            onEdit && "cursor-pointer hover:bg-white/10"
+            onViewDetails && "cursor-pointer hover:bg-white/10"
         )}
         animate={isDone ? successVariant : isFailed ? failVariant : {}}
-        onClick={() => onEdit && onEdit(habit)}
+        onClick={() => onViewDetails && onViewDetails()}
     >
       
       {/* Icon Container */}

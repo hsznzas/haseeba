@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
-import { Habit, HabitLog, DailyBriefing } from '../../types';
+import { Habit, HabitLog, DailyBriefing, PrayerQuality } from '../../types';
 import { buildDailyBriefingPrompt } from '../ai/promptBuilder';
-import { format } from 'date-fns';
+import { format, getDay } from 'date-fns';
 
 // Helper to get API key from multiple sources
 function getApiKey(): string {
@@ -94,8 +94,8 @@ export async function generateDailyBriefing(
     return {
       ...getDefaultBriefing(language),
       home_advice: language === 'ar' 
-        ? '⚠️ لم يتم العثور على مفتاح API. أضف المفتاح في الإعدادات.' 
-        : '⚠️ No API key found. Add your key in Settings.',
+        ? 'للحصول على رؤى ذكية، أضف مفتاح Gemini API في صفحة الملف الشخصي. كلما زادت السجلات، كانت التحليلات أفضل!' 
+        : 'To get AI insights, add your Gemini API key in Profile. More logs = better analysis!',
     };
   }
 
@@ -159,8 +159,8 @@ export async function generateDailyBriefing(
     return {
       ...getDefaultBriefing(language),
       home_advice: language === 'ar' 
-        ? '⚠️ حدث خطأ أثناء التحليل. حاول مرة أخرى.' 
-        : '⚠️ Error during analysis. Please try again.',
+        ? 'تأكد من إضافة مفتاح Gemini API صحيح في صفحة الملف الشخصي.' 
+        : 'Make sure to add a valid Gemini API key in Profile.',
     };
   }
 }
@@ -173,5 +173,178 @@ export async function regenerateBriefing(
 ): Promise<DailyBriefing> {
   clearBriefingCache();
   return generateDailyBriefing(habits, logs, language);
+}
+
+// Prayer-specific insight generation
+export interface PrayerInsight {
+  patterns: string[];
+  advice: string;
+  encouragement: string;
+}
+
+function getPrayerInsightCacheKey(prayerId: string): string {
+  const today = format(new Date(), 'yyyy-MM-dd');
+  return `haseeb_prayer_insight_${prayerId}_${today}`;
+}
+
+export function getCachedPrayerInsight(prayerId: string): PrayerInsight | null {
+  try {
+    const cacheKey = getPrayerInsightCacheKey(prayerId);
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as PrayerInsight;
+    }
+  } catch (error) {
+    console.error('Error reading cached prayer insight:', error);
+  }
+  return null;
+}
+
+function getDefaultPrayerInsight(language: string, prayerName: string): PrayerInsight {
+  const isArabic = language === 'ar';
+  return {
+    patterns: [
+      isArabic ? 'لا توجد بيانات كافية للتحليل' : 'Not enough data for analysis'
+    ],
+    advice: isArabic 
+      ? `استمر في تسجيل ${prayerName} لرؤية الأنماط والنصائح.`
+      : `Keep logging ${prayerName} to see patterns and advice.`,
+    encouragement: isArabic
+      ? 'كل خطوة تقربك من الله تستحق الاحتفاء.'
+      : 'Every step closer to Allah is worth celebrating.'
+  };
+}
+
+export async function generatePrayerInsight(
+  prayerId: string,
+  prayerName: string,
+  logs: HabitLog[],
+  language: string
+): Promise<PrayerInsight> {
+  // Check cache first
+  const cached = getCachedPrayerInsight(prayerId);
+  if (cached) {
+    console.log('🧠 Prayer Insight: Using cached insight');
+    return cached;
+  }
+
+  // Check for API key
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    return {
+      ...getDefaultPrayerInsight(language, prayerName),
+      advice: language === 'ar' 
+        ? 'للحصول على رؤى مخصصة، أضف مفتاح Gemini API في صفحة الملف الشخصي.'
+        : 'To get personalized insights, add your Gemini API key in Profile.'
+    };
+  }
+
+  // Filter logs for this prayer
+  const prayerLogs = logs.filter(l => l.habitId === prayerId);
+  
+  if (prayerLogs.length < 3) {
+    return getDefaultPrayerInsight(language, prayerName);
+  }
+
+  try {
+    console.log('🧠 Prayer Insight: Generating insight for', prayerId);
+    
+    // Analyze patterns
+    const dayOfWeekPerformance: Record<number, { takbirah: number, total: number }> = {};
+    prayerLogs.forEach(log => {
+      const date = new Date(log.date);
+      const dayOfWeek = getDay(date);
+      if (!dayOfWeekPerformance[dayOfWeek]) {
+        dayOfWeekPerformance[dayOfWeek] = { takbirah: 0, total: 0 };
+      }
+      dayOfWeekPerformance[dayOfWeek].total++;
+      if (log.value === PrayerQuality.TAKBIRAH) {
+        dayOfWeekPerformance[dayOfWeek].takbirah++;
+      }
+    });
+
+    // Collect reasons
+    const reasons = prayerLogs
+      .filter(l => l.reason && l.value !== PrayerQuality.TAKBIRAH)
+      .map(l => l.reason)
+      .filter((r): r is string => !!r);
+
+    // Build prompt for prayer-specific insight
+    const isArabic = language === 'ar';
+    const prompt = isArabic
+      ? `أنت مستشار إسلامي خبير. قم بتحليل بيانات صلاة ${prayerName} وقدم نصيحة شخصية.
+
+البيانات:
+- إجمالي السجلات: ${prayerLogs.length}
+- تكبيرة الإحرام: ${prayerLogs.filter(l => l.value === PrayerQuality.TAKBIRAH).length}
+- الأسباب المسجلة: ${reasons.join(', ') || 'لا توجد'}
+
+قدم رؤى في هذا التنسيق JSON:
+{
+  "patterns": ["نمط 1", "نمط 2"],
+  "advice": "نصيحة عملية قصيرة",
+  "encouragement": "كلمة تشجيعية"
+}
+
+كن موجزاً (2-3 جمل لكل حقل)، محدداً، وإيجابياً.`
+      : `You are an expert Islamic advisor. Analyze ${prayerName} prayer data and provide personalized advice.
+
+Data:
+- Total logs: ${prayerLogs.length}
+- Takbirah level: ${prayerLogs.filter(l => l.value === PrayerQuality.TAKBIRAH).length}
+- Recorded reasons: ${reasons.join(', ') || 'None'}
+
+Provide insights in this JSON format:
+{
+  "patterns": ["pattern 1", "pattern 2"],
+  "advice": "short actionable advice",
+  "encouragement": "encouraging message"
+}
+
+Be concise (2-3 sentences per field), specific, and positive.`;
+
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+
+    const responseText = response.text || '';
+    const cleanedJson = cleanJsonResponse(responseText);
+    
+    let parsed: Partial<PrayerInsight>;
+    try {
+      parsed = JSON.parse(cleanedJson);
+    } catch (parseError) {
+      const jsonMatch = cleanedJson.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw parseError;
+      }
+    }
+
+    const insight: PrayerInsight = {
+      patterns: parsed.patterns || [],
+      advice: parsed.advice || getDefaultPrayerInsight(language, prayerName).advice,
+      encouragement: parsed.encouragement || getDefaultPrayerInsight(language, prayerName).encouragement,
+    };
+
+    // Cache the insight
+    const cacheKey = getPrayerInsightCacheKey(prayerId);
+    localStorage.setItem(cacheKey, JSON.stringify(insight));
+    console.log('🧠 Prayer Insight: Cached successfully');
+
+    return insight;
+
+  } catch (error) {
+    console.error('🧠 Prayer Insight Error:', error);
+    return {
+      ...getDefaultPrayerInsight(language, prayerName),
+      advice: language === 'ar' 
+        ? 'تأكد من صحة مفتاح Gemini API في صفحة الملف الشخصي. سجّل المزيد من الصلوات للحصول على تحليل أفضل.'
+        : 'Ensure your Gemini API key is valid in Profile. Log more prayers for better analysis.'
+    };
+  }
 }
 

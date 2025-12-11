@@ -202,9 +202,8 @@ const Home: React.FC = () => {
     handleDeleteLog(habitId, dateStr);
   };
 
-  const handleEditHabit = (habit: Habit) => {
-    setEditingHabit(habit);
-    setIsModalOpen(true);
+  const handleViewHabitDetails = (habitId: string) => {
+    navigate(`/habit/${habitId}`);
   };
 
   const handleCloseModal = () => {
@@ -498,7 +497,7 @@ const Home: React.FC = () => {
                         streak={streaks[habit.id] || 0}
                         onUpdate={(val, status) => handleUpdate(habit.id, val, status)}
                         onDeleteLog={() => handleDelete(habit.id)}
-                        onEdit={undefined}
+                        onViewDetails={undefined}
                         onReasonNeeded={(val, status) => setReasoningState({ id: habit.id, val, status })}
                         isSortMode={true}
                       />
@@ -522,7 +521,7 @@ const Home: React.FC = () => {
                           streak={streaks[habit.id] || 0}
                           onUpdate={(val, status) => handleUpdate(habit.id, val, status)}
                           onDeleteLog={() => handleDelete(habit.id)}
-                          onEdit={!habit.presetId ? handleEditHabit : undefined}
+                          onViewDetails={() => handleViewHabitDetails(habit.id)}
                           onReasonNeeded={(val, status) => setReasoningState({ id: habit.id, val, status })}
                           isSortMode={false}
                         />
