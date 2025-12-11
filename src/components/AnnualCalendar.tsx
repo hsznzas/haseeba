@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, isSameDay, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, subMonths } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { HabitLog, HabitType, LogStatus, PrayerQuality } from '../../types';
 import { clsx } from 'clsx';

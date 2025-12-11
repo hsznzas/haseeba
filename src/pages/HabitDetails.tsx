@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { useData } from '../context/DataContext';
 import { ArrowLeft, Flame, TrendingDown, CheckCircle2, XCircle, AlertTriangle, Trophy } from 'lucide-react';
-import { HabitType, LogStatus, HabitLog, PrayerQuality } from '../../types';
+import { HabitType, LogStatus, PrayerQuality } from '../../types';
 import AnnualCalendar from '../components/AnnualCalendar';
 import PrayerInsightCard from '../components/PrayerInsightCard';
 import HabitSettingsSection from '../components/HabitSettingsSection';
