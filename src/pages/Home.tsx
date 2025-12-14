@@ -13,6 +13,7 @@ import { AnimatePresence, motion, Reorder } from 'framer-motion';
 import AddHabitModal from '../components/AddHabitModal';
 import ReasonModal from '../components/ReasonModal';
 import ActionButtonsKeyCard from '../components/ActionButtonsKeyCard';
+import HadithDisplay from '../components/HadithDisplay';
 import { generateDailyBriefing, getCachedBriefing } from '../services/aiEngine';
 import { isOnboardingComplete, setOnboardingComplete } from '../services/storage';
 
@@ -428,6 +429,9 @@ const Home: React.FC = () => {
               </div>
             </div>
         </div>
+
+        {/* Hadith Display - Calm Technology */}
+        <HadithDisplay />
 
         {/* Daily Focus Card - AI Insight */}
         <div className="px-4 mt-4">
