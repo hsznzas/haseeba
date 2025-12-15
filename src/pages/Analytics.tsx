@@ -253,11 +253,6 @@ const Analytics: React.FC = () => {
     let bestStreak = 0;
     let currentStreak = 0;
     
-    // Helper to check if a date has excused status for all prayers
-    const isDateExcused = (date: string, logsForDate: HabitLog[]) => {
-      return logsForDate.every(l => l.status === LogStatus.EXCUSED);
-    };
-    
     if (Array.isArray(habitId)) {
         // Aggregated streak for all 5 prayers
         // Group logs by date

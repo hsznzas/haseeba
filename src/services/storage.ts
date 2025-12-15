@@ -16,10 +16,12 @@ import {
   QuranProgress,
   User,
   UserPreferences,
-  STORAGE_KEYS,
-  StorageKey,
   HabitType,
   CustomReason,
+} from "../../types";
+import {
+  STORAGE_KEYS,
+  StorageKey,
 } from "@/index";
 import { INITIAL_HABITS } from "../../constants";
 import { generateId, getTodayString } from "@/lib/utils";
