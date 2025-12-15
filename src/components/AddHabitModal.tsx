@@ -3,7 +3,7 @@ import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { HabitType, Habit } from '../../types';
 import { useData } from '../context/DataContext';
-import { X, Activity, Trash2 } from 'lucide-react';
+import { X, Activity, Trash2, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { suggestIcon } from '../services/geminiService';
 import { ICON_MAP, IconName, AVAILABLE_ICONS } from '../utils/iconMap';
@@ -27,6 +27,8 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
   const [target, setTarget] = useState(1);
   const [selectedIcon, setSelectedIcon] = useState<string>('Activity');
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [affectsScore, setAffectsScore] = useState(true);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,14 +37,17 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
         setType(habitToEdit.type);
         setTarget(habitToEdit.dailyTarget || 1);
         setSelectedIcon(habitToEdit.emoji && ICON_MAP[habitToEdit.emoji as IconName] ? habitToEdit.emoji : 'Activity');
+        setAffectsScore(habitToEdit.affectsScore !== undefined ? habitToEdit.affectsScore : true);
       } else {
         setName('');
         setType(HabitType.REGULAR);
         setTarget(1);
         setSelectedIcon('Activity');
+        setAffectsScore(true);
       }
       setShowIconPicker(false);
       setShowDeleteConfirm(false);
+      setShowInfoModal(false);
     }
   }, [isOpen, habitToEdit, preferences.language]);
 
@@ -97,7 +102,8 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
       isActive: true,
       order: habitToEdit ? habitToEdit.order : 999,
       startDate: habitStartDate,
-      presetId: habitToEdit?.presetId
+      presetId: habitToEdit?.presetId,
+      affectsScore: affectsScore || undefined
     };
 
     await handleSaveHabit(updatedHabit);
@@ -225,6 +231,56 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
             </div>
           )}
 
+          {/* Affects Global Score Toggle */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  {preferences.language === 'ar' ? 'يؤثر على النتيجة الإجمالية' : 'Affects Global Score'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowInfoModal(true)}
+                  className="p-1 text-gray-500 hover:text-primary transition-colors"
+                >
+                  <Info size={14} />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  // Check if this is a 5 Key Prayer (5KP)
+                  const fiveKeyPrayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+                  const is5KP = habitToEdit && fiveKeyPrayers.includes(habitToEdit.id);
+                  if (!is5KP) {
+                    setAffectsScore(!affectsScore);
+                  }
+                }}
+                disabled={!!(habitToEdit && ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(habitToEdit.id))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  affectsScore ? 'bg-primary' : 'bg-slate-700'
+                } ${
+                  habitToEdit && ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(habitToEdit.id)
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'cursor-pointer'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    affectsScore ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            {habitToEdit && ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(habitToEdit.id) && (
+              <p className="text-[10px] text-gray-500 italic ml-1">
+                {preferences.language === 'ar' 
+                  ? 'الصلوات الخمس يجب أن تؤثر على النتيجة' 
+                  : '5 Key Prayers must affect score'}
+              </p>
+            )}
+          </div>
+
           {/* Delete Habit (only for existing custom habits) */}
           {habitToEdit && !habitToEdit.presetId && (
             <div className="pt-4 border-t border-slate-800">
@@ -274,6 +330,47 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
           </div>
         </form>
       </div>
+
+      {/* Info Modal */}
+      {showInfoModal && (
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex items-center justify-center p-4"
+          onClick={() => setShowInfoModal(false)}
+        >
+          <div 
+            className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-xs shadow-2xl animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                <Info size={16} className="text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-white mb-1">
+                  {preferences.language === 'ar' ? 'عادات المكافأة' : 'Bonus Habits'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-300 leading-relaxed">
+              {preferences.language === 'ar'
+                ? 'عند التعطيل، تصبح هذه العادة "عادة مكافأة". ستظهر في قائمتك، لكن عدم إكمالها لن يخفض نتيجتك اليومية أو يكسر سلاسلك. استخدم هذا للأهداف الاختيارية التي تريد تتبعها دون ضغط.'
+                : 'When disabled, this habit becomes a "Bonus Habit". It will appear in your list, but missing it will not lower your daily score or break your streaks. Use this for optional goals you want to track without pressure.'}
+            </p>
+            <button
+              onClick={() => setShowInfoModal(false)}
+              className="w-full mt-4 py-2 rounded-lg bg-slate-800 text-white text-xs font-medium hover:bg-slate-700 transition-colors"
+            >
+              {preferences.language === 'ar' ? 'فهمت' : 'Got it'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

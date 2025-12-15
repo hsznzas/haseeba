@@ -8,14 +8,15 @@ import BottomNav from '../components/BottomNav';
 import { useData } from '../context/DataContext';
 import { HabitLog, LogStatus, HabitType, PrayerQuality, Habit, DailyBriefing } from '../../types';
 import { format, subDays, getDay } from 'date-fns';
-import { Plus, User, RotateCw, ArrowUpDown, Brain, Info, Hourglass } from 'lucide-react';
+import { Plus, User, RotateCw, ArrowUpDown, Brain, Info, Hourglass, Pause } from 'lucide-react';
 import { AnimatePresence, motion, Reorder } from 'framer-motion';
 import AddHabitModal from '../components/AddHabitModal';
 import ReasonModal from '../components/ReasonModal';
 import ActionButtonsKeyCard from '../components/ActionButtonsKeyCard';
 import HadithDisplay from '../components/HadithDisplay';
 import { generateDailyBriefing, getCachedBriefing } from '../services/aiEngine';
-import { isOnboardingComplete, setOnboardingComplete } from '../services/storage';
+import { isOnboardingComplete, setOnboardingComplete, createExcusedLogsForToday as createExcusedLogsLocal } from '../services/storage';
+import { createExcusedLogsForCurrentUser } from '../services/api';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -72,6 +73,29 @@ const Home: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [user]);
+
+  // Auto-log excused prayers when isExcused mode is active
+  useEffect(() => {
+    const autoLogExcused = async () => {
+      if (preferences.isExcused && preferences.gender === 'female' && user) {
+        try {
+          if (user.isDemo) {
+            // Demo account: use localStorage
+            createExcusedLogsLocal();
+            await refreshData();
+          } else {
+            // Real account: use Supabase
+            await createExcusedLogsForCurrentUser();
+            await refreshData();
+          }
+        } catch (error) {
+          console.error('Error auto-logging excused prayers:', error);
+        }
+      }
+    };
+    
+    autoLogExcused();
+  }, [preferences.isExcused, preferences.gender, dateStr, user]);
 
   const handleKeyCardClose = () => {
     setShowKeyCard(false);
@@ -236,6 +260,7 @@ const Home: React.FC = () => {
 
   // ==========================================
   // STREAK CALCULATION (Point-in-Time based on selectedDate)
+  // With Excused Day Bridge Logic
   // ==========================================
   const streaks = useMemo(() => {
     const habitStreaks: Record<string, number> = {};
@@ -258,9 +283,16 @@ const Home: React.FC = () => {
         return log.status === LogStatus.DONE;
       };
 
+      // Check if a log is excused (acts as a bridge)
+      const isExcused = (log: HabitLog) => log.status === LogStatus.EXCUSED;
+
       // Calculate streak as of the selected date
       if (viewDateLog) {
-         if (isSuccessful(viewDateLog)) {
+         if (isExcused(viewDateLog)) {
+            // Excused day - don't count but continue checking backwards
+            checkDate = subDays(viewDate, 1);
+            isStreakActive = true;
+         } else if (isSuccessful(viewDateLog)) {
             currentStreak = 1;
             checkDate = subDays(viewDate, 1);
             isStreakActive = true;
@@ -270,10 +302,14 @@ const Home: React.FC = () => {
             isStreakActive = false;
          }
       } else {
-         // No log on selected date - check if day before had a successful log
+         // No log on selected date - check if day before had a successful log or was excused
          const dayBeforeLog = habitLogs.find(l => l.date === dayBeforeStr);
          if (dayBeforeLog && isSuccessful(dayBeforeLog)) {
             currentStreak = 1;
+            checkDate = subDays(viewDate, 2);
+            isStreakActive = true;
+         } else if (dayBeforeLog && isExcused(dayBeforeLog)) {
+            // Excused day before - continue checking backwards
             checkDate = subDays(viewDate, 2);
             isStreakActive = true;
          } else {
@@ -287,10 +323,20 @@ const Home: React.FC = () => {
            if (checkDate < startDate) break;
            const dateToCheckStr = format(checkDate, 'yyyy-MM-dd');
            const log = habitLogs.find(l => l.date === dateToCheckStr);
-           if (log && isSuccessful(log)) {
-             currentStreak++;
-             checkDate = subDays(checkDate, 1);
+           if (log) {
+             if (isExcused(log)) {
+               // Excused day acts as a bridge - don't increment but continue
+               checkDate = subDays(checkDate, 1);
+               continue;
+             } else if (isSuccessful(log)) {
+               currentStreak++;
+               checkDate = subDays(checkDate, 1);
+             } else {
+               // Failed log breaks the streak
+               break;
+             }
            } else {
+             // No log for this date - streak broken
              break;
            }
         }
@@ -354,6 +400,15 @@ const Home: React.FC = () => {
        .sort((a, b) => a.order - b.order);
   }, [habits, selectedDate, dateStr]);
 
+  // Separate habits into Core and Bonus
+  const coreHabits = useMemo(() => {
+    return visibleHabits.filter(h => h.affectsScore !== false);
+  }, [visibleHabits]);
+
+  const bonusHabits = useMemo(() => {
+    return visibleHabits.filter(h => h.affectsScore === false);
+  }, [visibleHabits]);
+
   return (
     <div className="pb-32 relative min-h-screen">
         <div className="sticky top-0 z-40 bg-slate-50/80 dark:bg-background/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 pt-[env(safe-area-inset-top)] shadow-sm">
@@ -410,6 +465,18 @@ const Home: React.FC = () => {
                 </div>
             </div>
             
+            {/* Excused Mode Indicator */}
+            {preferences.isExcused && preferences.gender === 'female' && (
+              <div className="px-4 pb-2">
+                <div className="flex items-center justify-center gap-2 py-2 px-4 bg-purple-500/10 border border-purple-500/30 rounded-xl">
+                  <Pause size={14} className="text-purple-400" />
+                  <span className="text-xs font-bold text-purple-400">
+                    {preferences.language === 'ar' ? 'وضع العذر مفعّل' : 'Excused Mode Active'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Row 2: Stats bar */}
             <div className="px-4 pb-2">
               <div className="flex items-center justify-center gap-4 py-1.5 px-3 bg-slate-100/50 dark:bg-white/[0.03] rounded-lg" dir="ltr">
@@ -512,7 +579,8 @@ const Home: React.FC = () => {
             ) : (
               <AnimatePresence mode="popLayout">
                 <div className="space-y-3">
-                  {visibleHabits.map(habit => {
+                  {/* Core Habits Section */}
+                  {coreHabits.map(habit => {
                     const log = logs.find(l => l.habitId === habit.id && l.date === dateStr);
                     return (
                       <motion.div
@@ -532,6 +600,40 @@ const Home: React.FC = () => {
                       </motion.div>
                     );
                   })}
+
+                  {/* Bonus Habits Divider and Section */}
+                  {bonusHabits.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-3 py-4">
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider px-3 py-1.5 bg-slate-900/50 rounded-full border border-slate-800">
+                          {preferences.language === 'ar' ? 'عادات المكافأة' : 'Bonus Habits'}
+                        </span>
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+                      </div>
+
+                      {bonusHabits.map(habit => {
+                        const log = logs.find(l => l.habitId === habit.id && l.date === dateStr);
+                        return (
+                          <motion.div
+                            key={habit.id}
+                            layout
+                          >
+                            <HabitCard 
+                              habit={habit}
+                              log={log}
+                              streak={streaks[habit.id] || 0}
+                              onUpdate={(val, status) => handleUpdate(habit.id, val, status)}
+                              onDeleteLog={() => handleDelete(habit.id)}
+                              onViewDetails={() => handleViewHabitDetails(habit.id)}
+                              onReasonNeeded={(val, status) => setReasoningState({ id: habit.id, val, status })}
+                              isSortMode={false}
+                            />
+                          </motion.div>
+                        );
+                      })}
+                    </>
+                  )}
                 </div>
               </AnimatePresence>
             )}

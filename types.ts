@@ -17,6 +17,7 @@ export enum LogStatus {
   DONE = 'DONE',
   SKIP = 'SKIP',
   FAIL = 'FAIL',
+  EXCUSED = 'EXCUSED',
 }
 
 export interface Habit {
@@ -34,6 +35,7 @@ export interface Habit {
   startDate?: string;
   isArchived?: boolean;
   requireReason?: boolean; // If true, ask for reason when habit is failed
+  affectsScore?: boolean; // If false, habit is "Bonus" and doesn't affect global score/streaks (default: true)
   createdAt?: string;
   updatedAt?: string;
 }
@@ -52,6 +54,7 @@ export interface HabitLog {
 export interface UserPreferences {
   language: Language;
   gender: 'male' | 'female';
+  isExcused: boolean;
   showHijri: boolean;
   dateOfBirth: string | null;
   theme?: 'dark' | 'light';
@@ -65,6 +68,7 @@ export interface UserPreferences {
 export const DEFAULT_PREFERENCES: UserPreferences = {
   language: 'ar',
   gender: 'male',
+  isExcused: false,
   showHijri: true,
   dateOfBirth: '1991-11-11',
   theme: 'dark',

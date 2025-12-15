@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, MoreVertical, Plus, Smartphone, Sunrise, Sun, CloudSun, Sunset, Moon, Clock, XCircle, Brain, TrendingUp, Lightbulb } from "lucide-react";
 import { DemoPersona } from "../services/storage";
 import { getGlobalStats, GlobalStats } from "../services/api";
-// 1. Updated Imports to include Scroll hooks
-import { motion, AnimatePresence, useScroll, useTransform, MotionValue, useInView } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 
 type FormMode = "signin" | "signup" | "recovery";
 
@@ -28,64 +28,36 @@ const AnimatedHourglass: React.FC<{ size?: number }> = ({ size = 24 }) => (
   </motion.div>
 );
 
-// 2. UPDATED COMPONENT: Handles Parallax + Levitation + Wobble
+// Optimized Dust Particle - Grok-style crisp, slow drift
 const DustParticle: React.FC<{ 
   x: number; 
   y: number; 
   size: number; 
-  blur: number; 
   opacity: number;
   duration: number;
-  delay: number;
-  wobble: number;
-  depth: number; // Needed for parallax speed calculation
-  scrollY: MotionValue<number>; // Needed to track scroll
-  isPaused?: boolean; // Pause animation when not in viewport
-}> = ({ x, y, size, blur, opacity, duration, delay, wobble, depth, scrollY, isPaused = false }) => {
-  
-  // Parallax Logic: Maps scroll position to vertical movement
-  // Depth 1 (Close) moves fast (-200px), Depth 0 (Far) moves slow
-  const parallaxY = useTransform(scrollY, [0, 1000], [0, -200 * depth]);
-
+  driftX: number;
+  driftY: number;
+}> = ({ x, y, size, opacity, duration, driftX, driftY }) => {
   return (
-    // OUTER DIV: Handles Scroll Parallax & Position
     <motion.div
-      className="absolute pointer-events-none"
+      className="absolute rounded-full bg-white pointer-events-none"
       style={{
         left: `${x}%`,
         top: `${y}%`,
-        y: parallaxY, // Bind scroll movement
+        width: size,
+        height: size,
+        opacity: opacity,
       }}
-    >
-      {/* INNER DIV: Handles Levitation, Wobble & Appearance */}
-      <motion.div
-        className="rounded-full bg-white"
-        style={{
-          width: size,
-          height: size,
-          filter: `blur(${blur}px)`,
-          boxShadow: `0 0 ${size * 2}px rgba(255,255,255,0.4)`
-        }}
-        animate={isPaused ? { opacity: 0 } : {
-          y: [0, -200], // Levitation Upwards
-          x: [0, wobble, -wobble, 0], // Wobble Left/Right
-          opacity: [0, opacity, opacity, 0], // Long life fade
-        }}
-        transition={{
-          duration: duration,
-          delay: delay,
-          repeat: Infinity,
-          ease: "linear",
-          times: [0, 0.1, 0.8, 1], // Fade in fast, stay visible long, fade out end
-          x: {
-            duration: duration, 
-            repeat: Infinity, 
-            ease: "easeInOut", 
-            times: [0, 0.25, 0.75, 1] 
-          }
-        }}
-      />
-    </motion.div>
+      animate={{
+        x: [0, driftX, 0],
+        y: [0, driftY, 0],
+      }}
+      transition={{
+        duration: duration,
+        repeat: Infinity,
+        ease: "linear",
+      }}
+    />
   );
 };
 
@@ -254,15 +226,21 @@ const AnimatedCounter: React.FC<{
   );
 };
 
+// Optimized particles: 70 crisp dots with slow infinite drift (Grok-style)
+// Defined OUTSIDE component to prevent regeneration on every render
+const DUST_PARTICLES = Array.from({ length: 70 }, () => ({
+  x: Math.random() * 100,
+  y: Math.random() * 100,
+  size: 1 + Math.random() * 2, // 1px to 3px - crisp, no blur
+  opacity: 0.15 + Math.random() * 0.25, // 0.15 to 0.4 - subtle
+  duration: 20 + Math.random() * 20, // 20s to 40s - very slow drift
+  driftX: (Math.random() - 0.5) * 80, // -40 to 40px horizontal drift
+  driftY: (Math.random() - 0.5) * 80, // -40 to 40px vertical drift
+}));
+
 const Login: React.FC = () => {
-  // 3. Initialize Scroll Hook
-  const { scrollY } = useScroll();
-  
-  // Ref for particle container to pause animations when not in view
-  const particleContainerRef = useRef<HTMLDivElement>(null);
-  const particlesInView = useInView(particleContainerRef, { margin: "200px" });
-  
   const { signInWithEmail, signUpWithEmail, startDemo, resetPasswordForEmail } = useAuth();
+  const navigate = useNavigate();
   const [language, setLanguage] = useState<"en" | "ar">("ar");
   const [mode, setMode] = useState<FormMode>("signin");
   const [email, setEmail] = useState("");
@@ -400,7 +378,7 @@ const Login: React.FC = () => {
     {
       id: "devout" as DemoPersona,
       nameEn: "The Worshiper",
-      nameAr: "المجتهد",
+      nameAr: "سابق بالخيرات",
       descEn: "95% consistency",
       descAr: "٩٥٪ التزام",
       icon: Sparkles,
@@ -411,7 +389,7 @@ const Login: React.FC = () => {
     {
       id: "intermediate" as DemoPersona,
       nameEn: "Half & Half",
-      nameAr: "الوسط",
+      nameAr: "اللي نص نص",
       descEn: "75% consistency",
       descAr: "٧٥٪ التزام",
       icon: Users,
@@ -422,7 +400,7 @@ const Login: React.FC = () => {
     {
       id: "beginner" as DemoPersona,
       nameEn: "The Careless",
-      nameAr: "الصايع / الغافل",
+      nameAr: "لهية قلوبهم",
       descEn: "30% consistency",
       descAr: "٣٠٪ التزام",
       icon: Zap,
@@ -432,28 +410,12 @@ const Login: React.FC = () => {
     },
   ];
 
-  // 4. UPDATED DATA: Added 'depth' to the return object
-  const dustParticles = Array.from({ length: 150 }, () => {
-    const depth = Math.random(); 
-    return {
-      depth, // <--- Passing this is crucial for parallax calculation
-      x: Math.random() * 100,
-      y: Math.random() * 100, 
-      size: 1 + depth * 2.5, 
-      blur: (1 - depth) * 2, 
-      opacity: 0.1 + depth * 0.4, 
-      duration: 15 - (depth * 9), 
-      delay: Math.random() * 5,
-      wobble: 10 + (depth * 30) 
-    };
-  });
-
   const [installTab, setInstallTab] = useState<'iphone' | 'android'>('iphone');
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col relative overflow-y-auto" dir={isArabic ? "rtl" : "ltr"}>
-      {/* Animated Background Effects */}
-      <div ref={particleContainerRef} className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Animated Background Effects - z-index 0 to stay behind content cards */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         {/* Gradient orbs */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[128px] animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-teal-500/10 rounded-full blur-[100px]" />
@@ -468,14 +430,9 @@ const Login: React.FC = () => {
           }}
         />
         
-        {/* 5. UPDATED RENDER: Particles pause when not in viewport for performance */}
-        {dustParticles.map((p, i) => (
-          <DustParticle 
-            key={`dust-${i}`} 
-            {...p} 
-            scrollY={scrollY}
-            isPaused={!particlesInView}
-          />
+        {/* Optimized Grok-style particles: crisp, slow, always-on */}
+        {DUST_PARTICLES.map((p, i) => (
+          <DustParticle key={`dust-${i}`} {...p} />
         ))}
       </div>
 
@@ -1673,6 +1630,14 @@ const Login: React.FC = () => {
           <a href="mailto:Admin@hseeb.com" className="hover:text-white/30 transition-colors">Admin@hseeb.com</a>
           <span className="hidden sm:inline">•</span>
           <span>v3.5</span>
+          <span className="hidden sm:inline">•</span>
+          {/* Hidden Admin Login Link */}
+          <button
+            onClick={() => navigate('/super-secret-admin')}
+            className="hover:text-white/30 transition-colors cursor-pointer"
+          >
+            {isArabic ? 'تسجيل دخول المشرف' : 'Admin Login'}
+          </button>
         </div>
       </footer>
     </div>

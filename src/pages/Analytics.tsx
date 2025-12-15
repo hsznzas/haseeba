@@ -9,7 +9,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, Brain, Zap, RefreshCw, Info, X } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog, DailyBriefing } from '../../types';
 import { 
-  format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, 
+  format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, addDays,
   isSameDay, differenceInDays, addYears, isWithinInterval, 
   startOfWeek, endOfWeek, addWeeks, startOfQuarter, endOfQuarter, addQuarters, 
   startOfYear, endOfYear
@@ -31,8 +31,11 @@ const parseLocalISO = (dateStr: string) => {
     return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
 };
 
-// Color Helper
-const getQualityColor = (val?: number) => {
+// Color Helper - Added excused color (Lavender/Slate)
+const getQualityColor = (val?: number, status?: string) => {
+  // Check for excused status first
+  if (status === 'EXCUSED') return '#94a3b8'; // Slate-400 (Neutral color for excused)
+  
   switch (val) {
     case PrayerQuality.TAKBIRAH: return '#22c55e'; // Green
     case PrayerQuality.JAMAA: return '#eab308';    // Yellow
@@ -130,10 +133,14 @@ const Analytics: React.FC = () => {
   // WIN = DONE for regular habits, TAKBIRAH for prayers
   // LOSS = FAIL for regular habits, non-TAKBIRAH for prayers
   // SKIP is ignored (deprecated)
+  // BONUS HABITS (affectsScore === false) are excluded
   const globalStats = useMemo(() => {
     return logs.reduce((acc, log) => {
       const habit = habits.find(h => h.id === log.habitId);
       if (!habit) return acc;
+      
+      // Skip bonus habits (affectsScore === false)
+      if (habit.affectsScore === false) return acc;
       
       // Skip legacy SKIP logs - they don't count
       if (log.status === LogStatus.SKIP) return acc;
@@ -229,11 +236,16 @@ const Analytics: React.FC = () => {
     );
   };
 
-  // --- Best Streak Logic ---
+  // --- Best Streak Logic (with Excused Day Bridge Support) ---
   const calculateBestStreak = (habitId: string | string[]) => {
     const ids = Array.isArray(habitId) ? habitId : [habitId];
+    
+    // Filter out bonus habits (affectsScore === false) from streak calculation
+    const relevantHabits = habits.filter(h => ids.includes(h.id) && h.affectsScore !== false);
+    const relevantHabitIds = relevantHabits.map(h => h.id);
+    
     const relevantLogs = logs
-        .filter(l => ids.includes(l.habitId))
+        .filter(l => relevantHabitIds.includes(l.habitId))
         .sort((a, b) => a.date.localeCompare(b.date));
 
     if (relevantLogs.length === 0) return 0;
@@ -241,46 +253,118 @@ const Analytics: React.FC = () => {
     let bestStreak = 0;
     let currentStreak = 0;
     
+    // Helper to check if a date has excused status for all prayers
+    const isDateExcused = (date: string, logsForDate: HabitLog[]) => {
+      return logsForDate.every(l => l.status === LogStatus.EXCUSED);
+    };
+    
     if (Array.isArray(habitId)) {
-        // Simplified aggregated streak
-        const logsByDate: Record<string, number> = {};
+        // Aggregated streak for all 5 prayers
+        // Group logs by date
+        const logsByDate: Record<string, { perfectCount: number, excusedCount: number, logs: HabitLog[] }> = {};
         relevantLogs.forEach(l => {
+            if (!logsByDate[l.date]) {
+                logsByDate[l.date] = { perfectCount: 0, excusedCount: 0, logs: [] };
+            }
+            logsByDate[l.date]!.logs.push(l);
             if (l.value === PrayerQuality.TAKBIRAH) {
-                logsByDate[l.date] = (logsByDate[l.date] || 0) + 1;
+                logsByDate[l.date]!.perfectCount++;
+            }
+            if (l.status === LogStatus.EXCUSED) {
+                logsByDate[l.date]!.excusedCount++;
             }
         });
-        const dates = Object.keys(logsByDate).sort().filter(d => logsByDate[d] === 5);
         
-        if (dates.length === 0) return 0;
-        currentStreak = 1; bestStreak = 1;
-
-        for (let i = 1; i < dates.length; i++) {
-            const prev = parseLocalISO(dates[i-1]!);
-            const curr = parseLocalISO(dates[i]!);
-            if (differenceInDays(curr, prev) === 1) currentStreak++;
-            else currentStreak = 1;
-            if (currentStreak > bestStreak) bestStreak = currentStreak;
+        // Get all dates sorted
+        const allDates = Object.keys(logsByDate).sort();
+        if (allDates.length === 0) return 0;
+        
+        // Calculate streak with bridge logic
+        currentStreak = 0; bestStreak = 0;
+        
+        for (let i = 0; i < allDates.length; i++) {
+            const date = allDates[i]!;
+            const data = logsByDate[date]!;
+            
+            if (data.excusedCount === 5) {
+                // All 5 prayers excused - bridge day (don't increment, don't break)
+                continue;
+            } else if (data.perfectCount === 5) {
+                // All 5 prayers perfect - count it
+                currentStreak++;
+                if (currentStreak > bestStreak) bestStreak = currentStreak;
+            } else {
+                // Not perfect - check if this breaks the streak
+                if (i > 0) {
+                    const prevDate = allDates[i-1]!;
+                    const daysDiff = differenceInDays(parseLocalISO(date), parseLocalISO(prevDate));
+                    if (daysDiff > 1) {
+                        // Gap in dates - reset streak
+                        currentStreak = 0;
+                    }
+                }
+                currentStreak = 0;
+            }
         }
+        
         return bestStreak;
     } else {
-        // Single Habit
-        const perfectDates = relevantLogs
-            .filter(l => l.value === PrayerQuality.TAKBIRAH)
-            .map(l => l.date);
-
-        if (perfectDates.length === 0) return 0;
-        currentStreak = 1; bestStreak = 1;
-
-        for (let i = 1; i < perfectDates.length; i++) {
-            const prev = parseLocalISO(perfectDates[i-1]!);
-            const curr = parseLocalISO(perfectDates[i]!);
-            if (differenceInDays(curr, prev) === 1) currentStreak++;
-            else currentStreak = 1;
-            if (currentStreak > bestStreak) bestStreak = currentStreak;
+        // Single Habit streak with bridge logic
+        const sortedDates = [...new Set(relevantLogs.map(l => l.date))].sort();
+        
+        currentStreak = 0; bestStreak = 0;
+        let lastCountedDate: string | null = null;
+        
+        for (let i = 0; i < sortedDates.length; i++) {
+            const date = sortedDates[i]!;
+            const logsForDate = relevantLogs.filter(l => l.date === date);
+            const log = logsForDate[0]; // Single habit, should be one log per date
+            
+            if (!log) continue;
+            
+            if (log.status === LogStatus.EXCUSED) {
+                // Excused - bridge day (don't increment, don't break)
+                continue;
+            }
+            
+            if (log.value === PrayerQuality.TAKBIRAH) {
+                // Check if consecutive to last counted date (accounting for bridge days)
+                if (lastCountedDate) {
+                    const daysDiff = differenceInDays(parseLocalISO(date), parseLocalISO(lastCountedDate));
+                    
+                    // Check if all days between were excused
+                    let allBridged = true;
+                    for (let d = 1; d < daysDiff; d++) {
+                        const checkDate = format(addDays(parseLocalISO(lastCountedDate), d), 'yyyy-MM-dd');
+                        const checkLog = relevantLogs.find(l => l.date === checkDate);
+                        if (!checkLog || checkLog.status !== LogStatus.EXCUSED) {
+                            allBridged = false;
+                            break;
+                        }
+                    }
+                    
+                    if (daysDiff === 1 || allBridged) {
+                        currentStreak++;
+                    } else {
+                        currentStreak = 1;
+                    }
+                } else {
+                    currentStreak = 1;
+                }
+                
+                lastCountedDate = date;
+                if (currentStreak > bestStreak) bestStreak = currentStreak;
+            } else {
+                // Failed - reset streak
+                currentStreak = 0;
+                lastCountedDate = null;
+            }
         }
+        
         return bestStreak;
     }
   };
+  
 
   // --- Individual Prayer Analytics ---
   const prayerIds = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
@@ -617,6 +701,9 @@ const Analytics: React.FC = () => {
   };
 
   const ConsolidatedDayRing = ({ date, dayLogs }: { date: Date, dayLogs: (HabitLog | undefined)[] }) => {
+    // Check if all prayers for this day are excused
+    const allExcused = dayLogs.every(log => log?.status === LogStatus.EXCUSED);
+    
     return (
       <div className="relative w-full aspect-square flex items-center justify-center">
         <svg viewBox="0 0 40 40" className="w-full h-full rotate-[-90deg]">
@@ -632,10 +719,15 @@ const Analytics: React.FC = () => {
             const y2 = center + radius * Math.sin(endRad);
             const largeArc = endAngle - startAngle > 180 ? 1 : 0;
             const d = [`M ${x1} ${y1}`, `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`].join(' ');
-            return <path key={i} d={d} fill="none" stroke={getQualityColor(log?.value)} strokeWidth={4} strokeLinecap="round" />;
+            // Pass status to getQualityColor for excused rendering
+            return <path key={i} d={d} fill="none" stroke={getQualityColor(log?.value, log?.status)} strokeWidth={4} strokeLinecap="round" />;
           })}
         </svg>
-        <span className={clsx("absolute text-xs font-bold", isSameDay(date, new Date()) ? "text-primary" : "text-gray-400")}>
+        <span className={clsx(
+          "absolute text-xs font-bold", 
+          isSameDay(date, new Date()) ? "text-primary" : 
+          allExcused ? "text-slate-400" : "text-gray-400"
+        )}>
           {format(date, 'd')}
         </span>
       </div>

@@ -1,29 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import hadithDB from '../data/hadiths.json';
+import quranVerses from '../data/quran_self_monitoring_basira_huda.json';
 import { Hadith } from '../utils/hadithRotator';
 
 const HadithDisplay: React.FC = () => {
   const [hadith, setHadith] = useState<Hadith | null>(null);
 
   useEffect(() => {
-    // Collect all hadiths from all categories
-    const allHadiths: Hadith[] = [];
-    const categories = Object.keys(hadithDB) as Array<keyof typeof hadithDB>;
-    
-    categories.forEach((category) => {
-      const categoryHadiths = hadithDB[category] as Hadith[];
-      if (Array.isArray(categoryHadiths)) {
-        allHadiths.push(...categoryHadiths);
-      }
-    });
+    // 50/50 chance to pick from hadith or quran
+    const useQuran = Math.random() < 0.5;
 
-    // Pick a random hadith
-    if (allHadiths.length > 0) {
-      const randomIndex = Math.floor(Math.random() * allHadiths.length);
-      const selectedHadith = allHadiths[randomIndex];
-      if (selectedHadith) {
-        setHadith(selectedHadith);
+    if (useQuran) {
+      // Pick from Quran verses (flat array)
+      const verses = quranVerses as Hadith[];
+      if (verses.length > 0) {
+        const randomIndex = Math.floor(Math.random() * verses.length);
+        setHadith(verses[randomIndex] ?? null);
+      }
+    } else {
+      // Pick from Hadiths (categorized object)
+      const allHadiths: Hadith[] = [];
+      const categories = Object.keys(hadithDB) as Array<keyof typeof hadithDB>;
+      categories.forEach((category) => {
+        const categoryHadiths = hadithDB[category] as Hadith[];
+        if (Array.isArray(categoryHadiths)) {
+          allHadiths.push(...categoryHadiths);
+        }
+      });
+
+      if (allHadiths.length > 0) {
+        const randomIndex = Math.floor(Math.random() * allHadiths.length);
+        setHadith(allHadiths[randomIndex] ?? null);
       }
     }
   }, []);

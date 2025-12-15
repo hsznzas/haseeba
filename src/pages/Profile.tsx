@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check, ChevronDown, ChevronUp, Users, Clock, XCircle, Pause, ArrowRight, Target } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +11,9 @@ import { differenceInMonths, differenceInYears, addYears } from 'date-fns';
 import { HabitType, CustomReason } from '../../types';
 import { ICON_MAP, IconName } from '../utils/iconMap';
 import { supabase } from '../services/supabaseClient';
+import { resetPrayerLogsForCurrentUser, createExcusedLogsForCurrentUser } from '../services/api';
+import * as storage from '../services/storage';
+import RaisedHandsIcon from '../components/icons/RaisedHandsIcon';
 
 // Footer easter egg endings library
 const FOOTER_ENDINGS = {
@@ -260,7 +263,7 @@ const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { preferences, setPreferences } = usePreferences();
   const { user, signOut } = useAuth();
-  const { habits, handleSaveHabit, handleSeedData } = useData();
+  const { habits, handleSaveHabit, handleSeedData, refreshData } = useData();
   const t = TRANSLATIONS[preferences.language];
   
   const [message, setMessage] = useState('');
@@ -273,8 +276,17 @@ const Profile: React.FC = () => {
   const [displayName, setDisplayName] = useState(user?.user_metadata?.full_name || user?.user_metadata?.name || '');
   const [isSavingName, setIsSavingName] = useState(false);
   
+  // Gender switching state
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [pendingGender, setPendingGender] = useState<'male' | 'female' | null>(null);
+  const [isResettingLogs, setIsResettingLogs] = useState(false);
+  
+  // Excused mode state
+  const [isTogglingExcused, setIsTogglingExcused] = useState(false);
+  
   // Footer easter egg state
   const [footerEndingIndex, setFooterEndingIndex] = useState(0);
+  const [showAffectsScoreInfo, setShowAffectsScoreInfo] = useState(false);
   const isArabic = preferences.language === 'ar';
   const currentFooterEnding = isArabic 
     ? FOOTER_ENDINGS.ar[footerEndingIndex]
@@ -405,6 +417,88 @@ const Profile: React.FC = () => {
     setShowDobModal(false);
   };
 
+  // Gender switching handlers
+  const handleGenderChangeRequest = (newGender: 'male' | 'female') => {
+    if (newGender === preferences.gender) return;
+    setPendingGender(newGender);
+    setShowGenderModal(true);
+  };
+
+  const handleConfirmGenderChange = async () => {
+    if (!pendingGender) return;
+    
+    setIsResettingLogs(true);
+    try {
+      // Reset prayer and rawatib logs - route based on user type
+      if (user?.isDemo) {
+        // Demo account: use localStorage
+        storage.resetPrayerLogs();
+      } else {
+        // Real account: use Supabase
+        await resetPrayerLogsForCurrentUser();
+      }
+      
+      // Update preferences with new gender and turn off excused mode
+      const newPrefs = {
+        ...preferences,
+        gender: pendingGender,
+        isExcused: false, // Always reset excused when switching gender
+      };
+      setPreferences(newPrefs);
+      
+      // Refresh data to reflect the deleted logs
+      await refreshData();
+      
+      setShowGenderModal(false);
+      setPendingGender(null);
+      setMessage(isArabic ? 'تم تحديث الجنس وإعادة تعيين سجلات الصلاة' : 'Gender updated and prayer logs reset');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      console.error('Error changing gender:', error);
+      setMessage(isArabic ? 'حدث خطأ أثناء تغيير الجنس' : 'Error changing gender');
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setIsResettingLogs(false);
+    }
+  };
+
+  const handleCancelGenderChange = () => {
+    setShowGenderModal(false);
+    setPendingGender(null);
+  };
+
+  // Excused mode toggle handler
+  const handleExcusedToggle = async () => {
+    if (preferences.gender !== 'female') return;
+    
+    const newExcusedState = !preferences.isExcused;
+    setIsTogglingExcused(true);
+    
+    try {
+      // Update preferences first
+      setPreferences({
+        ...preferences,
+        isExcused: newExcusedState,
+      });
+      
+      // If turning ON, create excused logs for today - route based on user type
+      if (newExcusedState) {
+        if (user?.isDemo) {
+          // Demo account: use localStorage
+          storage.createExcusedLogsForToday();
+        } else {
+          // Real account: use Supabase
+          await createExcusedLogsForCurrentUser();
+        }
+        await refreshData();
+      }
+    } catch (error) {
+      console.error('Error toggling excused mode:', error);
+    } finally {
+      setIsTogglingExcused(false);
+    }
+  };
+
   const toggleHabit = (id: string) => {
     const habit = habits.find(h => h.id === id);
     if (id === 'rawatib_master') {
@@ -447,6 +541,7 @@ const Profile: React.FC = () => {
   };
 
   return (
+    <>
     <div className="p-4 space-y-6 pb-32">
        <h1 className="text-2xl font-bold text-white mb-4">{t.profile}</h1>
 
@@ -657,6 +752,171 @@ const Profile: React.FC = () => {
          </div>
        )}
 
+       {/* Gender Comparison Modal */}
+       {showGenderModal && pendingGender && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+           <div className="bg-card w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
+             {/* Header */}
+             <div className="bg-gradient-to-r from-amber-500/20 to-red-500/20 p-4 border-b border-slate-700">
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                   <AlertTriangle size={20} className="text-amber-500" />
+                 </div>
+                 <div>
+                   <h2 className="text-lg font-bold text-white">
+                     {isArabic ? 'تأكيد تغيير الجنس' : 'Confirm Gender Change'}
+                   </h2>
+                   <p className="text-xs text-amber-400/80">
+                     {isArabic ? 'هذا الإجراء لا يمكن التراجع عنه' : 'This action cannot be undone'}
+                   </p>
+                 </div>
+               </div>
+             </div>
+
+             {/* Warning Message */}
+             <div className="p-4 bg-red-500/10 border-b border-red-500/20">
+               <p className="text-sm text-red-400 text-center font-medium">
+                 {isArabic 
+                   ? '⚠️ سيتم حذف جميع سجلات الصلوات الخمس والرواتب بشكل دائم لإعادة ضبط نظام التقييم.'
+                   : '⚠️ All 5 Prayer and Rawatib logs will be permanently deleted to reset the scoring system.'
+                 }
+               </p>
+             </div>
+
+             {/* Comparison Section */}
+             <div className="p-4">
+               <h3 className="text-xs text-gray-400 uppercase tracking-wider text-center mb-4">
+                 {isArabic ? 'مقارنة مستويات التسجيل' : 'Prayer Logging Levels Comparison'}
+               </h3>
+               
+               <div className="grid grid-cols-2 gap-4">
+                 {/* Male Column */}
+                 <div className={clsx(
+                   "p-4 rounded-xl border-2 transition-all",
+                   pendingGender === 'female' 
+                     ? "border-slate-700 bg-slate-900/50 opacity-60" 
+                     : "border-blue-500/50 bg-blue-500/10"
+                 )}>
+                   <div className="text-center mb-3">
+                     <span className="text-2xl">👨</span>
+                     <h4 className="font-bold text-white mt-1">{t.male}</h4>
+                     <p className="text-[10px] text-gray-400">
+                       {isArabic ? '٤ مستويات (تكبيرة/جماعة)' : '4 Levels (Takbirah/Jamaa)'}
+                     </p>
+                   </div>
+                   <div className="space-y-2">
+                     <div className="flex items-center gap-2 text-xs">
+                       <div className="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
+                         <RaisedHandsIcon size={14} className="text-emerald-500" />
+                       </div>
+                       <span className="text-gray-300">{t.takbirah}</span>
+                     </div>
+                     <div className="flex items-center gap-2 text-xs">
+                       <div className="w-6 h-6 rounded-md bg-yellow-500/20 flex items-center justify-center">
+                         <Users size={14} className="text-yellow-500" />
+                       </div>
+                       <span className="text-gray-300">{t.jamaa}</span>
+                     </div>
+                     <div className="flex items-center gap-2 text-xs">
+                       <div className="w-6 h-6 rounded-md bg-orange-500/20 flex items-center justify-center">
+                         <Clock size={14} className="text-orange-500" />
+                       </div>
+                       <span className="text-gray-300">{t.onTime}</span>
+                     </div>
+                     <div className="flex items-center gap-2 text-xs">
+                       <div className="w-6 h-6 rounded-md bg-red-500/20 flex items-center justify-center">
+                         <XCircle size={14} className="text-red-500" />
+                       </div>
+                       <span className="text-gray-300">{t.missed}</span>
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* Female Column */}
+                 <div className={clsx(
+                   "p-4 rounded-xl border-2 transition-all",
+                   pendingGender === 'male' 
+                     ? "border-slate-700 bg-slate-900/50 opacity-60" 
+                     : "border-pink-500/50 bg-pink-500/10"
+                 )}>
+                   <div className="text-center mb-3">
+                     <span className="text-2xl">👩</span>
+                     <h4 className="font-bold text-white mt-1">{t.female}</h4>
+                     <p className="text-[10px] text-gray-400">
+                       {isArabic ? '٣ مستويات (أول الوقت/في الوقت)' : '3 Levels (Earliest/Within Time)'}
+                     </p>
+                   </div>
+                   <div className="space-y-2">
+                     <div className="flex items-center gap-2 text-xs">
+                       <div className="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
+                         <Clock size={14} className="text-emerald-500" />
+                       </div>
+                       <span className="text-gray-300">{isArabic ? 'أول الوقت' : 'Earliest Time'}</span>
+                     </div>
+                     <div className="flex items-center gap-2 text-xs">
+                       <div className="w-6 h-6 rounded-md bg-orange-500/20 flex items-center justify-center">
+                         <Clock size={14} className="text-orange-500" />
+                       </div>
+                       <span className="text-gray-300">{isArabic ? 'في الوقت' : 'Within Time'}</span>
+                     </div>
+                     <div className="flex items-center gap-2 text-xs">
+                       <div className="w-6 h-6 rounded-md bg-red-500/20 flex items-center justify-center">
+                         <XCircle size={14} className="text-red-500" />
+                       </div>
+                       <span className="text-gray-300">{t.missed}</span>
+                     </div>
+                     <div className="flex items-center gap-2 text-xs mt-3 pt-2 border-t border-slate-700">
+                       <div className="w-6 h-6 rounded-md bg-purple-500/20 flex items-center justify-center">
+                         <Pause size={14} className="text-purple-400" />
+                       </div>
+                       <span className="text-purple-400 font-medium">{isArabic ? 'فترة العذر' : 'Excused Mode'}</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Arrow indicator */}
+               <div className="flex justify-center my-4">
+                 <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-full">
+                   <span className="text-gray-400 text-sm">
+                     {preferences.gender === 'male' ? '👨' : '👩'}
+                   </span>
+                   <ArrowRight size={16} className="text-primary" />
+                   <span className="text-white text-sm font-bold">
+                     {pendingGender === 'male' ? '👨' : '👩'}
+                   </span>
+                 </div>
+               </div>
+             </div>
+
+             {/* Actions */}
+             <div className="p-4 bg-slate-900/50 border-t border-slate-700 flex gap-3">
+               <button 
+                 onClick={handleCancelGenderChange}
+                 disabled={isResettingLogs}
+                 className="flex-1 py-3 rounded-xl bg-slate-800 text-gray-300 font-medium hover:bg-slate-700 transition-colors disabled:opacity-50"
+               >
+                 {t.cancel}
+               </button>
+               <button 
+                 onClick={handleConfirmGenderChange}
+                 disabled={isResettingLogs}
+                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-red-500 text-white font-bold hover:from-amber-600 hover:to-red-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+               >
+                 {isResettingLogs ? (
+                   <>
+                     <Loader2 size={16} className="animate-spin" />
+                     {isArabic ? 'جارٍ الحذف...' : 'Resetting...'}
+                   </>
+                 ) : (
+                   isArabic ? 'تأكيد وحذف السجلات' : 'Confirm & Reset Logs'
+                 )}
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
        {/* Preferences */}
        <div className="glass-card p-5 rounded-2xl">
          <h3 className="font-bold text-white mb-4 flex items-center gap-2">
@@ -683,6 +943,109 @@ const Profile: React.FC = () => {
                 <div className={clsx("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", preferences.showHijri ? "right-1" : "left-1")} />
             </button>
          </div>
+       </div>
+
+       {/* Gender Settings */}
+       <div className="glass-card p-5 rounded-2xl">
+         <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+           <User size={18} className="text-pink-500" /> {t.gender}
+         </h3>
+         
+         {/* Gender Switcher */}
+         <div className="flex gap-3 bg-slate-900 p-1.5 rounded-xl mb-4">
+           <button 
+             onClick={() => handleGenderChangeRequest('male')}
+             className={clsx(
+               "flex-1 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2",
+               preferences.gender === 'male' 
+                 ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" 
+                 : "text-gray-400 hover:text-white hover:bg-slate-800"
+             )}
+           >
+             <span>👨</span> {t.male}
+           </button>
+           <button 
+             onClick={() => handleGenderChangeRequest('female')}
+             className={clsx(
+               "flex-1 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2",
+               preferences.gender === 'female' 
+                 ? "bg-pink-500/20 text-pink-400 border border-pink-500/30" 
+                 : "text-gray-400 hover:text-white hover:bg-slate-800"
+             )}
+           >
+             <span>👩</span> {t.female}
+           </button>
+         </div>
+
+         {/* Current Gender Info */}
+         <div className="p-3 bg-slate-900/50 rounded-xl border border-slate-800 mb-4">
+           <p className="text-xs text-gray-400">
+             {preferences.gender === 'male' ? (
+               isArabic 
+                 ? '🕌 نظام التسجيل الحالي: ٤ مستويات (تكبيرة الإحرام، جماعة، في الوقت، فائتة)'
+                 : '🕌 Current logging system: 4 levels (Takbirah, Jamaa, On Time, Missed)'
+             ) : (
+               isArabic
+                 ? '🕌 نظام التسجيل الحالي: ٣ مستويات (أول الوقت، في الوقت، فائتة)'
+                 : '🕌 Current logging system: 3 levels (Earliest Time, Within Time, Missed)'
+             )}
+           </p>
+         </div>
+
+         {/* Excused Mode Toggle - Only for Female */}
+         {preferences.gender === 'female' && (
+           <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+             <div className="flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                   <Pause size={20} className="text-purple-400" />
+                 </div>
+                 <div>
+                   <h4 className="font-bold text-white text-sm">
+                     {isArabic ? 'فترة العذر' : 'Excused Period'}
+                   </h4>
+                   <p className="text-[10px] text-gray-400">
+                     {isArabic 
+                       ? 'يحافظ على التتابع دون زيادة العدد'
+                       : 'Maintains streak without incrementing count'
+                     }
+                   </p>
+                 </div>
+               </div>
+               <button 
+                 onClick={handleExcusedToggle}
+                 disabled={isTogglingExcused}
+                 className={clsx(
+                   "w-14 h-7 rounded-full relative transition-all",
+                   preferences.isExcused 
+                     ? "bg-purple-500 shadow-lg shadow-purple-500/30" 
+                     : "bg-slate-700"
+                 )}
+               >
+                 {isTogglingExcused ? (
+                   <Loader2 size={14} className="absolute top-1.5 left-1/2 -translate-x-1/2 animate-spin text-white" />
+                 ) : (
+                   <div className={clsx(
+                     "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-md",
+                     preferences.isExcused ? "right-1" : "left-1"
+                   )} />
+                 )}
+               </button>
+             </div>
+             
+             {preferences.isExcused && (
+               <div className="mt-3 pt-3 border-t border-purple-500/20">
+                 <p className="text-xs text-purple-300/80 flex items-center gap-2">
+                   <Moon size={12} />
+                   {isArabic 
+                     ? 'وضع العذر مفعّل - سيتم تسجيل صلوات اليوم كـ "معذورة" تلقائياً'
+                     : 'Excused mode active - Today\'s prayers will be logged as "excused" automatically'
+                   }
+                 </p>
+               </div>
+             )}
+           </div>
+         )}
        </div>
 
        {/* AI Settings (BYOK - Gemini) */}
@@ -773,6 +1136,16 @@ const Profile: React.FC = () => {
              {preferences.language === 'ar' ? 'سبب' : 'Reason'}
              <ColumnTooltip text={preferences.language === 'ar' ? 'عند الفشل، هل تريد إدخال سبب؟' : 'When failed, prompt for a reason?'} />
                 </div>
+           <div className="w-14 text-center flex items-center justify-center">
+             <Target size={8} className="mr-0.5" />
+             {preferences.language === 'ar' ? 'نتيجة' : 'Score'}
+             <button 
+               onClick={() => setShowAffectsScoreInfo(true)}
+               className="ml-0.5 text-gray-600 hover:text-gray-400 cursor-help transition-colors"
+             >
+               <Info size={10} />
+             </button>
+                </div>
          </div>
          
          {/* Collapsible Habits Container */}
@@ -823,6 +1196,27 @@ const Profile: React.FC = () => {
                    )} />
                  </button>
                </div>
+               {/* Affects Score Toggle - affects all rawatib */}
+               <div className="w-14 flex justify-center">
+                 <button 
+                   onClick={() => {
+                     const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
+                     const allAffectScore = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.affectsScore !== false);
+                     habits.filter(h => rawatibIds.includes(h.id)).forEach(h => {
+                       handleSaveHabit({ ...h, affectsScore: !allAffectScore });
+                     });
+                   }}
+                   className={clsx(
+                     "w-9 h-5 rounded-full transition-colors relative",
+                     habits.filter(h => h.presetId === 'rawatib').every(h => h.affectsScore !== false) ? "bg-purple-500" : "bg-slate-700"
+                   )}
+                 >
+                   <div className={clsx(
+                     "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all",
+                     habits.filter(h => h.presetId === 'rawatib').every(h => h.affectsScore !== false) ? "right-[3px]" : "left-[3px]"
+                   )} />
+                 </button>
+               </div>
              </div>
 
              {/* All Non-Prayer Habits (excluding rawatib which are handled above) */}
@@ -833,6 +1227,7 @@ const Profile: React.FC = () => {
                  const displayName = preferences.language === 'ar' ? (habit.nameAr || habit.name) : habit.name;
                  const IconComp = getHabitIcon(habit);
                  const iconColor = getHabitColor(habit);
+                 const is5KP = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(habit.id);
                  
                  return (
                    <div 
@@ -878,6 +1273,28 @@ const Profile: React.FC = () => {
                          <div className={clsx(
                            "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all",
                            habit.requireReason !== false ? "right-[3px]" : "left-[3px]"
+                         )} />
+                       </button>
+                     </div>
+                     
+                     {/* Affects Score Toggle - Disabled for 5KP */}
+                     <div className="w-14 flex justify-center">
+                       <button 
+                         onClick={() => {
+                           if (!is5KP) {
+                             handleSaveHabit({ ...habit, affectsScore: habit.affectsScore === false ? true : false });
+                           }
+                         }}
+                         disabled={is5KP}
+                         className={clsx(
+                           "w-9 h-5 rounded-full transition-colors relative",
+                           habit.affectsScore !== false ? "bg-purple-500" : "bg-slate-700",
+                           is5KP && "opacity-50 cursor-not-allowed"
+                         )}
+                       >
+                         <div className={clsx(
+                           "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all",
+                           habit.affectsScore !== false ? "right-[3px]" : "left-[3px]"
                          )} />
                        </button>
                      </div>
@@ -936,15 +1353,6 @@ const Profile: React.FC = () => {
        </div>
        )}
 
-       {/* Home Button */}
-       <button 
-         onClick={() => navigate('/')}
-         className="w-full py-4 bg-primary hover:bg-primary/90 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-primary/20 transition-all active:scale-95"
-       >
-         <Home size={24} />
-         {t.home}
-       </button>
-       
        {/* Footer - Secret Easter Egg */}
        <footer className="py-8 text-center">
          <p 
@@ -954,7 +1362,73 @@ const Profile: React.FC = () => {
            {isArabic ? `صُنع بـ 💙 ${currentFooterEnding}` : `Built with 💙 for ${currentFooterEnding}`}
          </p>
        </footer>
+
+       {/* Bottom spacer to prevent content from being hidden behind floating bar */}
+       <div className="h-24" />
     </div>
+
+    {/* Floating Home Bar - Fixed at bottom */}
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 w-full bg-[#18181b]/95 backdrop-blur-xl border-t border-white/10 shadow-2xl"
+      style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+    >
+      <div className="flex items-center justify-center h-20 max-w-md mx-auto w-full">
+        <button 
+          onClick={() => navigate('/')}
+          className="flex items-center justify-center gap-2 px-8 py-3 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl text-primary font-bold transition-all active:scale-95"
+        >
+          <Home size={20} />
+          {t.home}
+        </button>
+      </div>
+    </nav>
+
+    {/* Affects Score Info Modal */}
+    {showAffectsScoreInfo && (
+      <div 
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+        onClick={() => setShowAffectsScoreInfo(false)}
+      >
+        <div 
+          className="bg-slate-900 border border-purple-500/30 rounded-xl p-5 max-w-xs shadow-2xl animate-in fade-in zoom-in-95"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
+              <Target size={16} className="text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-white mb-1">
+                {preferences.language === 'ar' ? 'عادات المكافأة' : 'Bonus Habits'}
+              </h3>
+            </div>
+            <button
+              onClick={() => setShowAffectsScoreInfo(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <p className="text-xs text-gray-300 leading-relaxed mb-3">
+            {preferences.language === 'ar'
+              ? 'عند التعطيل، تصبح هذه العادة "عادة مكافأة". ستظهر في قائمتك، لكن عدم إكمالها لن يخفض نتيجتك اليومية أو يكسر سلاسلك. استخدم هذا للأهداف الاختيارية التي تريد تتبعها دون ضغط.'
+              : 'When disabled, this habit becomes a "Bonus Habit". It will appear in your list, but missing it will not lower your daily score or break your streaks. Use this for optional goals you want to track without pressure.'}
+          </p>
+          <p className="text-xs text-yellow-400 leading-relaxed mb-4 bg-yellow-500/10 p-2 rounded border border-yellow-500/20">
+            {preferences.language === 'ar'
+              ? '⚠️ الصلوات الخمس يجب أن تؤثر على النتيجة ولا يمكن تغييرها.'
+              : '⚠️ The 5 Key Prayers must affect the score and cannot be changed.'}
+          </p>
+          <button
+            onClick={() => setShowAffectsScoreInfo(false)}
+            className="w-full py-2 rounded-lg bg-slate-800 text-white text-xs font-medium hover:bg-slate-700 transition-colors"
+          >
+            {preferences.language === 'ar' ? 'فهمت' : 'Got it'}
+          </button>
+        </div>
+      </div>
+    )}
+  </>
   );
 };
 

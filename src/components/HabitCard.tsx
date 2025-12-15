@@ -2,7 +2,7 @@ import React from 'react';
 import { Habit, HabitLog, HabitType, LogStatus } from '../../types';
 import { usePreferences } from '../App';
 import PrayerCard from './PrayerCard';
-import { Check, X, Minus, RotateCcw, Plus, CheckCircle2, Activity } from 'lucide-react';
+import { Check, X, Minus, RotateCcw, Plus, CheckCircle2, Activity, Pause } from 'lucide-react';
 import AnimatedFlame from './AnimatedFlame';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
@@ -22,6 +22,11 @@ interface HabitCardProps {
 
 const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onDeleteLog, onViewDetails, onReasonNeeded, isSortMode }) => {
   const { preferences } = usePreferences();
+  
+  // Rawatib excused mode detection
+  const isRawatib = habit.presetId === 'rawatib';
+  const isGlobalExcusedMode = preferences.isExcused && preferences.gender === 'female';
+  const isRawatibExcused = isRawatib && isGlobalExcusedMode;
 
   const forcePartyVisible = () => {
      const container = document.getElementById('party-js-container');
@@ -221,22 +226,25 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
   return (
     <motion.div 
         className={clsx(
-            "h-14 bg-white/5 backdrop-blur-md border border-white/5 rounded-xl flex items-center pl-3 pr-0 py-0 relative overflow-hidden transition-all",
-            onViewDetails && "cursor-pointer hover:bg-white/10"
+            "h-14 bg-white/5 backdrop-blur-md border rounded-xl flex items-center pl-3 pr-0 py-0 relative overflow-hidden transition-all",
+            isRawatibExcused 
+              ? "opacity-50 border-purple-500/30 bg-purple-500/5 pointer-events-none"
+              : "border-white/5",
+            onViewDetails && !isRawatibExcused && "cursor-pointer hover:bg-white/10"
         )}
         animate={isDone ? successVariant : isFailed ? failVariant : {}}
-        onClick={() => onViewDetails && onViewDetails()}
+        onClick={() => onViewDetails && !isRawatibExcused && onViewDetails()}
     >
       
       {/* Icon Container */}
       <div className="w-10 h-full flex items-center justify-center shrink-0 mr-3 border-r border-white/5">
-        <IconComponent size={20} className={clsx(isLogged ? "text-gray-500" : "")} style={!isLogged && iconColor ? { color: iconColor } : undefined} />
+        <IconComponent size={20} className={clsx(isRawatibExcused ? "text-purple-400/50" : isLogged ? "text-gray-500" : "")} style={!isLogged && !isRawatibExcused && iconColor ? { color: iconColor } : undefined} />
       </div>
 
       {/* Text & Streak */}
       <div className="flex-1 min-w-0 flex flex-col justify-center mr-2">
         <div className="flex items-center gap-1.5">
-            <h3 className={clsx("font-bold leading-tight truncate", titleSizeClass, isLogged ? "text-gray-500" : "text-white")}>
+            <h3 className={clsx("font-bold leading-tight truncate", titleSizeClass, isRawatibExcused ? "text-gray-400" : isLogged ? "text-gray-500" : "text-white")}>
             {displayTitle}
             </h3>
             {/* Status indicator icon after title */}
@@ -250,7 +258,16 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
       </div>
 
       {/* Action Buttons (2-Column Grid: Done & Fail) */}
-      {isLogged ? (
+      {isRawatibExcused ? (
+        <div className="h-full flex items-center px-3 ml-auto">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 rounded-lg border border-purple-500/20">
+            <Pause size={12} className="text-purple-400/60" />
+            <span className="text-[10px] font-medium text-purple-400/60">
+              {preferences.language === 'ar' ? 'معذورة' : 'Excused'}
+            </span>
+          </div>
+        </div>
+      ) : isLogged ? (
         <div className="h-full w-16 flex items-center justify-center bg-slate-900/50 border-l border-white/5 ml-auto rounded-e-xl">
              <motion.button 
                 whileTap={{ scale: 0.9 }}

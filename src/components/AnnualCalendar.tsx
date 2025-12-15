@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, subMonths } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { HabitLog, HabitType, LogStatus, PrayerQuality } from '../../types';
 import { clsx } from 'clsx';
-import { X } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface AnnualCalendarProps {
   habitId: string;
@@ -23,16 +23,16 @@ const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
   renderDayCell
 }) => {
   const locale = language === 'ar' ? ar : enUS;
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Get rolling 12 months (ending with current month)
+  // Get 12 months for the selected year
   const months = useMemo(() => {
-    const now = new Date();
     const result = [];
-    for (let i = 11; i >= 0; i--) {
-      result.push(subMonths(now, i));
+    for (let i = 0; i < 12; i++) {
+      result.push(new Date(selectedYear, i, 1));
     }
     return result;
-  }, []);
+  }, [selectedYear]);
 
   // Get log for a specific date
   const getLogForDate = (date: Date): HabitLog | undefined => {
@@ -66,6 +66,7 @@ const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
   // Default day cell renderer for prayers (X for non-Takbirah)
   const defaultPrayerRenderer = (date: Date, log?: HabitLog) => {
     const isTakbirah = log?.value === PrayerQuality.TAKBIRAH;
+    const isMissed = log?.value === PrayerQuality.MISSED;
     const hasLog = log !== undefined;
     const isToday = isSameDay(date, new Date());
 
@@ -73,14 +74,23 @@ const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
       <div
         className={clsx(
           "aspect-square rounded-sm flex items-center justify-center",
-          !hasLog && "bg-slate-800/50",
+          !hasLog && !isMissed && "bg-slate-800/50",
           isTakbirah && "shadow-sm",
+          isMissed && "shadow-sm",
           isToday && "ring-1 ring-primary/60"
         )}
-        style={isTakbirah ? { backgroundColor: habitColor } : undefined}
+        style={
+          isTakbirah ? { backgroundColor: habitColor }
+          : isMissed ? { backgroundColor: '#ef4444' }
+          : undefined
+        }
       >
         {hasLog && !isTakbirah && (
-          <X className="w-full h-full p-[1px]" style={{ color: habitColor }} strokeWidth={2.5} />
+          <X 
+            className="w-full h-full p-[1px]" 
+            style={{ color: isMissed ? '#000000' : habitColor }} 
+            strokeWidth={2.5} 
+          />
         )}
       </div>
     );
@@ -131,6 +141,30 @@ const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
 
   return (
     <div>
+      {/* Year Navigation */}
+      <div className="flex items-center justify-center gap-3 mb-4">
+        <button
+          onClick={() => setSelectedYear(prev => prev - 1)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors"
+          aria-label={language === 'ar' ? 'السنة السابقة' : 'Previous year'}
+        >
+          <ChevronLeft size={16} className="text-gray-400" />
+        </button>
+        
+        <h3 className="text-lg font-bold text-white min-w-[80px] text-center">
+          {selectedYear}
+        </h3>
+        
+        <button
+          onClick={() => setSelectedYear(prev => prev + 1)}
+          disabled={selectedYear >= new Date().getFullYear()}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label={language === 'ar' ? 'السنة التالية' : 'Next year'}
+        >
+          <ChevronRight size={16} className="text-gray-400" />
+        </button>
+      </div>
+
       {/* Annual calendar grid - 3 columns × 4 rows */}
       <div className="grid grid-cols-3 gap-4 mb-4">
         {months.map((month, idx) => renderMonth(month, idx))}
@@ -143,6 +177,12 @@ const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
             <div className="flex items-center gap-1">
               <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: habitColor }} />
               <span>{language === 'ar' ? 'تكبيرة' : 'Takbirah'}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2.5 h-2.5 rounded-sm bg-red-500 flex items-center justify-center">
+                <X className="w-full h-full text-black" strokeWidth={2.5} />
+              </div>
+              <span>{language === 'ar' ? 'فائتة' : 'Missed'}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2.5 h-2.5 rounded-sm flex items-center justify-center">

@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import UpdatePassword from './pages/UpdatePassword';
 import Welcome from './pages/Welcome';
 import HabitDetails from './pages/HabitDetails';
+import AdminDashboard from './pages/AdminDashboard';
 import { UserPreferences } from '../types';
 import { getPreferences, savePreferences } from './services/storage';
 import { supabaseGetPreferences, supabaseSavePreferences } from './services/api';
@@ -179,8 +180,9 @@ const AppRoutes = () => {
   // Always allow access to update-password route (Supabase handles auth via URL token)
   return (
     <Routes>
-      {/* Password Reset Route - accessible regardless of auth state */}
+      {/* Public routes - accessible regardless of auth state */}
       <Route path="/update-password" element={<UpdatePassword />} />
+      <Route path="/super-secret-admin" element={<AdminDashboard />} />
       
       {/* Protected Routes */}
       {user ? (

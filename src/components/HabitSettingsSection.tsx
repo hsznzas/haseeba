@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Habit, HabitType } from '../../types';
 import { useData } from '../context/DataContext';
-import { Lock, Trash2, Archive, Save } from 'lucide-react';
+import { Lock, Trash2, Archive, Save, Info, X, Target } from 'lucide-react';
 import { ICON_MAP, IconName, AVAILABLE_ICONS } from '../utils/iconMap';
 import { Activity } from 'lucide-react';
 import { format } from 'date-fns';
@@ -24,19 +24,23 @@ const HabitSettingsSection: React.FC<HabitSettingsSectionProps> = ({
   const isArabic = language === 'ar';
   const isPreset = !!habit.presetId;
   const canFullyEdit = !isPreset;
+  const is5KP = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(habit.id);
   
   // Form state
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<string>('Activity');
   const [dailyTarget, setDailyTarget] = useState(1);
   const [isActive, setIsActive] = useState(true);
+  const [affectsScore, setAffectsScore] = useState(true);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showAffectsScoreInfo, setShowAffectsScoreInfo] = useState(false);
 
   useEffect(() => {
     setName(isArabic ? habit.nameAr : habit.name);
     setSelectedIcon(habit.icon || habit.emoji || 'Activity');
     setDailyTarget(habit.dailyTarget || 1);
     setIsActive(habit.isActive);
+    setAffectsScore(habit.affectsScore !== undefined ? habit.affectsScore : true);
   }, [habit, isArabic]);
 
   const handleSave = async () => {
@@ -49,6 +53,7 @@ const HabitSettingsSection: React.FC<HabitSettingsSectionProps> = ({
         dailyTarget: habit.type === HabitType.COUNTER ? dailyTarget : undefined,
       }),
       isActive,
+      affectsScore,
       updatedAt: new Date().toISOString(),
     };
 
@@ -198,6 +203,48 @@ const HabitSettingsSection: React.FC<HabitSettingsSectionProps> = ({
           </div>
         </div>
 
+        {/* Affects Global Score Toggle */}
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              {isArabic ? 'يؤثر على النتيجة الإجمالية' : 'Affects Global Score'}
+            </label>
+            <button
+              onClick={() => setShowAffectsScoreInfo(true)}
+              className="text-gray-500 hover:text-primary transition-colors"
+            >
+              <Info size={12} />
+            </button>
+          </div>
+          <div className="flex items-center gap-3 bg-slate-900/50 rounded-lg p-2.5 border border-slate-800">
+            <button
+              onClick={() => {
+                if (!is5KP) {
+                  setAffectsScore(!affectsScore);
+                  // Save immediately
+                  handleSaveHabit({ ...habit, affectsScore: !affectsScore });
+                }
+              }}
+              disabled={is5KP}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                affectsScore ? 'bg-purple-500' : 'bg-slate-700'
+              } ${is5KP ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                affectsScore ? 'translate-x-6' : 'translate-x-0'
+              }`} />
+            </button>
+            <span className="text-sm text-white">
+              {affectsScore ? (isArabic ? 'نعم' : 'Yes') : (isArabic ? 'لا (مكافأة)' : 'No (Bonus)')}
+            </span>
+            {is5KP && (
+              <span className="text-[10px] text-yellow-500 ml-auto">
+                {isArabic ? '🔒 مقفل' : '🔒 Locked'}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Metadata */}
         <div className="pt-3 border-t border-slate-800 space-y-1">
           <div className="flex justify-between text-[10px]">
@@ -296,6 +343,52 @@ const HabitSettingsSection: React.FC<HabitSettingsSectionProps> = ({
                 {isArabic ? 'إلغاء' : 'Cancel'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Affects Score Info Modal */}
+      {showAffectsScoreInfo && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setShowAffectsScoreInfo(false)}
+        >
+          <div 
+            className="bg-slate-900 border border-purple-500/30 rounded-xl p-5 max-w-xs shadow-2xl animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
+                <Target size={16} className="text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-white mb-1">
+                  {isArabic ? 'عادات المكافأة' : 'Bonus Habits'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowAffectsScoreInfo(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-300 leading-relaxed mb-3">
+              {isArabic
+                ? 'عند التعطيل، تصبح هذه العادة "عادة مكافأة". ستظهر في قائمتك، لكن عدم إكمالها لن يخفض نتيجتك اليومية أو يكسر سلاسلك. استخدم هذا للأهداف الاختيارية التي تريد تتبعها دون ضغط.'
+                : 'When disabled, this habit becomes a "Bonus Habit". It will appear in your list, but missing it will not lower your daily score or break your streaks. Use this for optional goals you want to track without pressure.'}
+            </p>
+            <p className="text-xs text-yellow-400 leading-relaxed mb-4 bg-yellow-500/10 p-2 rounded border border-yellow-500/20">
+              {isArabic
+                ? '⚠️ الصلوات الخمس يجب أن تؤثر على النتيجة ولا يمكن تغييرها.'
+                : '⚠️ The 5 Key Prayers must affect the score and cannot be changed.'}
+            </p>
+            <button
+              onClick={() => setShowAffectsScoreInfo(false)}
+              className="w-full py-2 rounded-lg bg-slate-800 text-white text-xs font-medium hover:bg-slate-700 transition-colors"
+            >
+              {isArabic ? 'فهمت' : 'Got it'}
+            </button>
           </div>
         </div>
       )}

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Habit, HabitLog, PrayerQuality } from '../../types';
+import { Habit, HabitLog, PrayerQuality, LogStatus } from '../../types';
 import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sunrise, Sun, CloudSun, Sunset, Moon, Users, Clock, XCircle, RotateCcw, GripVertical } from 'lucide-react';
+import { Sunrise, Sun, CloudSun, Sunset, Moon, Users, Clock, XCircle, RotateCcw, GripVertical, Pause } from 'lucide-react';
 import AnimatedFlame from './AnimatedFlame';
 import RaisedHandsIcon from './icons/RaisedHandsIcon';
 // import { getDailyHadith } from '../utils/hadithRotator'; // Hadith feature disabled
@@ -23,11 +23,15 @@ interface PrayerCardProps {
 const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, onReasonNeeded, onDelete, onViewDetails, isSortMode }) => {
   const { preferences } = usePreferences();
   const t = TRANSLATIONS[preferences.language];
+  const isArabic = preferences.language === 'ar';
+  const isFemale = preferences.gender === 'female';
   const [showSparkle, setShowSparkle] = useState(false);
   const [justClicked, setJustClicked] = useState<number | null>(null);
 
   const currentLevel = log ? log.value : null;
   const isLogged = currentLevel !== null;
+  const isExcused = log?.status === LogStatus.EXCUSED;
+  const isGlobalExcusedMode = preferences.isExcused && preferences.gender === 'female';
 
   // Hadith feature disabled for now
   // const dailyHadith = useMemo(() => getDailyHadith(habit.id), [habit.id]);
@@ -73,8 +77,8 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
     }
   }, [justClicked]);
 
-  // Levels ordered from best (left) to worst (right): Takbirah -> Jamaa -> OnTime -> Missed
-  const levels = [
+  // Male levels: 4 options (Takbirah -> Jamaa -> OnTime -> Missed)
+  const maleLevels = [
     {
       val: PrayerQuality.TAKBIRAH,
       label: t.takbirah,
@@ -105,15 +109,49 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
     },
   ];
 
+  // Female levels: 3 options (Earliest Time -> Within Time -> Missed)
+  // Earliest Time maps to value 4 (same as TAKBIRAH for scoring)
+  // Within Time maps to value 2 (same as ON_TIME for scoring)
+  const femaleLevels = [
+    {
+      val: PrayerQuality.TAKBIRAH, // Maps to value 4 (best score)
+      label: isArabic ? 'أول الوقت' : 'Earliest Time',
+      icon: Clock,
+      base: "text-primary hover:bg-primary/20",
+      color: "text-primary"
+    },
+    { 
+      val: PrayerQuality.ON_TIME, // Maps to value 2
+      label: isArabic ? 'في الوقت' : 'Within Time', 
+      icon: Clock,
+      base: "text-slate-400 hover:text-orange-400 hover:bg-orange-500/20",
+      color: "text-orange-400"
+    },
+    { 
+      val: PrayerQuality.MISSED, 
+      label: t.missed, 
+      icon: XCircle,
+      base: "text-slate-400 hover:text-red-400 hover:bg-red-500/20",
+      color: "text-red-400"
+    },
+  ];
+
+  // Select levels based on gender
+  const levels = isFemale ? femaleLevels : maleLevels;
+
   const getStatusIcon = () => {
+    // Handle excused state
+    if (isExcused) {
+      return { Icon: Pause, color: 'text-purple-400', isTakbirah: false, isExcused: true };
+    }
     const level = levels.find(l => l.val === currentLevel);
     if (level) {
-      return { Icon: level.icon, color: level.color, isTakbirah: level.val === PrayerQuality.TAKBIRAH };
+      return { Icon: level.icon, color: level.color, isTakbirah: level.val === PrayerQuality.TAKBIRAH, isExcused: false };
     }
     return null;
   };
 
-  const statusIcon = isLogged ? getStatusIcon() : null;
+  const statusIcon = (isLogged || isExcused) ? getStatusIcon() : null;
 
   const getPrayerIcon = (id: string) => {
     switch (id) {
@@ -132,7 +170,13 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
     <div className={clsx(
         "glass-card rounded-2xl mb-3 relative overflow-hidden transition-all duration-300",
         "h-16 flex items-stretch pl-4 pr-0 py-0",
-        !isLogged ? "border-primary/20 shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)]" : "opacity-80 border-white/5"
+        isGlobalExcusedMode && !isExcused
+          ? "opacity-50 border-purple-500/30 bg-purple-500/5 pointer-events-none" 
+          : isExcused 
+            ? "opacity-60 border-purple-500/20 bg-purple-500/5" 
+            : !isLogged 
+              ? "border-primary/20 shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)]" 
+              : "opacity-80 border-white/5"
     )}>
       
       {!isLogged && <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />}
@@ -202,7 +246,7 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
       >
         <div className={clsx(
           "w-10 h-full flex items-center justify-center me-3 shrink-0 transition-colors",
-          isLogged ? "text-gray-500" : "text-primary"
+          isGlobalExcusedMode ? "text-purple-400/50" : isLogged ? "text-gray-500" : "text-primary"
         )}>
           <Icon size={24} strokeWidth={1.5} />
         </div>
@@ -212,7 +256,7 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
             <div className="flex items-center gap-1.5">
               <h3 className={clsx(
                 "font-bold text-base leading-tight truncate", 
-                isLogged ? "text-gray-500" : "text-white"
+                isGlobalExcusedMode ? "text-gray-400" : isLogged ? "text-gray-500" : "text-white"
               )}>
                 {preferences.language === 'ar' ? habit.nameAr : habit.name}
               </h3>
@@ -254,6 +298,33 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
         <div className="h-full w-14 flex items-center justify-center text-slate-500 cursor-grab active:cursor-grabbing relative z-10">
           <GripVertical size={20} />
         </div>
+      ) : isGlobalExcusedMode && !isExcused ? (
+        // Global Excused Mode active - show disabled state with purple indicator
+        <div className="h-full flex items-center px-3 relative z-10">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 rounded-lg border border-purple-500/20">
+            <Pause size={12} className="text-purple-400/60" />
+            <span className="text-[10px] font-medium text-purple-400/60">
+              {isArabic ? 'معذورة' : 'Excused'}
+            </span>
+          </div>
+        </div>
+      ) : isExcused ? (
+        // Excused state - show purple moon indicator with undo option
+        <div className="h-full flex items-center gap-2 px-3 relative z-10">
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-500/20 rounded-lg border border-purple-500/30">
+            <Pause size={12} className="text-purple-400" />
+            <span className="text-[10px] font-bold text-purple-400">
+              {isArabic ? 'معذورة' : 'Excused'}
+            </span>
+          </div>
+          <motion.button 
+            onClick={handleDeleteClick}
+            whileTap={{ scale: 0.9 }}
+            className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+          >
+            <RotateCcw size={14} />
+          </motion.button>
+        </div>
       ) : isLogged ? (
         <motion.button 
           onClick={handleDeleteClick}
@@ -262,7 +333,32 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
         >
           <RotateCcw size={18} />
         </motion.button>
+      ) : isFemale ? (
+        // Female: 3 buttons (Earliest Time, Within Time, Missed)
+        <div className="h-full flex items-stretch flex-none">
+          {femaleLevels.map((level, idx) => {
+            const LevelIcon = level.icon;
+            const isFirst = idx === 0;
+            const isLast = idx === femaleLevels.length - 1;
+            return (
+              <motion.button
+                key={level.val}
+                onClick={isFirst ? handleTakbirah : handleUpdateLevel(level.val)}
+                whileTap={{ scale: 0.9 }}
+                className={clsx(
+                  "h-full flex-1 w-11 flex items-center justify-center transition-all duration-300 border-s border-white/10 relative z-10 bg-transparent",
+                  isLast && "rounded-e-xl",
+                  level.base
+                )}
+                aria-label={level.label}
+              >
+                <LevelIcon size={18} />
+              </motion.button>
+            );
+          })}
+        </div>
       ) : (
+        // Male: 4 buttons (Takbirah, Jamaa, OnTime, Missed)
         <div className="h-full flex items-stretch flex-none">
           {/* Takbirah button (best - raised hands) */}
           <motion.button
@@ -275,9 +371,9 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
           </motion.button>
           
           {/* Other levels: Jamaa, OnTime, Missed */}
-          {levels.slice(1).map((level, idx) => {
+          {maleLevels.slice(1).map((level, idx) => {
             const LevelIcon = level.icon;
-            const isLast = idx === levels.slice(1).length - 1;
+            const isLast = idx === maleLevels.slice(1).length - 1;
             return (
               <motion.button
                 key={level.val}

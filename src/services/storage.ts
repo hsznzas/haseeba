@@ -720,6 +720,76 @@ export const deleteLog = (habitId: string, date: string): HabitLog[] => {
 // Make sure 'saveHabit' and 'deleteHabit' are also exported!
 
 // ============================================
+// Female Profile / Excused Mode Functions
+// ============================================
+
+// Prayer and Rawatib IDs (matching constants.ts)
+const PRAYER_IDS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+const RAWATIB_IDS = [
+  'fajr_sunnah',
+  'dhuhr_sunnah_before_1',
+  'dhuhr_sunnah_before_2',
+  'dhuhr_sunnah_after',
+  'maghrib_sunnah',
+  'isha_sunnah',
+];
+const PRAYER_AND_RAWATIB_IDS = [...PRAYER_IDS, ...RAWATIB_IDS];
+
+/**
+ * Reset all prayer and rawatib logs (for gender switching)
+ * Only deletes logs for the 5 prayers and their rawatib, preserves other habits
+ */
+export function resetPrayerLogs(): void {
+  console.log('🗑️ [Demo] Resetting prayer and rawatib logs from localStorage');
+  const completions = getHabitCompletions();
+  const filtered = completions.filter(c => 
+    !PRAYER_AND_RAWATIB_IDS.includes(c.habitId)
+  );
+  safeSetItem(STORAGE_KEYS.COMPLETIONS, filtered);
+  console.log(`✅ [Demo] Removed ${completions.length - filtered.length} prayer/rawatib logs`);
+}
+
+/**
+ * Create excused logs for today's 5 prayers (for excused mode toggle)
+ * Only creates logs for prayers that don't already have a log for today
+ */
+export function createExcusedLogsForToday(): void {
+  const today = getTodayString();
+  console.log('🌙 [Demo] Creating excused logs for today:', today);
+  
+  const completions = getHabitCompletions();
+  
+  // Check which prayers already have logs for today
+  const existingHabitIds = new Set(
+    completions
+      .filter(c => c.date === today && PRAYER_IDS.includes(c.habitId))
+      .map(c => c.habitId)
+  );
+  
+  const prayersToCreate = PRAYER_IDS.filter(id => !existingHabitIds.has(id));
+  
+  if (prayersToCreate.length === 0) {
+    console.log('✅ [Demo] All prayers already logged for today');
+    return;
+  }
+  
+  // Create excused logs for missing prayers
+  const newLogs = prayersToCreate.map(habitId => ({
+    id: `${habitId}-${today}`,
+    habitId: habitId,
+    userId: 'demo-user',
+    date: today,
+    count: 0, // Excused prayers have no quality value
+    note: undefined,
+    status: LogStatus.EXCUSED,
+    completedAt: new Date().toISOString(),
+  }));
+  
+  safeSetItem(STORAGE_KEYS.COMPLETIONS, [...completions, ...newLogs]);
+  console.log(`✅ [Demo] Created ${newLogs.length} excused logs for today`);
+}
+
+// ============================================
 // Demo / Seeding Utilities
 // ============================================
 
@@ -855,7 +925,7 @@ const didHabitSucceed = (persona: DemoPersona): boolean => {
 
 /**
  * Seed demo data with STRICT "NO GAPS" RULE:
- * - Every active habit has a log for every day (180 days)
+ * - Every active habit has a log for every day (365 days / 12 months)
  * - Status is DONE, SKIP, or FAIL (proper mix based on persona)
  * - Streaks are naturally affected by the persona profile
  */
@@ -868,9 +938,9 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
   // 2. Create Demo User
   createDemoUser();
 
-  // 3. Calculate date range (6 months = 180 days)
+  // 3. Calculate date range (12 months = 365 days)
   const today = new Date();
-  const daysBack = 180;
+  const daysBack = 365;
   const startDate = new Date(today.getTime() - daysBack * 24 * 60 * 60 * 1000);
   const startDateStr = formatDate(startDate);
 
@@ -880,6 +950,7 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
     ...INITIAL_HABITS.map((h, idx) => ({
       ...h,
       isActive: true, // Activate all for demo richness
+      affectsScore: h.affectsScore !== undefined ? h.affectsScore : true, // Default to true
       startDate: startDateStr,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -893,6 +964,7 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
       emoji: h.emoji,
       type: h.type || HabitType.REGULAR,
       isActive: true,
+      affectsScore: true, // Default to true
       dailyTarget: h.dailyTarget || 1,
       startDate: startDateStr,
       createdAt: new Date().toISOString(),
