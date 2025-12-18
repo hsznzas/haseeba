@@ -37,7 +37,7 @@ const getQualityColor = (val?: number, status?: string) => {
   if (status === 'EXCUSED') return '#94a3b8'; // Slate-400 (Neutral color for excused)
   
   switch (val) {
-    case PrayerQuality.TAKBIRAH: return '#22c55e'; // Green
+    case PrayerQuality.TAKBIRAH: return '#3b82f6'; // Blue
     case PrayerQuality.JAMAA: return '#eab308';    // Yellow
     case PrayerQuality.ON_TIME: return '#f97316';  // Orange
     case PrayerQuality.MISSED: return '#ef4444';   // Red
@@ -45,12 +45,12 @@ const getQualityColor = (val?: number, status?: string) => {
   }
 };
 
-// Rate Color Interpolation Helper (0% -> Red, 100% -> Green)
+// Rate Color Interpolation Helper (0% -> Red, 100% -> Blue)
 const getRateColorStyle = (percentage: number) => {
     if (percentage <= 25) return '#7f1d1d'; // Deep Dark Red
     if (percentage <= 50) return '#ef4444'; // Red
     if (percentage <= 75) return '#eab308'; // Yellow
-    return '#22c55e'; // Bright Green
+    return '#3b82f6'; // Blue
 };
 
 const Analytics: React.FC = () => {
@@ -375,7 +375,7 @@ const Analytics: React.FC = () => {
   ];
 
   // --- Top Obstacles Analysis ---
-  const obstacleColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'];
+  const obstacleColors = ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#60a5fa'];
   
   const obstaclesData = useMemo(() => {
     // Helper to extract top 5 reasons from logs
@@ -459,7 +459,7 @@ const Analytics: React.FC = () => {
     const missedPct = total > 0 ? Math.round((missed / total) * 100) : 0;
 
     const qualityBreakdown = [
-      { label: preferences.language === 'ar' ? 'تكبيرة الإحرام' : 'Takbirah', pct: takbirahPct, color: '#22c55e' },
+      { label: preferences.language === 'ar' ? 'تكبيرة الإحرام' : 'Takbirah', pct: takbirahPct, color: '#3b82f6' },
       { label: preferences.language === 'ar' ? 'جماعة' : 'In Group', pct: inGroupPct, color: '#eab308' },
       { label: preferences.language === 'ar' ? 'في الوقت' : 'On Time', pct: onTimePct, color: '#f97316' },
       { label: preferences.language === 'ar' ? 'فائتة' : 'Missed', pct: missedPct, color: '#ef4444' },
@@ -492,7 +492,7 @@ const Analytics: React.FC = () => {
       }));
 
     const chartData = [
-      { name: t.takbirah, value: takbirah, color: '#22c55e' },
+      { name: t.takbirah, value: takbirah, color: '#3b82f6' },
       { name: t.inGroup, value: inGroup, color: '#eab308' },
       { name: t.onTime, value: onTime, color: '#f97316' },
       { name: t.missed, value: missed, color: '#ef4444' },
@@ -627,7 +627,7 @@ const Analytics: React.FC = () => {
     const bestStreak = calculateBestStreak([prayerId]);
 
     const data = [
-      { name: t.takbirah, value: takbirah, color: '#22c55e' },
+      { name: t.takbirah, value: takbirah, color: '#3b82f6' },
       { name: t.inGroup, value: inGroup, color: '#eab308' },
       { name: t.onTime, value: onTime, color: '#f97316' },
       { name: t.missed, value: missed, color: '#ef4444' },
@@ -759,8 +759,8 @@ const Analytics: React.FC = () => {
     const segmentMapping = [0, 5, 1, 3, 2, 4]; // Maps rawatibIds index to segment index
     
     const baseColor = '#1e293b'; // Slate-800 - faded house outline
-    const activeColor = '#3b82f6'; // Blue - individual segment completed
-    const perfectColor = '#22c55e'; // Green - all 6 completed
+    const activeColor = '#eab308'; // Yellow - individual segment completed
+    const perfectColor = '#3b82f6'; // Blue - all 6 completed
     
     return (
       <div className="relative w-full aspect-square flex items-center justify-center">
@@ -789,10 +789,10 @@ const Analytics: React.FC = () => {
                 key={`active-${seg.id}`} 
                 d={seg.d} 
                 fill="none" 
-                stroke={allCompleted ? perfectColor : activeColor} 
-                strokeWidth={3} 
+                stroke={allCompleted ? perfectColor : activeColor}
+                strokeWidth={3}
                 strokeLinecap="round"
-                className={allCompleted ? 'drop-shadow-[0_0_4px_rgba(34,197,94,0.5)]' : ''}
+                className={allCompleted ? 'drop-shadow-[0_0_4px_rgba(59,130,246,0.5)]' : ''}
               />
             );
           })}
