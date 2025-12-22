@@ -9,6 +9,7 @@ import React, {
 import { supabase } from "../services/supabaseClient";
 import { Session, User } from "@supabase/supabase-js";
 import { DemoPersona, clearAllData, seedDemoData } from "../services/storage";
+import { Preferences } from '@capacitor/preferences';
 // Extended User type to include demo flag
 export type AppUser = User & { isDemo?: boolean; name: string; email?: string };
 interface AuthContextType {
@@ -44,10 +45,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // 2. Listen for Supabase auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Bridge auth token to native iOS app via Capacitor Preferences
+      if (session?.access_token) {
+        await Preferences.set({
+          key: 'user_session_token',
+          value: session.access_token
+        });
+        console.log('✅ Auth token bridged to native iOS app');
+      } else {
+        // Clear token on sign out
+        await Preferences.remove({ key: 'user_session_token' });
+        console.log('🗑️ Auth token cleared from native iOS app');
+      }
+      
       // If a real user logs in, ensure we clear the local demo flag
       if (session?.user) {
         localStorage.removeItem("haseeb_demo_persona");
