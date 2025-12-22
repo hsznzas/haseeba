@@ -2,67 +2,137 @@
 //  AppRootView.swift
 //  Haseeb
 //
-//  Root view that manages authentication state (Fixed with @AppStorage)
+//  Root view that manages authentication state
 //
 
 import SwiftUI
 
 struct AppRootView: View {
-    // 🚀 CRITICAL FIX: This variable "watches" the database token in real-time.
-    // If ProfileView deletes this token, this View AUTOMATICALLY reloads.
-    @AppStorage("user_session_token") private var userToken: String = ""
-    
-    // We keep this local state just to satisfy the LoginView's requirement for a binding.
-    // The actual navigation is now controlled by 'userToken' above.
-    @State private var isLoginState: Bool = false
+    @State private var isLoggedIn: Bool = false
+    @State private var isCheckingAuth: Bool = true
     
     var body: some View {
         ZStack {
-            if userToken.isEmpty {
-                // 🔴 Token is missing -> Show Login Screen
-                LoginView(isLoggedIn: $isLoginState)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            } else {
-                // 🟢 Token exists -> Show Main App
+            if isCheckingAuth {
+                // Splash screen while checking auth
+                splashScreen
+            } else if isLoggedIn {
+                // Show main app
                 MainTabView()
-                // 🚀 FORCE RESET: This ID ensures that if the token changes/clears,
-                // SwiftUI destroys this view and rebuilds the hierarchy from scratch.
-                    .id(userToken)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(.opacity.combined(with: .scale))
+            } else {
+                // Show login
+                LoginView(isLoggedIn: $isLoggedIn)
+                    .transition(.opacity.combined(with: .scale))
             }
         }
-        // Smooth animation when switching between Login and Home
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: userToken.isEmpty)
+        .onAppear {
+            checkAuthStatus()
+        }
     }
     
+    // MARK: - Splash Screen
+    
+    private var splashScreen: some View {
+        ZStack {
+            // Spiritual Night Sky Background
+            LinearGradient(
+                colors: [
+                    Color(hex: "1e1b4b"),
+                    Color(hex: "000000")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                // Logo with glow
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [.blue.opacity(0.4), .clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 80
+                            )
+                        )
+                        .frame(width: 160, height: 160)
+                        .blur(radius: 20)
+                    
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 100, height: 100)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 2
+                                )
+                        )
+                    
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 46, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.orange, .red],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                
+                // App name
+                Text("Haseeb")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                
+                // Loading indicator
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white.opacity(0.8)))
+                    .scaleEffect(1.2)
+                    .padding(.top, 8)
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+    
+    // MARK: - Check Auth Status
+    
+    private func checkAuthStatus() {
+        print("🔍 Checking authentication status...")
+        
+        // Simulate checking auth (e.g., validating token)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // Check if token exists in UserDefaults
+            if let token = UserDefaults.standard.string(forKey: "user_session_token"), !token.isEmpty {
+                print("✅ Auth token found: \(token.prefix(20))...")
+                
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    isLoggedIn = true
+                    isCheckingAuth = false
+                }
+            } else {
+                print("⚠️ No auth token found. Showing login screen.")
+                
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    isLoggedIn = false
+                    isCheckingAuth = false
+                }
+            }
+        }
+    }
 }
 
-  
-// MARK: - Color Extension Fix
-// (Kept from your original file to ensure colors work)
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
-        }
+// MARK: - Preview
 
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue:  Double(b) / 255,
-            opacity: Double(a) / 255
-        )
+struct AppRootView_Previews: PreviewProvider {
+    static var previews: some View {
+        AppRootView()
     }
 }

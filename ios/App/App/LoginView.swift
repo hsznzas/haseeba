@@ -380,38 +380,31 @@ struct LoginView: View {
             return
         }
         
+        guard email.contains("@") else {
+            showErrorMessage("Please enter a valid email")
+            return
+        }
+        
         // Show loading
         isLoading = true
         showError = false
         
-        // 🚀 REAL LOGIN: Call HabitService to get the real token
-        Task {
-            do {
-                // 1. Call API
-                let token = try await HabitService.shared.signIn(email: email, password: password)
-                
-                // 2. Handle Success on Main Thread
-                await MainActor.run {
-                    // Save real token via AuthManager (which handles UserDefaults)
-                    AuthManager.shared.login(token: token)
-                    
-                    UserDefaults.standard.set(email, forKey: "user_email")
-                    
-                    isLoading = false
-                    
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                        isLoggedIn = true
-                    }
-                    print("✅ User logged in with REAL Supabase token!")
-                }
-            } catch {
-                // 3. Handle Failure on Main Thread
-                await MainActor.run {
-                    isLoading = false
-                    showErrorMessage(error.localizedDescription)
-                    print("❌ Login Error: \(error)")
-                }
+        print("🔐 Sign in tapped with email: \(email)")
+        
+        // Simulate network delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            // Generate and save dummy token via AuthManager
+            let dummyToken = "dummy_token_\(UUID().uuidString)"
+            AuthManager.shared.login(token: dummyToken)
+            
+            // Update logged in state
+            isLoading = false
+            
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                isLoggedIn = true
             }
+            
+            print("✅ User logged in successfully")
         }
     }
     

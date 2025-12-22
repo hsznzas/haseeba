@@ -2,62 +2,11 @@
 //  HabitCardView.swift
 //  Haseeb
 //
-//  Premium Liquid Glass Habit Card (Fixed for Supabase)
+//  Premium Liquid Glass Habit Card
 //
 
 import SwiftUI
 
-// MARK: - 1. THE MISSING PIECES (Extensions)
-// We add these here so the UI still works with the simple Database Model
-extension Habit {
-    var displayName: String {
-        return nameAr ?? name
-    }
-    
-    var uiColor: Color {
-        // Safe fallback colors if hex string is missing or invalid
-        // You can update this to use your hex logic if Color(hex:) is globally available
-        switch type {
-        case .prayer: return Color.blue
-        case .regular: return Color.green
-        case .counter: return Color.orange
-        }
-    }
-}
-
-// Re-adding this Enum because it was removed from Models.swift
-enum PrayerQuality: Int, CaseIterable {
-    case missed = 0
-    case qada = 1
-    case alone = 2
-    case jamaa = 3
-    case takbirah = 4
-    case onTime = 5
-    
-    var color: Color {
-        switch self {
-        case .missed: return .red
-        case .qada: return .orange
-        case .alone: return .yellow
-        case .jamaa: return .green
-        case .takbirah: return .blue
-        case .onTime: return .purple
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .missed: return "xmark"
-        case .qada: return "arrow.uturn.backward"
-        case .alone: return "person.fill"
-        case .jamaa: return "person.3.fill"
-        case .takbirah: return "hands.clap.fill"
-        case .onTime: return "clock.fill"
-        }
-    }
-}
-
-// MARK: - 2. YOUR PREMIUM CARD VIEW
 struct HabitCardView: View {
     let habit: Habit
     let log: HabitLog?
@@ -181,7 +130,7 @@ struct HabitCardView: View {
                 
                 // Title & Count
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(habit.displayName) // ✅ Fixed
+                    Text(habit.displayName(language: "en"))
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
@@ -269,8 +218,8 @@ struct HabitCardView: View {
                     }
                 }
             }
+            .padding(18)
         }
-        .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 24)
                 .fill(.ultraThinMaterial)
@@ -301,7 +250,7 @@ struct HabitCardView: View {
             
             // Title & Streak
             HStack(spacing: 10) {
-                Text(habit.displayName) // ✅ Fixed
+                Text(habit.displayName(language: "en"))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(isLogged ? .white.opacity(0.5) : .white)
                 
@@ -371,11 +320,14 @@ struct HabitCardView: View {
             if let emoji = habit.emoji {
                 Text(emoji)
                     .font(.system(size: 24))
-            } else {
-                // Fallback icon logic
-                Image(systemName: "star.fill")
+            } else if let icon = habit.icon {
+                Image(systemName: icon)
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundColor(habit.uiColor) // ✅ Fixed
+                    .foregroundColor(Color(hex: habit.color ?? "#ffffff"))
+            } else {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundColor(.blue)
             }
         }
         .frame(width: 48)
@@ -389,7 +341,7 @@ struct HabitCardView: View {
     
     private var titleSection: some View {
         HStack(spacing: 10) {
-            Text(habit.displayName) // ✅ Fixed
+            Text(habit.displayName(language: "en"))
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundColor(isLogged ? .white.opacity(0.5) : .white)
                 .lineLimit(1)
@@ -519,7 +471,7 @@ struct HabitCardView: View {
     }
 }
 
-// MARK: - Preview (Fixed Init)
+// MARK: - Preview
 
 struct HabitCardView_Previews: PreviewProvider {
     static var previews: some View {
@@ -536,7 +488,7 @@ struct HabitCardView_Previews: PreviewProvider {
             .ignoresSafeArea()
             
             VStack(spacing: 18) {
-                // Regular Habit
+                // Regular Habit - Not Logged
                 HabitCardView(
                     habit: Habit(
                         id: "quran",
@@ -544,16 +496,86 @@ struct HabitCardView_Previews: PreviewProvider {
                         nameAr: "قراءة القرآن",
                         type: .regular,
                         emoji: "📖",
+                        icon: nil,
+                        color: "#10b981",
                         dailyTarget: nil,
                         presetId: nil,
                         isActive: true,
-                        orderIndex: 0, // ✅ Fixed param name
+                        order: 0,
                         startDate: nil,
+                        isArchived: false,
                         requireReason: true,
-                        affectsScore: true
+                        affectsScore: true,
+                        createdAt: nil,
+                        updatedAt: nil
                     ),
                     log: nil,
                     streak: 7,
+                    isSortMode: false,
+                    onToggle: { _, _ in },
+                    onDelete: {}
+                )
+                
+                // Counter Habit
+                HabitCardView(
+                    habit: Habit(
+                        id: "water",
+                        name: "Drink Water",
+                        nameAr: "شرب الماء",
+                        type: .counter,
+                        emoji: "💧",
+                        icon: nil,
+                        color: "#06b6d4",
+                        dailyTarget: 8,
+                        presetId: nil,
+                        isActive: true,
+                        order: 1,
+                        startDate: nil,
+                        isArchived: false,
+                        requireReason: false,
+                        affectsScore: false,
+                        createdAt: nil,
+                        updatedAt: nil
+                    ),
+                    log: HabitLog(
+                        id: "water-today",
+                        habitId: "water",
+                        date: "2024-12-15",
+                        value: 5,
+                        status: nil,
+                        notes: nil,
+                        timestamp: Date().timeIntervalSince1970,
+                        reason: nil
+                    ),
+                    streak: 3,
+                    isSortMode: false,
+                    onToggle: { _, _ in },
+                    onDelete: {}
+                )
+                
+                // Prayer Habit
+                HabitCardView(
+                    habit: Habit(
+                        id: "fajr",
+                        name: "Fajr",
+                        nameAr: "الفجر",
+                        type: .prayer,
+                        emoji: "🌅",
+                        icon: nil,
+                        color: "#3b82f6",
+                        dailyTarget: nil,
+                        presetId: "fajr",
+                        isActive: true,
+                        order: 0,
+                        startDate: nil,
+                        isArchived: false,
+                        requireReason: true,
+                        affectsScore: true,
+                        createdAt: nil,
+                        updatedAt: nil
+                    ),
+                    log: nil,
+                    streak: 12,
                     isSortMode: false,
                     onToggle: { _, _ in },
                     onDelete: {}
