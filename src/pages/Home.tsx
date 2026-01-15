@@ -498,53 +498,55 @@ const Home: React.FC = () => {
         </div>
 
         {/* Hadith Display - Calm Technology */}
-        <HadithDisplay />
+        {preferences.showHadith && <HadithDisplay />}
 
         {/* Daily Focus Card - AI Insight */}
-        <div className="px-4 mt-4">
-          <AnimatePresence mode="wait">
-            {isBriefingLoading ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-gradient-to-br from-blue-950/80 to-slate-900/90 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 mb-4"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 animate-pulse" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-blue-500/20 rounded animate-pulse w-24" />
-                    <div className="h-4 bg-blue-500/10 rounded animate-pulse w-full" />
-                    <div className="h-4 bg-blue-500/10 rounded animate-pulse w-3/4" />
+        {preferences.showAIInsights && (
+          <div className="px-4 mt-4">
+            <AnimatePresence mode="wait">
+              {isBriefingLoading ? (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-gradient-to-br from-blue-950/80 to-slate-900/90 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 mb-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 bg-blue-500/20 rounded animate-pulse w-24" />
+                      <div className="h-4 bg-blue-500/10 rounded animate-pulse w-full" />
+                      <div className="h-4 bg-blue-500/10 rounded animate-pulse w-3/4" />
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ) : dailyBriefing?.home_advice ? (
-              <motion.div
-                key="content"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-gradient-to-br from-blue-950/80 to-slate-900/90 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 mb-4 shadow-lg shadow-blue-500/5"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
-                    <Brain size={16} className="text-blue-400" />
+                </motion.div>
+              ) : dailyBriefing?.home_advice ? (
+                <motion.div
+                  key="content"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-gradient-to-br from-blue-950/80 to-slate-900/90 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 mb-4 shadow-lg shadow-blue-500/5"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+                      <Brain size={16} className="text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-blue-400/70 font-semibold uppercase tracking-wider mb-1">
+                        {preferences.language === 'ar' ? 'تركيز اليوم' : 'Daily Focus'}
+                      </p>
+                      <p className="text-sm text-white/90 leading-relaxed">
+                        {dailyBriefing.home_advice}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-blue-400/70 font-semibold uppercase tracking-wider mb-1">
-                      {preferences.language === 'ar' ? 'تركيز اليوم' : 'Daily Focus'}
-                    </p>
-                    <p className="text-sm text-white/90 leading-relaxed">
-                      {dailyBriefing.home_advice}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
+        )}
 
         <div className="px-4">
             {isSortMode ? (

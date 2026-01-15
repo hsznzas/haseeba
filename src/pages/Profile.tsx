@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { TRANSLATIONS, INITIAL_HABITS } from '../../constants';
 import { useData } from '../context/DataContext';
-import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check, ChevronDown, ChevronUp, Users, Clock, XCircle, Pause, ArrowRight, Target } from 'lucide-react';
+import { User, Globe, Moon, Loader2, PlayCircle, StopCircle, LogOut, RotateCcw, Calendar, Home, Hourglass, MessageSquare, X, Sparkles, Database, Info, Edit2, Trash2, AlertTriangle, Plus, Check, ChevronDown, ChevronUp, Users, Clock, XCircle, Pause, ArrowRight, Target, BookOpen } from 'lucide-react';
 import { clsx } from 'clsx';
 import { translateCustomHabits } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
@@ -934,14 +934,42 @@ const Profile: React.FC = () => {
            <button onClick={() => handleLanguageChange('ar')} className={clsx("flex-1 py-2.5 rounded-lg text-sm font-bold transition-all font-arabic", preferences.language === 'ar' ? "bg-slate-700 text-white shadow-sm" : "text-gray-400 hover:text-white")}>العربية</button>
          </div>
 
-         <div className="mt-6 flex items-center justify-between">
-            <span className="text-sm text-gray-300 flex items-center gap-2"><Calendar size={16} /> Hijri Date</span>
-            <button 
-                onClick={() => setPreferences({ ...preferences, showHijri: !preferences.showHijri })}
-                className={clsx("w-12 h-6 rounded-full relative transition-colors", preferences.showHijri ? "bg-primary" : "bg-slate-700")}
-            >
-                <div className={clsx("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", preferences.showHijri ? "right-1" : "left-1")} />
-            </button>
+         <div className="mt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-300 flex items-center gap-2"><Calendar size={16} /> Hijri Date</span>
+              <button 
+                  onClick={() => setPreferences({ ...preferences, showHijri: !preferences.showHijri })}
+                  className={clsx("w-12 h-6 rounded-full relative transition-colors", preferences.showHijri ? "bg-primary" : "bg-slate-700")}
+              >
+                  <div className={clsx("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", preferences.showHijri ? "right-1" : "left-1")} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-300 flex items-center gap-2">
+                <BookOpen size={16} />
+                {isArabic ? 'عرض الحديث اليومي' : 'Show Daily Hadith'}
+              </span>
+              <button 
+                onClick={() => setPreferences({ ...preferences, showHadith: !preferences.showHadith })}
+                className={clsx("w-12 h-6 rounded-full relative transition-colors", preferences.showHadith ? "bg-primary" : "bg-slate-700")}
+              >
+                <div className={clsx("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", preferences.showHadith ? "right-1" : "left-1")} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-300 flex items-center gap-2">
+                <Sparkles size={16} />
+                {isArabic ? 'عرض تحليلات الذكاء الاصطناعي' : 'Show AI Insights'}
+              </span>
+              <button 
+                onClick={() => setPreferences({ ...preferences, showAIInsights: !preferences.showAIInsights })}
+                className={clsx("w-12 h-6 rounded-full relative transition-colors", preferences.showAIInsights ? "bg-primary" : "bg-slate-700")}
+              >
+                <div className={clsx("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", preferences.showAIInsights ? "right-1" : "left-1")} />
+              </button>
+            </div>
          </div>
        </div>
 

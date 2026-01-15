@@ -56,6 +56,8 @@ export interface UserPreferences {
   gender: 'male' | 'female';
   isExcused: boolean;
   showHijri: boolean;
+  showHadith: boolean;
+  showAIInsights: boolean;
   dateOfBirth: string | null;
   theme?: 'dark' | 'light';
   notifications?: boolean;
@@ -70,6 +72,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   gender: 'male',
   isExcused: false,
   showHijri: true,
+  showHadith: false,
+  showAIInsights: false,
   dateOfBirth: '1991-11-11',
   theme: 'dark',
   notifications: true,
