@@ -825,6 +825,8 @@ export const supabaseGetPreferences = async (userId: string): Promise<UserPrefer
           gender: DEFAULT_PREFERENCES.gender,
           is_excused: DEFAULT_PREFERENCES.isExcused,
           show_hijri: DEFAULT_PREFERENCES.showHijri,
+          show_hadith: DEFAULT_PREFERENCES.showHadith,
+          show_ai_insights: DEFAULT_PREFERENCES.showAIInsights,
           date_of_birth: DEFAULT_PREFERENCES.dateOfBirth,
         })
         .select()
@@ -840,6 +842,8 @@ export const supabaseGetPreferences = async (userId: string): Promise<UserPrefer
         gender: newPrefs.gender,
         isExcused: newPrefs.is_excused ?? false,
         showHijri: newPrefs.show_hijri,
+        showHadith: newPrefs.show_hadith ?? DEFAULT_PREFERENCES.showHadith,
+        showAIInsights: newPrefs.show_ai_insights ?? DEFAULT_PREFERENCES.showAIInsights,
         dateOfBirth: newPrefs.date_of_birth,
       };
     }
@@ -849,6 +853,8 @@ export const supabaseGetPreferences = async (userId: string): Promise<UserPrefer
       gender: data.gender,
       isExcused: data.is_excused ?? false,
       showHijri: data.show_hijri,
+      showHadith: data.show_hadith ?? DEFAULT_PREFERENCES.showHadith,
+      showAIInsights: data.show_ai_insights ?? DEFAULT_PREFERENCES.showAIInsights,
       dateOfBirth: data.date_of_birth,
     };
   } catch (err) {
@@ -870,6 +876,8 @@ export const supabaseSavePreferences = async (
         gender: prefs.gender,
         is_excused: prefs.isExcused ?? false,
         show_hijri: prefs.showHijri,
+        show_hadith: prefs.showHadith,
+        show_ai_insights: prefs.showAIInsights,
         date_of_birth: prefs.dateOfBirth,
       });
 
