@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePreferences } from '../App';
 import { useData } from '../context/DataContext';
-import { ArrowLeft, Flame, TrendingDown, CheckCircle2, XCircle, AlertTriangle, Trophy } from 'lucide-react';
+import { ArrowLeft, Flame, TrendingDown, CheckCircle2, XCircle, AlertTriangle, Trophy, Sun, Moon } from 'lucide-react';
 import { HabitType, LogStatus, PrayerQuality } from '../../types';
 import AnnualCalendar from '../components/AnnualCalendar';
 import PrayerInsightCard from '../components/PrayerInsightCard';
@@ -29,6 +29,9 @@ const HabitDetails: React.FC = () => {
     'isha_sunnah',
   ];
   const isRawatib = habit?.presetId === 'rawatib' || (habit && rawatibIds.includes(habit.id));
+  
+  // Check if this is a twice-daily habit (COUNTER with target 2)
+  const isTwiceDaily = habit?.type === HabitType.COUNTER && habit?.dailyTarget === 2;
 
   if (!habit) {
     return (
@@ -130,6 +133,91 @@ const HabitDetails: React.FC = () => {
       topObstacles
     };
   }, [habitLogs, isRawatib]);
+
+  // Calculate metrics for twice-daily habits with two-digit encoding
+  // value = (MorningState * 10) + EveningState
+  // State Key: 0 = Pending, 1 = Done, 2 = Fail
+  const twiceDailyMetrics = useMemo(() => {
+    if (!isTwiceDaily) return null;
+
+    // Helper to decode two-digit value
+    const decode = (value: number) => {
+      const amState = Math.floor(value / 10);
+      const pmState = value % 10;
+      return { amState, pmState };
+    };
+
+    // Filter only completed logs (PM not pending)
+    const completedLogs = habitLogs.filter(l => {
+      const { pmState } = decode(l.value || 0);
+      return pmState !== 0; // PM has been logged
+    });
+
+    const total = completedLogs.length;
+    
+    // Perfect days: Both AM and PM Done (value = 11)
+    const perfectDays = completedLogs.filter(l => l.value === 11).length;
+    
+    // Partial days: One done, one fail (values: 12, 21)
+    const partialDays = completedLogs.filter(l => {
+      const { amState, pmState } = decode(l.value || 0);
+      return (amState === 1 && pmState === 2) || (amState === 2 && pmState === 1);
+    }).length;
+    
+    // Both failed (value = 22)
+    const bothFailed = completedLogs.filter(l => l.value === 22).length;
+    
+    // Count individual session stats
+    const amDone = completedLogs.filter(l => {
+      const { amState } = decode(l.value || 0);
+      return amState === 1;
+    }).length;
+    
+    const pmDone = completedLogs.filter(l => {
+      const { pmState } = decode(l.value || 0);
+      return pmState === 1;
+    }).length;
+    
+    const perfectRate = total > 0 ? Math.round((perfectDays / total) * 100) : 0;
+    const amSuccessRate = total > 0 ? Math.round((amDone / total) * 100) : 0;
+    const pmSuccessRate = total > 0 ? Math.round((pmDone / total) * 100) : 0;
+    
+    // Calculate best streak (consecutive perfect days - value = 11)
+    const sortedLogs = [...completedLogs].sort((a, b) => a.date.localeCompare(b.date));
+    let bestStreak = 0;
+    let currentStreak = 0;
+    let prevDate: Date | null = null;
+    
+    const perfectLogs = sortedLogs.filter(l => l.value === 11);
+    perfectLogs.forEach(log => {
+      const logDate = parseLocalISO(log.date);
+      if (prevDate) {
+        const dayDiff = Math.round((logDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (dayDiff === 1) {
+          currentStreak++;
+        } else {
+          currentStreak = 1;
+        }
+      } else {
+        currentStreak = 1;
+      }
+      bestStreak = Math.max(bestStreak, currentStreak);
+      prevDate = logDate;
+    });
+    
+    return {
+      total,
+      perfectDays,
+      partialDays,
+      bothFailed,
+      amDone,
+      pmDone,
+      perfectRate,
+      amSuccessRate,
+      pmSuccessRate,
+      bestStreak
+    };
+  }, [habitLogs, isTwiceDaily]);
 
   // Calculate metrics for prayers
   const prayerMetrics = useMemo(() => {
@@ -294,6 +382,8 @@ const HabitDetails: React.FC = () => {
             <p className="text-xs text-gray-400">
               {habit.type === HabitType.PRAYER 
                 ? (preferences.language === 'ar' ? 'صلاة' : 'Prayer')
+                : isTwiceDaily
+                ? (preferences.language === 'ar' ? 'مرتين يومياً' : 'Twice Daily')
                 : habit.type === HabitType.COUNTER
                 ? (preferences.language === 'ar' ? 'عداد' : 'Counter')
                 : (preferences.language === 'ar' ? 'عادة' : 'Habit')
@@ -305,7 +395,195 @@ const HabitDetails: React.FC = () => {
 
       {/* Content */}
       <div className="px-4 py-6 space-y-6">
-        {habit.type === HabitType.REGULAR || habit.type === HabitType.COUNTER ? (
+        {isTwiceDaily && twiceDailyMetrics ? (
+          <>
+            {/* Header with Split-Doughnut Icon */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-500/20 to-red-500/10 border border-emerald-500/20">
+                <svg width="28" height="28" viewBox="0 0 28 28">
+                  <circle cx="14" cy="14" r="10" fill="none" stroke="#1e293b" strokeWidth="3" />
+                  <path d="M 14 4 A 10 10 0 0 0 14 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M 14 4 A 10 10 0 0 1 14 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-gray-500">
+                  {isArabic ? 'عادة مرتين يومياً' : 'Dual-Session Habit'}
+                </p>
+              </div>
+            </div>
+
+            {/* Annual Calendar Section with Split-Doughnut */}
+            <div className="bg-card rounded-xl border border-emerald-500/20 p-4">
+              <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide mb-4">
+                {isArabic ? 'التقويم السنوي' : 'Annual Calendar'}
+              </h2>
+              <AnnualCalendar
+                habitId={habit.id}
+                habitType={habit.type}
+                habitColor={habitColor}
+                logs={logs}
+                language={preferences.language}
+                dailyTarget={habit.dailyTarget}
+              />
+            </div>
+
+            {/* Twice-Daily Ring Visualization */}
+            <div className="bg-card rounded-xl border border-emerald-500/30 bg-slate-900/80 shadow-lg overflow-hidden p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm text-gray-400 font-semibold uppercase tracking-wide">
+                  {isArabic ? 'إحصائيات الجلسات' : 'Session Stats'}
+                </h2>
+                {twiceDailyMetrics.bestStreak > 0 && (
+                  <div className="flex items-center gap-1 text-xs bg-orange-500/10 px-2 py-1 rounded-lg text-orange-400 border border-orange-500/20">
+                    <Trophy size={12} />
+                    <span className="font-bold">{twiceDailyMetrics.bestStreak}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4" dir="ltr">
+                {/* Ring Chart */}
+                <div className="flex flex-col items-center justify-center">
+                  <div className="relative h-24 w-24">
+                    {(() => {
+                      const chartData = [
+                        { name: isArabic ? 'يوم مثالي' : 'Perfect', value: twiceDailyMetrics.perfectDays, color: '#10b981' },
+                        { name: isArabic ? 'جزئي' : 'Partial', value: twiceDailyMetrics.partialDays, color: '#f59e0b' },
+                        { name: isArabic ? 'فشل' : 'Failed', value: twiceDailyMetrics.bothFailed, color: '#ef4444' },
+                      ].filter(d => d.value > 0);
+
+                      const finalChartData = chartData.length > 0 ? chartData : [{ name: 'Empty', value: 1, color: '#1e293b' }];
+                      const rateColor = getRateColorStyle(twiceDailyMetrics.perfectRate);
+
+                      return (
+                        <>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={finalChartData} cx="50%" cy="50%" innerRadius={30} outerRadius={42} paddingAngle={2} dataKey="value" stroke="none">
+                                {finalChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-lg font-bold" style={{ color: rateColor }}>{twiceDailyMetrics.perfectRate}%</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-xl font-bold" style={{ color: getRateColorStyle(twiceDailyMetrics.perfectRate) }}>{twiceDailyMetrics.perfectDays}</span>
+                    <span className="text-xs text-gray-500">/ {twiceDailyMetrics.total}</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400 mt-0.5">{isArabic ? 'أيام مثالية' : 'Perfect Days'}</span>
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 flex flex-col gap-3 min-w-0">
+                  <div className="space-y-1.5">
+                    <h4 className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                      {isArabic ? 'نتائج الأيام' : 'Day Results'}
+                    </h4>
+                    <div className="flex flex-col gap-1">
+                      {[
+                        { 
+                          label: isArabic ? 'يوم مثالي' : 'Perfect Day', 
+                          val: twiceDailyMetrics.perfectDays, 
+                          pct: twiceDailyMetrics.perfectRate, 
+                          color: '#10b981',
+                          icon: CheckCircle2 
+                        },
+                        { 
+                          label: isArabic ? 'جزئي (1 تم / 1 فشل)' : 'Partial (1 Pass / 1 Fail)', 
+                          val: twiceDailyMetrics.partialDays, 
+                          pct: twiceDailyMetrics.total > 0 ? Math.round((twiceDailyMetrics.partialDays / twiceDailyMetrics.total) * 100) : 0, 
+                          color: '#f59e0b',
+                          icon: AlertTriangle 
+                        },
+                        { 
+                          label: isArabic ? 'فشل كلي' : 'Both Failed', 
+                          val: twiceDailyMetrics.bothFailed, 
+                          pct: twiceDailyMetrics.total > 0 ? Math.round((twiceDailyMetrics.bothFailed / twiceDailyMetrics.total) * 100) : 0, 
+                          color: '#ef4444',
+                          icon: XCircle 
+                        },
+                      ].map(item => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={item.label} className="flex items-center gap-2 text-xs">
+                            <Icon size={10} style={{ color: item.color }} className="shrink-0" />
+                            <span className="text-gray-400 flex-1 truncate">{item.label}</span>
+                            <span className="font-bold tabular-nums" style={{ color: item.color }}>{item.pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Session Success Rates */}
+                  <div className="h-px bg-slate-700/50" />
+                  <div className="space-y-1.5">
+                    <h4 className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                      {isArabic ? 'نجاح الجلسات' : 'Session Success'}
+                    </h4>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        <Sun size={10} className="text-amber-400 shrink-0" />
+                        <span className="text-gray-400 flex-1">{isArabic ? 'نجاح الصباح' : 'AM Success'}</span>
+                        <span className="font-bold tabular-nums text-amber-400">{twiceDailyMetrics.amSuccessRate}%</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Moon size={10} className="text-blue-400 shrink-0" />
+                        <span className="text-gray-400 flex-1">{isArabic ? 'نجاح المساء' : 'PM Success'}</span>
+                        <span className="font-bold tabular-nums text-blue-400">{twiceDailyMetrics.pmSuccessRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-4 gap-2">
+              {/* Best Streak */}
+              <div className="bg-slate-900/50 rounded-xl p-2.5 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-orange-400 mb-1">
+                  <Flame size={12} />
+                </div>
+                <div className="font-mono text-lg font-bold text-white">{twiceDailyMetrics.bestStreak}</div>
+                <div className="text-[8px] text-gray-500 uppercase">{isArabic ? 'تتابع' : 'Streak'}</div>
+              </div>
+              
+              {/* Perfect Days */}
+              <div className="bg-slate-900/50 rounded-xl p-2.5 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-emerald-400 mb-1">
+                  <CheckCircle2 size={12} />
+                </div>
+                <div className="font-mono text-lg font-bold text-white">{twiceDailyMetrics.perfectDays}</div>
+                <div className="text-[8px] text-gray-500 uppercase">{isArabic ? 'مثالي' : 'Perfect'}</div>
+              </div>
+              
+              {/* Partial Days */}
+              <div className="bg-slate-900/50 rounded-xl p-2.5 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-amber-400 mb-1">
+                  <AlertTriangle size={12} />
+                </div>
+                <div className="font-mono text-lg font-bold text-white">{twiceDailyMetrics.partialDays}</div>
+                <div className="text-[8px] text-gray-500 uppercase">{isArabic ? 'جزئي' : 'Partial'}</div>
+              </div>
+              
+              {/* Both Failed */}
+              <div className="bg-slate-900/50 rounded-xl p-2.5 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-red-400 mb-1">
+                  <XCircle size={12} />
+                </div>
+                <div className="font-mono text-lg font-bold text-white">{twiceDailyMetrics.bothFailed}</div>
+                <div className="text-[8px] text-gray-500 uppercase">{isArabic ? 'فشل' : 'Failed'}</div>
+              </div>
+            </div>
+          </>
+        ) : habit.type === HabitType.REGULAR || habit.type === HabitType.COUNTER ? (
           <>
             {/* Header with Icon */}
             <div className="flex items-center gap-3">
@@ -333,6 +611,7 @@ const HabitDetails: React.FC = () => {
                 habitColor={habitColor}
                 logs={logs}
                 language={preferences.language}
+                dailyTarget={habit.dailyTarget}
               />
             </div>
 

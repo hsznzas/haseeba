@@ -29,6 +29,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [affectsScore, setAffectsScore] = useState(true);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [isTwiceDaily, setIsTwiceDaily] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,12 +39,15 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
         setTarget(habitToEdit.dailyTarget || 1);
         setSelectedIcon(habitToEdit.emoji && ICON_MAP[habitToEdit.emoji as IconName] ? habitToEdit.emoji : 'Activity');
         setAffectsScore(habitToEdit.affectsScore !== undefined ? habitToEdit.affectsScore : true);
+        // Check if this is a twice-daily habit (COUNTER with target 2)
+        setIsTwiceDaily(habitToEdit.type === HabitType.COUNTER && habitToEdit.dailyTarget === 2);
       } else {
         setName('');
         setType(HabitType.REGULAR);
         setTarget(1);
         setSelectedIcon('Activity');
         setAffectsScore(true);
+        setIsTwiceDaily(false);
       }
       setShowIconPicker(false);
       setShowDeleteConfirm(false);
@@ -190,23 +194,80 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
             <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
               <button 
                 type="button"
-                onClick={() => setType(HabitType.REGULAR)}
-                className={`py-2 rounded-lg text-sm font-medium transition-all ${type === HabitType.REGULAR ? 'bg-slate-800 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                onClick={() => {
+                  setType(HabitType.REGULAR);
+                  if (isTwiceDaily) setIsTwiceDaily(false);
+                }}
+                disabled={isTwiceDaily}
+                className={`py-2 rounded-lg text-sm font-medium transition-all ${type === HabitType.REGULAR && !isTwiceDaily ? 'bg-slate-800 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'} ${isTwiceDaily ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {t.regular}
               </button>
               <button 
                 type="button"
                 onClick={() => setType(HabitType.COUNTER)}
-                className={`py-2 rounded-lg text-sm font-medium transition-all ${type === HabitType.COUNTER ? 'bg-slate-800 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`py-2 rounded-lg text-sm font-medium transition-all ${type === HabitType.COUNTER || isTwiceDaily ? 'bg-slate-800 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
               >
                 {t.counter}
               </button>
             </div>
           </div>
 
-          {/* Counter Target */}
-          {type === HabitType.COUNTER && (
+          {/* Twice Daily Mode Toggle */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  {preferences.language === 'ar' ? 'وضع مرتين يومياً' : 'Twice Daily Mode'}
+                </label>
+                <span className="text-[10px] text-gray-500">
+                  {preferences.language === 'ar' ? 'مثال: صباحاً ومساءً' : 'e.g., Morning & Evening'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const newVal = !isTwiceDaily;
+                  setIsTwiceDaily(newVal);
+                  if (newVal) {
+                    setType(HabitType.COUNTER);
+                    setTarget(2);
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isTwiceDaily ? 'bg-amber-500' : 'bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isTwiceDaily ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            {isTwiceDaily && (
+              <div className="flex items-center gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg animate-in fade-in">
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 rounded-full border-2 border-amber-500 flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" style={{ clipPath: 'inset(0 50% 0 0)' }} />
+                  </div>
+                  <span className="text-[10px] text-amber-400">
+                    {preferences.language === 'ar' ? 'صباحاً' : 'AM'}
+                  </span>
+                </div>
+                <span className="text-gray-600">→</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 rounded-full bg-emerald-500" />
+                  <span className="text-[10px] text-emerald-400">
+                    {preferences.language === 'ar' ? 'مساءً' : 'PM'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Counter Target - Hidden when Twice Daily Mode is ON */}
+          {type === HabitType.COUNTER && !isTwiceDaily && (
             <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
                <label className="text-xs font-medium text-gray-400 uppercase tracking-wider ml-1">{t.target}</label>
                <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-xl p-2">

@@ -2,12 +2,73 @@ import React from 'react';
 import { Habit, HabitLog, HabitType, LogStatus } from '../../types';
 import { usePreferences } from '../App';
 import PrayerCard from './PrayerCard';
-import { Check, X, Minus, RotateCcw, Plus, CheckCircle2, Activity, Pause } from 'lucide-react';
+import { Check, X, Minus, RotateCcw, Plus, CheckCircle2, Activity, Pause, Sun, Moon } from 'lucide-react';
 import AnimatedFlame from './AnimatedFlame';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { ICON_MAP, IconName } from '../utils/iconMap';
 import party from 'party-js';
+
+// Two-digit encoding helpers for Twice-Daily Habits
+// value = (MorningState * 10) + EveningState
+// State Key: 0 = Pending, 1 = Done, 2 = Fail
+const decodeTwiceDaily = (value: number) => {
+  const amState = Math.floor(value / 10); // 0=pending, 1=done, 2=fail
+  const pmState = value % 10;             // 0=pending, 1=done, 2=fail
+  return { amState, pmState };
+};
+
+// Split-Doughnut SVG Component for Twice-Daily Habits
+const SplitDoughnutIndicator: React.FC<{ value: number; size?: number }> = ({ value, size = 44 }) => {
+  const strokeWidth = 4;
+  const radius = (size / 2) - strokeWidth;
+  const cx = size / 2;
+  const cy = size / 2;
+  
+  const { amState, pmState } = decodeTwiceDaily(value);
+  
+  // Colors based on state: 0=gray, 1=green, 2=red
+  const getColor = (state: number) => {
+    if (state === 1) return '#10b981'; // emerald-500 (Done)
+    if (state === 2) return '#ef4444'; // red-500 (Fail)
+    return '#334155'; // slate-700 (Pending/Empty)
+  };
+  
+  const amColor = getColor(amState);
+  const pmColor = getColor(pmState);
+  
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* Base ring (empty) */}
+      <circle 
+        cx={cx} 
+        cy={cy} 
+        r={radius} 
+        fill="none" 
+        stroke="#1e293b"
+        strokeWidth={strokeWidth}
+      />
+      
+      {/* Left half (AM) - 0° to 180° */}
+      <path
+        d={`M ${cx} ${cy - radius} A ${radius} ${radius} 0 0 0 ${cx} ${cy + radius}`}
+        fill="none"
+        stroke={amColor}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      
+      {/* Right half (PM) - 180° to 360° */}
+      <path
+        d={`M ${cx} ${cy - radius} A ${radius} ${radius} 0 0 1 ${cx} ${cy + radius}`}
+        fill="none"
+        stroke={pmColor}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+};
 
 interface HabitCardProps {
   habit: Habit;
@@ -114,7 +175,230 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
   const displayTitle = (preferences.language === 'ar' ? (habit.nameAr || habit.name) : (habit.name || habit.nameAr)) || "Untitled";
   const titleSizeClass = displayTitle.length > 30 ? "text-[10px] leading-tight" : displayTitle.length > 20 ? "text-xs" : "text-sm";
 
-  // --- COUNTER HABIT LOGIC ---
+  // --- TWICE-DAILY HABIT LOGIC (COUNTER with target === 2) ---
+  // Uses two-digit encoding: value = (MorningState * 10) + EveningState
+  // State Key: 0 = Pending, 1 = Done, 2 = Fail
+  const isTwiceDaily = habit.type === HabitType.COUNTER && habit.dailyTarget === 2;
+  
+  if (isTwiceDaily) {
+      const value = log?.value || 0;
+      const { amState, pmState } = decodeTwiceDaily(value);
+      
+      // Determine current phase
+      const isMorningPhase = value === 0; // Nothing logged yet
+      const isEveningPhase = value >= 10 && pmState === 0; // AM logged, PM pending
+      const isCompleted = pmState !== 0; // Both sessions logged
+      
+      // Determine overall status for styling
+      const isPerfectDay = amState === 1 && pmState === 1; // Both done (value = 11)
+      const hasAnyFail = amState === 2 || pmState === 2;
+      
+      // Get phase info for display
+      const getPhaseInfo = () => {
+        if (isMorningPhase) return { 
+          label: preferences.language === 'ar' ? 'صباحاً' : 'Morning', 
+          color: 'text-amber-400',
+          icon: Sun
+        };
+        if (isEveningPhase) {
+          const amStatus = amState === 1 
+            ? (preferences.language === 'ar' ? '✓ صباح' : '✓ AM')
+            : (preferences.language === 'ar' ? '✗ صباح' : '✗ AM');
+          return { 
+            label: preferences.language === 'ar' ? 'مساءً' : 'Evening', 
+            sublabel: amStatus,
+            color: 'text-blue-400',
+            icon: Moon
+          };
+        }
+        // Completed
+        if (isPerfectDay) return { 
+          label: preferences.language === 'ar' ? 'مكتمل' : 'Completed', 
+          color: 'text-emerald-400',
+          icon: CheckCircle2
+        };
+        return { 
+          label: preferences.language === 'ar' ? 'مكتمل' : 'Completed', 
+          color: hasAnyFail ? 'text-orange-400' : 'text-emerald-400',
+          icon: CheckCircle2
+        };
+      };
+      
+      const phaseInfo = getPhaseInfo();
+      const PhaseIcon = phaseInfo.icon;
+      
+      // Morning handlers: value = 0 -> 10 (done) or 20 (fail)
+      const handleMorningDone = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        forcePartyVisible();
+        try {
+          party.sparkles(e.currentTarget as HTMLElement, { 
+            count: party.variation.range(15, 25),
+            speed: party.variation.range(150, 300),
+            size: party.variation.range(0.5, 0.8),
+            color: party.Color.fromHex("#10b981"),
+          });
+        } catch (err) {
+          console.log('Party.js error:', err);
+        }
+        onUpdate(10, undefined); // AM Done, PM Pending
+      };
+      
+      const handleMorningFail = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        forcePartyVisible();
+        try {
+          party.sparkles(e.currentTarget as HTMLElement, { 
+            count: party.variation.range(10, 20),
+            speed: party.variation.range(200, 400),
+            size: party.variation.range(0.4, 0.7),
+            color: party.Color.fromHex("#ef4444"),
+          });
+        } catch (err) {
+          console.log('Party.js error:', err);
+        }
+        onUpdate(20, undefined); // AM Failed, PM Pending
+      };
+      
+      // Evening handlers: current + 1 (done) or current + 2 (fail)
+      const handleEveningDone = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newValue = value + 1;
+        const newAmState = Math.floor(newValue / 10);
+        const isPerfect = newAmState === 1; // AM was done + PM done = perfect
+        forcePartyVisible();
+        try {
+          if (isPerfect) {
+            party.confetti(e.currentTarget as HTMLElement, { 
+              count: party.variation.range(40, 60),
+              spread: party.variation.range(25, 50),
+              size: party.variation.range(0.8, 1.2),
+            });
+          } else {
+            party.sparkles(e.currentTarget as HTMLElement, { 
+              count: party.variation.range(15, 25),
+              speed: party.variation.range(150, 300),
+              size: party.variation.range(0.5, 0.8),
+              color: party.Color.fromHex("#10b981"),
+            });
+          }
+        } catch (err) {
+          console.log('Party.js error:', err);
+        }
+        // Determine final status: DONE if both sessions done, otherwise FAIL
+        const finalStatus = (newAmState === 1) ? LogStatus.DONE : LogStatus.FAIL;
+        onUpdate(newValue, finalStatus);
+      };
+      
+      const handleEveningFail = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newValue = value + 2;
+        forcePartyVisible();
+        try {
+          party.sparkles(e.currentTarget as HTMLElement, { 
+            count: party.variation.range(10, 20),
+            speed: party.variation.range(200, 400),
+            size: party.variation.range(0.4, 0.7),
+            color: party.Color.fromHex("#ef4444"),
+          });
+        } catch (err) {
+          console.log('Party.js error:', err);
+        }
+        onUpdate(newValue, LogStatus.FAIL); // At least one session failed
+      };
+      
+      // Undo handler: resets entire day to 0
+      const handleUndo = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onDeleteLog();
+      };
+
+      // Border color based on completion status
+      const getBorderStyle = () => {
+        if (!isCompleted) return "border-white/5";
+        if (isPerfectDay) return "border-emerald-500/30 bg-emerald-500/5";
+        if (hasAnyFail) return "border-orange-500/30 bg-orange-500/5";
+        return "border-emerald-500/30 bg-emerald-500/5";
+      };
+
+      return (
+        <motion.div 
+          className={clsx(
+            "h-[4.5rem] bg-white/5 backdrop-blur-md border rounded-xl flex items-center px-3 relative overflow-hidden transition-all",
+            getBorderStyle(),
+            onViewDetails && "cursor-pointer hover:bg-white/10"
+          )}
+          onClick={() => onViewDetails && onViewDetails()}
+          animate={isPerfectDay ? successVariant : hasAnyFail && isCompleted ? failVariant : {}}
+        >
+          {/* Split Doughnut Indicator */}
+          <div className="shrink-0 mr-3">
+            <SplitDoughnutIndicator value={value} size={44} />
+          </div>
+
+          {/* Title & Phase Label */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className={clsx(
+                "font-bold truncate", 
+                titleSizeClass, 
+                isPerfectDay ? "text-emerald-400" : isCompleted && hasAnyFail ? "text-orange-400" : "text-white"
+              )}>
+                {displayTitle}
+              </h3>
+              {streak > 0 && (
+                <div className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20">
+                  <AnimatedFlame size={10} streak={streak} /> {streak}
+                </div>
+              )}
+            </div>
+            <div className={clsx("flex items-center gap-1.5 text-xs mt-0.5", phaseInfo.color)}>
+              <PhaseIcon size={12} />
+              <span className="font-medium">{phaseInfo.label}</span>
+              {'sublabel' in phaseInfo && (
+                <span className={clsx("text-[10px] px-1.5 py-0.5 rounded", amState === 1 ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400")}>
+                  {phaseInfo.sublabel}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="shrink-0 ml-2">
+            {isCompleted ? (
+              // Phase 3: Completed - Show Undo
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={handleUndo}
+                className="w-12 h-12 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+              >
+                <RotateCcw size={18} />
+              </motion.button>
+            ) : (
+              // Phase 1 or 2: Show Pass/Fail buttons
+              <div className="flex gap-1">
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={isMorningPhase ? handleMorningDone : handleEveningDone}
+                  className="w-10 h-10 flex items-center justify-center bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 rounded-lg border border-emerald-500/30 transition-colors"
+                >
+                  <Check size={18} />
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={isMorningPhase ? handleMorningFail : handleEveningFail}
+                  className="w-10 h-10 flex items-center justify-center bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg border border-red-500/30 transition-colors"
+                >
+                  <X size={18} />
+                </motion.button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      );
+  }
+
+  // --- REGULAR COUNTER HABIT LOGIC ---
   if (habit.type === HabitType.COUNTER) {
       const count = log?.value || 0;
       const target = habit.dailyTarget || 1;
