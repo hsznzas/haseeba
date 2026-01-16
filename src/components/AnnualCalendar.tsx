@@ -12,6 +12,7 @@ interface AnnualCalendarProps {
   logs: HabitLog[];
   language: 'en' | 'ar';
   renderDayCell?: (date: Date, log?: HabitLog) => React.ReactNode;
+  dailyTarget?: number; // Used for twice-daily detection
 }
 
 const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
@@ -20,8 +21,11 @@ const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
   habitColor = '#10b981',
   logs,
   language,
-  renderDayCell
+  renderDayCell,
+  dailyTarget
 }) => {
+  // Detect twice-daily habit
+  const isTwiceDaily = habitType === HabitType.COUNTER && dailyTarget === 2;
   const locale = language === 'ar' ? ar : enUS;
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -96,8 +100,84 @@ const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
     );
   };
 
+  // Two-digit encoding helpers for Twice-Daily Habits
+  // value = (MorningState * 10) + EveningState
+  // State Key: 0 = Pending, 1 = Done, 2 = Fail
+  const decodeTwiceDaily = (value: number) => {
+    const amState = Math.floor(value / 10); // 0=pending, 1=done, 2=fail
+    const pmState = value % 10;             // 0=pending, 1=done, 2=fail
+    return { amState, pmState };
+  };
+
+  // Get color based on state: 0=gray, 1=green, 2=red
+  const getStateColor = (state: number) => {
+    if (state === 1) return '#10b981'; // emerald-500 (Done)
+    if (state === 2) return '#ef4444'; // red-500 (Fail)
+    return '#334155'; // slate-700 (Pending/Empty)
+  };
+
+  // Twice-daily split-doughnut renderer with two-digit encoding
+  const twiceDailyRenderer = (date: Date, log?: HabitLog) => {
+    const value = log?.value || 0;
+    const isToday = isSameDay(date, new Date());
+    const size = 12; // Cell size
+    const strokeWidth = 2;
+    const radius = (size / 2) - strokeWidth;
+    const cx = size / 2;
+    const cy = size / 2;
+    
+    const { amState, pmState } = decodeTwiceDaily(value);
+    const amColor = getStateColor(amState);
+    const pmColor = getStateColor(pmState);
+
+    return (
+      <div
+        className={clsx(
+          "aspect-square flex items-center justify-center",
+          isToday && "ring-1 ring-primary/60 rounded-sm"
+        )}
+      >
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {/* Base ring (empty) */}
+          <circle 
+            cx={cx} 
+            cy={cy} 
+            r={radius} 
+            fill="none" 
+            stroke="#1e293b"
+            strokeWidth={strokeWidth}
+          />
+          
+          {/* Left half (AM) - color based on state */}
+          <path
+            d={`M ${cx} ${cy - radius} A ${radius} ${radius} 0 0 0 ${cx} ${cy + radius}`}
+            fill="none"
+            stroke={amColor}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+          
+          {/* Right half (PM) - color based on state */}
+          <path
+            d={`M ${cx} ${cy - radius} A ${radius} ${radius} 0 0 1 ${cx} ${cy + radius}`}
+            fill="none"
+            stroke={pmColor}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
+    );
+  };
+
   // Choose renderer based on habit type
-  const dayRenderer = renderDayCell || (habitType === HabitType.PRAYER ? defaultPrayerRenderer : defaultRegularHabitRenderer);
+  const dayRenderer = renderDayCell || (
+    isTwiceDaily 
+      ? twiceDailyRenderer 
+      : habitType === HabitType.PRAYER 
+        ? defaultPrayerRenderer 
+        : defaultRegularHabitRenderer
+  );
 
   // Render a single month calendar
   const renderMonth = (monthDate: Date, monthIndex: number) => {
@@ -171,8 +251,45 @@ const AnnualCalendar: React.FC<AnnualCalendarProps> = ({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 text-[9px] text-gray-500">
-        {habitType === HabitType.PRAYER ? (
+      <div className="flex items-center justify-center gap-4 text-[9px] text-gray-500 flex-wrap">
+        {isTwiceDaily ? (
+          <>
+            {/* Perfect Day: Both Done (11) */}
+            <div className="flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <circle cx="6" cy="6" r="4" fill="none" stroke="#1e293b" strokeWidth="2" />
+                <path d="M 6 2 A 4 4 0 0 0 6 10" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
+                <path d="M 6 2 A 4 4 0 0 1 6 10" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span>{language === 'ar' ? 'يوم مثالي' : 'Perfect'}</span>
+            </div>
+            {/* Partial: One Done, One Fail */}
+            <div className="flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <circle cx="6" cy="6" r="4" fill="none" stroke="#1e293b" strokeWidth="2" />
+                <path d="M 6 2 A 4 4 0 0 0 6 10" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
+                <path d="M 6 2 A 4 4 0 0 1 6 10" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span>{language === 'ar' ? 'جزئي' : 'Partial'}</span>
+            </div>
+            {/* Both Failed (22) */}
+            <div className="flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <circle cx="6" cy="6" r="4" fill="none" stroke="#1e293b" strokeWidth="2" />
+                <path d="M 6 2 A 4 4 0 0 0 6 10" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+                <path d="M 6 2 A 4 4 0 0 1 6 10" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span>{language === 'ar' ? 'فشل' : 'Failed'}</span>
+            </div>
+            {/* No Log (0) */}
+            <div className="flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <circle cx="6" cy="6" r="4" fill="none" stroke="#334155" strokeWidth="2" />
+              </svg>
+              <span>{language === 'ar' ? 'لا سجل' : 'No Log'}</span>
+            </div>
+          </>
+        ) : habitType === HabitType.PRAYER ? (
           <>
             <div className="flex items-center gap-1">
               <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: habitColor }} />
