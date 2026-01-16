@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import DateSelector from '../components/DateSelector';
 import HabitCard from '../components/HabitCard';
 import BottomNav from '../components/BottomNav';
+import NewsTicker from '../components/NewsTicker';
 import { useData } from '../context/DataContext';
 import { HabitLog, LogStatus, HabitType, PrayerQuality, Habit, DailyBriefing } from '../../types';
 import { format, subDays, getDay } from 'date-fns';
@@ -648,6 +649,10 @@ const Home: React.FC = () => {
              >
                  <Plus size={28} strokeWidth={2.5} />
              </button>
+        </div>
+
+        <div className="mt-4">
+          <NewsTicker />
         </div>
 
         <BottomNav>

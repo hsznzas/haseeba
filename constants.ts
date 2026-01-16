@@ -1,6 +1,8 @@
 import { Habit } from './types';
 import { HabitType } from './types';
 
+export const LATEST_UPDATE = "🚀 Welcome to Haseeb v1.0 - Tracking Deen & Dunya";
+
 export const TRANSLATIONS = {
   en: {
     title: "Haseeb",
