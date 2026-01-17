@@ -3,25 +3,23 @@
 //  Haseeb
 //
 //  Root view that controls app authentication flow
-//  NOTE: AppRootView is the preferred entry point (includes WelcomeView)
 //
 
 import SwiftUI
 
 struct RootView: View {
-    @ObservedObject private var authManager = AuthManager.shared
+    @StateObject private var authManager = AuthManager.shared
     
     var body: some View {
         Group {
             if authManager.isLoggedIn {
-                FloatingNavigationContainer()
+                MainTabView()
                     .transition(.asymmetric(
                         insertion: .move(edge: .trailing).combined(with: .opacity),
                         removal: .move(edge: .leading).combined(with: .opacity)
                     ))
             } else {
-                // LoginView now observes AuthManager internally - no binding needed
-                WelcomeView()
+                LoginView(isLoggedIn: $authManager.isLoggedIn)
                     .transition(.asymmetric(
                         insertion: .move(edge: .leading).combined(with: .opacity),
                         removal: .move(edge: .trailing).combined(with: .opacity)

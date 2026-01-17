@@ -400,7 +400,7 @@ const Login: React.FC = () => {
     {
       id: "beginner" as DemoPersona,
       nameEn: "The Careless",
-      nameAr: "لهية قلوبهم",
+      nameAr: "لاهية قلوبهم",
       descEn: "30% consistency",
       descAr: "٣٠٪ التزام",
       icon: Zap,

@@ -133,7 +133,7 @@ struct ProfileView: View {
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundColor(.white.opacity(0.4))
                             .padding(.top, 16)
-                            .padding(.bottom, 100) // Extra padding for floating tab bar
+                            .padding(.bottom, 32)
                     }
                 }
             }

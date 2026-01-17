@@ -3,6 +3,7 @@
 //  Haseeb
 //
 //  Premium Liquid Glass Habit Card
+//  Updated: Fail/Done buttons, text scaling, streak style, icon mapping
 //
 
 import SwiftUI
@@ -14,30 +15,33 @@ struct HabitCardView: View {
     let isSortMode: Bool
     let onToggle: (Int, LogStatus) -> Void
     let onDelete: () -> Void
+    var onFail: (() -> Void)? = nil  // Optional: for "require reason" habits
     
+    @EnvironmentObject var languageManager: LanguageManager
     @State private var scale: CGFloat = 1.0
-    @State private var isPressed: Bool = false
     
+    // MARK: - Computed Properties
+    
+    /// A habit is logged ONLY if there's a valid log object
     private var isLogged: Bool {
-        log != nil
+        guard let log = log else { return false }
+        // For prayer: consider logged if count >= 0 (even missed is a log)
+        // For regular/counter: any log means logged
+        return true
     }
     
-    private var isDone: Bool {
-        log?.status == .done
-    }
-    
-    private var isFailed: Bool {
-        log?.status == .fail
-    }
+    private var isDone: Bool { log?.status == .done }
+    private var isFailed: Bool { log?.status == .fail }
     
     var body: some View {
         Group {
-            switch habit.type {
-            case .counter:
-                counterCard
-            case .prayer:
-                prayerCard
-            case .regular:
+            if let type = habit.type {
+                switch type {
+                case .counter: counterCard
+                case .prayer: prayerCard
+                case .regular: regularCard
+                }
+            } else {
                 regularCard
             }
         }
@@ -45,544 +49,433 @@ struct HabitCardView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.6), value: scale)
     }
     
-    // MARK: - Regular Habit Card (Premium Glass)
+    // MARK: - Icon Mapping Helper
     
-    private var regularCard: some View {
-        Button {
-            // Tap feedback for entire card
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                scale = 0.97
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    scale = 1.0
-                }
-            }
-        } label: {
-            HStack(spacing: 0) {
-                // Icon Section - Glass Divider
-                iconSection
-                
-                // Title & Streak Section
-                titleSection
-                
-                Spacer()
-                
-                // Action Buttons
-                if isSortMode {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(0.4))
-                        .padding(.trailing, 18)
-                } else if isLogged {
-                    deleteButton
-                } else {
-                    actionButtons
-                }
-            }
-            .frame(height: 68)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .strokeBorder(.white.opacity(0.2), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-            )
+    /// Maps emoji, web icon names, or prayer names to SF Symbols
+    private func mapToSFSymbol(_ name: String?) -> String {
+        guard let name = name, !name.isEmpty else {
+            return "star.fill"
         }
-        .buttonStyle(PlainButtonStyle())
+        
+        let lowercased = name.lowercased()
+        
+        // === PRAYER NAMES (Text-based) ===
+        let prayerMappings: [String: String] = [
+            "fajr": "moon.stars.fill",
+            "dhuhr": "sun.max.fill",
+            "asr": "sun.min.fill",
+            "maghrib": "sunset.fill",
+            "isha": "moon.fill",
+            "sunrise": "sunrise.fill",
+            "sunset": "sunset.fill",
+            "moon": "moon.stars.fill",
+            "sun": "sun.max.fill",
+            "night": "moon.fill",
+            "cloud": "sun.min.fill",
+            "quran": "book.fill",
+            "book": "book.fill",
+            "prayer": "hands.sparkles.fill",
+        ]
+        
+        // === GENERAL WEB ICONS (Text-based) ===
+        let webIconMappings: [String: String] = [
+            "water": "drop.fill",
+            "drop": "drop.fill",
+            "gym": "dumbbell.fill",
+            "dumbbell": "dumbbell.fill",
+            "fitness": "figure.run",
+            "run": "figure.run",
+            "money": "banknote.fill",
+            "dollar": "banknote.fill",
+            "cash": "banknote.fill",
+            "heart": "heart.fill",
+            "health": "heart.fill",
+            "sleep": "bed.double.fill",
+            "bed": "bed.double.fill",
+            "meditation": "figure.mind.and.body",
+            "yoga": "figure.mind.and.body",
+            "food": "leaf.fill",
+            "diet": "leaf.fill",
+            "pill": "pill.fill",
+            "medicine": "pill.fill",
+            "study": "book.fill",
+            "read": "book.open.fill",
+            "write": "pencil",
+            "note": "note.text",
+            "work": "laptopcomputer",
+            "computer": "laptopcomputer",
+            "target": "target",
+            "goal": "target",
+            "check": "checkmark.circle.fill",
+            "done": "checkmark.circle.fill",
+            "brain": "brain.head.profile",
+            "think": "brain.head.profile",
+            "time": "alarm.fill",
+            "alarm": "alarm.fill",
+            "clock": "clock.fill",
+            "fire": "flame.fill",
+            "streak": "flame.fill",
+            "star": "star.fill",
+            "music": "music.note",
+            "phone": "iphone",
+            "home": "house.fill",
+            "car": "car.fill",
+            "travel": "airplane",
+            "walk": "figure.walk",
+            "steps": "figure.walk",
+        ]
+        
+        // === EMOJI MAPPINGS ===
+        let emojiMappings: [String: String] = [
+            // Prayer/Religious
+            "🕌": "moon.stars.fill",
+            "🌅": "sunrise.fill",
+            "☀️": "sun.max.fill",
+            "🌙": "moon.fill",
+            "🌃": "moon.stars.fill",
+            "🤲": "hands.sparkles.fill",
+            "📿": "sparkles",
+            "🌤️": "sun.min.fill",
+            "🌌": "moon.fill",
+            
+            // Health/Fitness
+            "💧": "drop.fill",
+            "🏃": "figure.run",
+            "🏋️": "dumbbell.fill",
+            "🧘": "figure.mind.and.body",
+            "😴": "bed.double.fill",
+            "💤": "moon.zzz.fill",
+            "🍎": "apple.logo",
+            "🥗": "leaf.fill",
+            "💊": "pill.fill",
+            "🚶": "figure.walk",
+            
+            // Productivity
+            "📚": "book.fill",
+            "📖": "book.open.fill",
+            "✍️": "pencil",
+            "📝": "note.text",
+            "💻": "laptopcomputer",
+            "🎯": "target",
+            "✅": "checkmark.circle.fill",
+            
+            // Mindfulness
+            "🧠": "brain.head.profile",
+            "❤️": "heart.fill",
+            "🙏": "hands.sparkles.fill",
+            "😊": "face.smiling.fill",
+            
+            // Time
+            "⏰": "alarm.fill",
+            "🌞": "sun.max.fill",
+            "🌜": "moon.fill",
+            
+            // Money
+            "💰": "banknote.fill",
+            "💵": "banknote.fill",
+            "💳": "creditcard.fill",
+            
+            // Misc
+            "🔥": "flame.fill",
+            "⭐": "star.fill",
+            "🎵": "music.note",
+            "🎧": "headphones",
+            "📱": "iphone",
+            "🏠": "house.fill",
+            "🚗": "car.fill",
+            "✈️": "airplane",
+            "🌍": "globe.americas.fill"
+        ]
+        
+        // 1. Check emoji mappings first (exact match)
+        if let sfSymbol = emojiMappings[name] {
+            return sfSymbol
+        }
+        
+        // 2. Check prayer name mappings (lowercased partial match)
+        for (key, symbol) in prayerMappings {
+            if lowercased.contains(key) {
+                return symbol
+            }
+        }
+        
+        // 3. Check web icon mappings (lowercased partial match)
+        for (key, symbol) in webIconMappings {
+            if lowercased.contains(key) {
+                return symbol
+            }
+        }
+        
+        // 4. If it's already a valid SF Symbol name
+        if name.contains(".") || UIImage(systemName: name) != nil {
+            return name
+        }
+        
+        // 5. Default fallback
+        return "star.fill"
     }
     
-    // MARK: - Counter Habit Card
+    // MARK: - Smart Icon View
     
+    private func smartIcon(name: String?, size: CGFloat) -> some View {
+        let symbolName = mapToSFSymbol(name)
+        
+        return Group {
+            if UIImage(systemName: symbolName) != nil {
+                Image(systemName: symbolName)
+                    .font(.system(size: size, weight: .semibold))
+            } else if let name = name {
+                // Fallback to text for unmapped emojis
+                Text(name)
+                    .font(.system(size: size))
+            } else {
+                Image(systemName: "star.fill")
+                    .font(.system(size: size, weight: .semibold))
+            }
+        }
+    }
+    
+    // MARK: - Regular Card
+    private var regularCard: some View {
+        HStack(spacing: 12) {
+            iconSection
+            titleSection
+            Spacer()
+            if isSortMode {
+                Image(systemName: "line.3.horizontal").foregroundColor(.gray)
+            } else if isLogged {
+                deleteButton
+            } else {
+                // Two buttons: Fail [X] and Done [✓]
+                dualActionButtons
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 72)
+        .background(glassBackground)
+    }
+    
+    // MARK: - Counter Card
     private var counterCard: some View {
-        let count = log?.value ?? 0
-        let target = habit.dailyTarget ?? 1
+        let count = log?.count ?? 0
+        let target = habit.targetCount ?? 1
         let progress = min(Double(count) / Double(target), 1.0)
         let isTargetMet = count >= target
         
         return VStack(spacing: 0) {
-            HStack(spacing: 18) {
-                // Glass Circular Progress
+            HStack(spacing: 16) {
+                // Progress Circle with Icon
                 ZStack {
-                    Circle()
-                        .stroke(.white.opacity(0.1), lineWidth: 4)
-                        .frame(width: 60, height: 60)
+                    Circle().stroke(.white.opacity(0.1), lineWidth: 4).frame(width: 50, height: 50)
+                    Circle().trim(from: 0, to: progress)
+                        .stroke(isTargetMet ? Color.green : Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .frame(width: 50, height: 50).rotationEffect(.degrees(-90))
                     
-                    Circle()
-                        .trim(from: 0, to: progress)
-                        .stroke(
-                            LinearGradient(
-                                colors: isTargetMet ? [.green, .blue] : [.blue, .cyan],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                        )
-                        .frame(width: 60, height: 60)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: progress)
-                    
-                    Text(habit.emoji ?? "📊")
-                        .font(.system(size: 26))
+                    smartIcon(name: habit.emoji, size: 20)
                 }
                 
-                // Title & Count
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(habit.displayName(language: "en"))
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.headline)
                         .foregroundColor(.white)
+                        .minimumScaleFactor(0.7)
                         .lineLimit(1)
                     
-                    HStack(spacing: 10) {
-                        Text("\(count) / \(target)")
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.6))
-                        
-                        if streak > 0 {
-                            streakView
-                        }
-                    }
+                    Text("\(count) / \(target)")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.6))
+                        .monospacedDigit()
                 }
                 
                 Spacer()
                 
-                // Glass Counter Controls
                 if !isSortMode {
-                    VStack(spacing: 10) {
-                        // +/- Controls
-                        HStack(spacing: 0) {
-                            Button {
-                                if count > 0 {
-                                    onToggle(count - 1, count - 1 >= target ? .done : .fail)
-                                }
-                            } label: {
-                                Image(systemName: "minus")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white.opacity(0.6))
-                                    .frame(width: 36, height: 36)
-                                    .background(.white.opacity(0.06))
-                            }
-                            
-                            Rectangle()
-                                .fill(.white.opacity(0.15))
-                                .frame(width: 1, height: 18)
-                            
-                            Button {
-                                onToggle(count + 1, count + 1 >= target ? .done : .fail)
-                            } label: {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(.blue.opacity(0.9))
-                                    .frame(width: 36, height: 36)
-                                    .background(.blue.opacity(0.12))
-                            }
+                    HStack(spacing: 0) {
+                        Button { if count > 0 { onToggle(count - 1, .done) } } label: {
+                            Image(systemName: "minus").frame(width: 40, height: 40).background(Color.white.opacity(0.05))
                         }
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(.ultraThinMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .strokeBorder(.white.opacity(0.15), lineWidth: 1)
-                                )
-                        )
-                        
-                        // Check Button
-                        Button {
-                            onToggle(count, count >= target ? .done : .fail)
-                        } label: {
-                            HStack(spacing: 5) {
-                                if isTargetMet {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 13, weight: .bold))
-                                } else {
-                                    Text("Done")
-                                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                                }
-                            }
-                            .foregroundColor(isTargetMet ? .green : .white.opacity(0.5))
-                            .frame(width: 72, height: 30)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(isTargetMet ? .green.opacity(0.2) : .white.opacity(0.04))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .strokeBorder(
-                                                isTargetMet ? .green.opacity(0.4) : .white.opacity(0.12),
-                                                lineWidth: 1
-                                            )
-                                    )
-                            )
+                        Divider().frame(height: 20).background(Color.white.opacity(0.2))
+                        Button { onToggle(count + 1, .done) } label: {
+                            Image(systemName: "plus").frame(width: 40, height: 40).background(Color.blue.opacity(0.2))
                         }
                     }
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
             }
-            .padding(18)
+            .padding(16)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .strokeBorder(.white.opacity(0.2), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-        )
+        .background(glassBackground)
     }
     
-    // MARK: - Prayer Card
-    
+    // MARK: - Prayer Card (Flexible Layout)
     private var prayerCard: some View {
-        HStack(spacing: 0) {
-            // Icon with Glass Divider
-            HStack {
-                Text(habit.emoji ?? "🕌")
-                    .font(.system(size: 24))
-            }
-            .frame(width: 48)
-            .overlay(
-                Rectangle()
-                    .fill(.white.opacity(0.1))
-                    .frame(width: 1),
-                alignment: .trailing
-            )
-            
-            // Title & Streak
-            HStack(spacing: 10) {
+        VStack(spacing: 0) {
+            // Top Row: Icon + Name + Streak
+            HStack(spacing: 12) {
+                smartIcon(name: habit.emoji, size: 22)
+                    .foregroundColor(Color(hex: habit.color ?? "#3b82f6"))
+                    .frame(width: 40, height: 40)
+                    .background(Color(hex: habit.color ?? "#3b82f6").opacity(0.15))
+                    .cornerRadius(12)
+                
                 Text(habit.displayName(language: "en"))
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(isLogged ? .white.opacity(0.5) : .white)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                
+                Spacer()
                 
                 if streak > 0 {
-                    streakView
+                    streakBadge
+                }
+                
+                if isLogged {
+                    deleteButton
                 }
             }
-            .padding(.leading, 14)
+            .padding(16)
             
-            Spacer()
-            
-            // Prayer Quality Buttons or Delete
+            // Bottom Row: 4 Buttons (Only if NOT logged)
             if !isSortMode && !isLogged {
-                HStack(spacing: 0) {
-                    prayerButton(quality: .takbirah, color: .blue, icon: "star.fill")
-                    prayerButton(quality: .jamaa, color: .yellow, icon: "person.2.fill")
-                    prayerButton(quality: .onTime, color: .orange, icon: "clock.fill")
-                    prayerButton(quality: .missed, color: .red, icon: "xmark")
+                Divider().background(Color.white.opacity(0.1))
+                
+                HStack(spacing: 1) {
+                    prayerButton(icon: "star.fill", color: .blue, quality: .takbirah)
+                    prayerButton(icon: "person.2.fill", color: .yellow, quality: .jamaa)
+                    prayerButton(icon: "clock.fill", color: .orange, quality: .onTime)
+                    prayerButton(icon: "xmark", color: .red, quality: .missed)
                 }
-            } else if isLogged {
-                deleteButton
+                .frame(height: 44)
             }
         }
-        .frame(height: 68)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .strokeBorder(.white.opacity(0.2), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-        )
+        .background(glassBackground)
     }
     
-    private func prayerButton(quality: PrayerQuality, color: Color, icon: String) -> some View {
+    // MARK: - Helper Views
+    
+    private func prayerButton(icon: String, color: Color, quality: PrayerQuality) -> some View {
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                scale = 0.95
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    scale = 1.0
-                }
-            }
+            animatePress()
             onToggle(quality.rawValue, .done)
         } label: {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundColor(color.opacity(0.9))
-                .frame(width: 38)
-                .frame(maxHeight: .infinity)
-                .background(color.opacity(0.15))
-                .overlay(
-                    Rectangle()
-                        .fill(.white.opacity(0.08))
-                        .frame(width: 1),
-                    alignment: .leading
-                )
+            ZStack {
+                Color.white.opacity(0.03)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(color)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
         }
     }
     
-    // MARK: - Subviews
-    
     private var iconSection: some View {
-        HStack {
-            if let emoji = habit.emoji {
-                Text(emoji)
-                    .font(.system(size: 24))
-            } else if let icon = habit.icon {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundColor(Color(hex: habit.color ?? "#ffffff"))
-            } else {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundColor(.blue)
-            }
-        }
-        .frame(width: 48)
-        .overlay(
-            Rectangle()
-                .fill(.white.opacity(0.1))
-                .frame(width: 1),
-            alignment: .trailing
-        )
+        smartIcon(name: habit.emoji, size: 24)
+            .foregroundColor(Color(hex: habit.color ?? "#ffffff"))
+            .frame(width: 40)
     }
     
     private var titleSection: some View {
-        HStack(spacing: 10) {
-            Text(habit.displayName(language: "en"))
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundColor(isLogged ? .white.opacity(0.5) : .white)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(habit.displayName(language: languageManager.language.rawValue))
+                .font(.headline)
+                .foregroundColor(isLogged ? .gray : .white)
+                .strikethrough(isLogged)
+                .minimumScaleFactor(0.7)
                 .lineLimit(1)
             
-            if isDone {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(.green)
-            } else if isFailed {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(.red)
-            }
-            
             if streak > 0 {
-                streakView
+                streakBadge
             }
         }
-        .padding(.leading, 14)
     }
     
-    private var streakView: some View {
+    // MARK: - Streak Badge (🔥 + number only)
+    private var streakBadge: some View {
         HStack(spacing: 3) {
             Text("🔥")
                 .font(.system(size: 12))
             Text("\(streak)")
-                .font(.system(size: 11, weight: .black, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundColor(.orange)
         }
-        .padding(.horizontal, 7)
+        .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(
-            Capsule()
-                .fill(.orange.opacity(0.15))
-                .overlay(
-                    Capsule()
-                        .strokeBorder(.orange.opacity(0.3), lineWidth: 1)
-                )
-        )
+        .background(Color.orange.opacity(0.15))
+        .cornerRadius(8)
     }
     
-    private var actionButtons: some View {
-        HStack(spacing: 0) {
-            // Done Button - Glass Green
+    // MARK: - Dual Action Buttons (Fail/Done)
+    private var dualActionButtons: some View {
+        HStack(spacing: 8) {
+            // Fail Button [X] - Red Glass
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    scale = 1.03
+                animatePress()
+                // If habit requires reason, use onFail callback
+                if habit.requireReason == true, let failAction = onFail {
+                    failAction()
+                } else {
+                    onToggle(0, .fail)
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        scale = 1.0
-                    }
-                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.red)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color.red.opacity(0.15))
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Done Button [✓] - Green Glass
+            Button {
+                animatePress()
                 onToggle(1, .done)
             } label: {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.green.opacity(0.95))
-                    .frame(width: 60)
-                    .frame(maxHeight: .infinity)
-                    .background(.green.opacity(0.15))
-                    .overlay(
-                        Rectangle()
-                            .fill(.white.opacity(0.08))
-                            .frame(width: 1),
-                        alignment: .leading
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.green)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color.green.opacity(0.15))
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(Color.green.opacity(0.3), lineWidth: 1)
+                            )
                     )
             }
-            
-            // Fail Button - Glass Red
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    scale = 0.97
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        scale = 1.0
-                    }
-                }
-                onToggle(0, .fail)
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.red.opacity(0.95))
-                    .frame(width: 60)
-                    .frame(maxHeight: .infinity)
-                    .background(.red.opacity(0.15))
-            }
+            .buttonStyle(PlainButtonStyle())
         }
-        .clipShape(
-            UnevenRoundedRectangle(
-                topLeadingRadius: 0,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: 24,
-                topTrailingRadius: 24
-            )
-        )
     }
     
     private var deleteButton: some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                scale = 0.95
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    scale = 1.0
-                }
-            }
-            onDelete()
-        } label: {
+        Button { animatePress(); onDelete() } label: {
             Image(systemName: "arrow.counterclockwise")
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .foregroundColor(.white.opacity(0.5))
-                .frame(width: 70)
-                .frame(maxHeight: .infinity)
-                .background(.white.opacity(0.04))
+                .padding(10)
         }
-        .clipShape(
-            UnevenRoundedRectangle(
-                topLeadingRadius: 0,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: 24,
-                topTrailingRadius: 24
-            )
-        )
     }
-}
-
-// MARK: - Preview
-
-struct HabitCardView_Previews: PreviewProvider {
-    static var previews: some View {
-        ZStack {
-            // Premium background
-            LinearGradient(
-                colors: [
-                    Color(hex: "1e1b4b"),
-                    Color(hex: "000000")
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 18) {
-                // Regular Habit - Not Logged
-                HabitCardView(
-                    habit: Habit(
-                        id: "quran",
-                        name: "Quran Reading",
-                        nameAr: "قراءة القرآن",
-                        type: .regular,
-                        emoji: "📖",
-                        icon: nil,
-                        color: "#10b981",
-                        dailyTarget: nil,
-                        presetId: nil,
-                        isActive: true,
-                        order: 0,
-                        startDate: nil,
-                        isArchived: false,
-                        requireReason: true,
-                        affectsScore: true,
-                        createdAt: nil,
-                        updatedAt: nil
-                    ),
-                    log: nil,
-                    streak: 7,
-                    isSortMode: false,
-                    onToggle: { _, _ in },
-                    onDelete: {}
-                )
-                
-                // Counter Habit
-                HabitCardView(
-                    habit: Habit(
-                        id: "water",
-                        name: "Drink Water",
-                        nameAr: "شرب الماء",
-                        type: .counter,
-                        emoji: "💧",
-                        icon: nil,
-                        color: "#06b6d4",
-                        dailyTarget: 8,
-                        presetId: nil,
-                        isActive: true,
-                        order: 1,
-                        startDate: nil,
-                        isArchived: false,
-                        requireReason: false,
-                        affectsScore: false,
-                        createdAt: nil,
-                        updatedAt: nil
-                    ),
-                    log: HabitLog(
-                        id: "water-today",
-                        habitId: "water",
-                        date: "2024-12-15",
-                        value: 5,
-                        status: nil,
-                        notes: nil,
-                        timestamp: Date().timeIntervalSince1970,
-                        reason: nil
-                    ),
-                    streak: 3,
-                    isSortMode: false,
-                    onToggle: { _, _ in },
-                    onDelete: {}
-                )
-                
-                // Prayer Habit
-                HabitCardView(
-                    habit: Habit(
-                        id: "fajr",
-                        name: "Fajr",
-                        nameAr: "الفجر",
-                        type: .prayer,
-                        emoji: "🌅",
-                        icon: nil,
-                        color: "#3b82f6",
-                        dailyTarget: nil,
-                        presetId: "fajr",
-                        isActive: true,
-                        order: 0,
-                        startDate: nil,
-                        isArchived: false,
-                        requireReason: true,
-                        affectsScore: true,
-                        createdAt: nil,
-                        updatedAt: nil
-                    ),
-                    log: nil,
-                    streak: 12,
-                    isSortMode: false,
-                    onToggle: { _, _ in },
-                    onDelete: {}
-                )
-            }
-            .padding(20)
-        }
-        .preferredColorScheme(.dark)
+    
+    private var glassBackground: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(Material.ultraThin)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+    }
+    
+    private func animatePress() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        withAnimation(.spring()) { scale = 0.95 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { withAnimation { scale = 1.0 } }
     }
 }

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Analytics from './pages/Analytics';
@@ -169,9 +169,35 @@ const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// --- PWA Home Redirect Hook ---
+// Forces redirect to home when app is opened as PWA (standalone mode)
+const usePWAHomeRedirect = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const hasRedirected = useRef(false);
+
+  useEffect(() => {
+    // Only run once on initial mount
+    if (hasRedirected.current) return;
+    
+    // Check if running as PWA (standalone mode)
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  (window.navigator as any).standalone === true;
+    
+    // If PWA and not already on home, redirect to home
+    if (isPWA && location.pathname !== '/') {
+      hasRedirected.current = true;
+      navigate('/', { replace: true });
+    }
+  }, []);
+};
+
 // --- App Routing and Protection ---
 const AppRoutes = () => {
   const { user, loading: authLoading } = useAuth();
+  
+  // Force redirect to home when opened as PWA
+  usePWAHomeRedirect();
 
   if (authLoading) {
     return <LoadingScreen />;

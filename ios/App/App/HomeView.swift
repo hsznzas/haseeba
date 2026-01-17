@@ -9,7 +9,21 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
-    @State private var showAddHabit = false
+    @EnvironmentObject var languageManager: LanguageManager
+    @Binding var selectedDate: Date
+    @Binding var showAddHabit: Bool
+    @Binding var isCollapsed: Bool
+    
+    // Reason Sheet State
+    @State private var showingReasonSheet: Bool = false
+    @State private var activeHabitForReason: Habit? = nil
+    @State private var failReason: String = ""
+    
+    init(selectedDate: Binding<Date> = .constant(Date()), showAddHabit: Binding<Bool> = .constant(false), isCollapsed: Binding<Bool> = .constant(false)) {
+        self._selectedDate = selectedDate
+        self._showAddHabit = showAddHabit
+        self._isCollapsed = isCollapsed
+    }
     
     var body: some View {
         NavigationView {
@@ -17,29 +31,23 @@ struct HomeView: View {
                 // MARK: - Spiritual Night Sky Background
                 LinearGradient(
                     colors: [
-                        Color(hex: "1e1b4b"), // Deep indigo - top left
-                        Color(hex: "000000")  // Pure black - bottom right
+                        Color(hex: "1e1b4b"),
+                        Color(hex: "000000")
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
                 
-                // MARK: - Main Content
-                ScrollView(showsIndicators: false) {
+                // MARK: - Main Content (with scroll detection)
+                ScrollableWithDetection(isCollapsed: $isCollapsed) {
                     VStack(spacing: 20) {
-                        // MARK: - Header
                         header
-                        
-                        // MARK: - Glass Date Selector
-                        dateSelector
-                        
-                        // MARK: - Habits List
                         habitsList
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                    .padding(.bottom, 120)
+                    .padding(.bottom, 200)
                 }
             }
             .toolbar {
@@ -55,21 +63,33 @@ struct HomeView: View {
                     }
                 }
             }
-            .overlay(alignment: .bottomTrailing) {
-                // MARK: - Floating Add Button
-                addButton
-            }
         }
         .preferredColorScheme(.dark)
+        .onChange(of: viewModel.selectedDate) { newDate in
+            if selectedDate != newDate {
+                selectedDate = newDate
+            }
+        }
+        .onChange(of: selectedDate) { newDate in
+            if viewModel.selectedDate != newDate {
+                viewModel.selectedDate = newDate
+            }
+        }
+        .onAppear {
+            selectedDate = viewModel.selectedDate
+        }
+        // MARK: - Reason Sheet
+        .sheet(isPresented: $showingReasonSheet) {
+            reasonSheet
+        }
     }
     
-    // MARK: - Premium Header
+    // MARK: - Premium Header (Greeting + Full-Width Score Bar)
     
     private var header: some View {
-        HStack(spacing: 16) {
-            // Avatar + Greeting
+        VStack(spacing: 12) {
+            // 1. Greeting & Profile Row (Standard Padding)
             HStack(spacing: 12) {
-                // Glass Avatar
                 ZStack {
                     Circle()
                         .fill(.ultraThinMaterial)
@@ -92,300 +112,258 @@ struct HomeView: View {
                         .foregroundColor(.white.opacity(0.9))
                 }
                 
-                Text(viewModel.preferences.language == "ar" ? "مرحبًا، \(viewModel.userName)" : "Hi, \(viewModel.userName)")
+                Text(languageManager.isArabic ? "مرحبًا، \(viewModel.userName)" : "Hi, \(viewModel.userName)")
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundColor(.white)
+                
+                Spacer()
             }
             
-            Spacer()
-            
-            // Frosted Stats Pill
-            statsPill
+            // 2. Full-Width Daily Score Bar
+            dailyScoreBar
         }
-        .padding(.vertical, 8)
     }
     
-    private var statsPill: some View {
+    // MARK: - Daily Score Bar (Full Width)
+    
+    private var dailyScoreBar: some View {
         let stats = viewModel.calculateStats(for: viewModel.selectedDate)
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: viewModel.selectedDate) ?? Date()
         let yesterdayStats = viewModel.calculateStats(for: yesterday)
         
-        return HStack(spacing: 14) {
-            // Today Stats
-            HStack(spacing: 6) {
+        return HStack(spacing: 0) {
+            // Today's Stats
+            HStack(spacing: 8) {
                 Text(dayAbbreviation(viewModel.selectedDate))
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundColor(.green.opacity(0.9))
                 
-                HStack(spacing: 4) {
-                    Text("\(stats.done)✓")
-                        .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .foregroundColor(.green)
+                HStack(spacing: 6) {
+                    HStack(spacing: 2) {
+                        Text("\(stats.done)")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundColor(.green)
                     
-                    Text("\(stats.failed)✗")
-                        .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .foregroundColor(.red.opacity(0.8))
+                    HStack(spacing: 2) {
+                        Text("\(stats.failed)")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundColor(.red.opacity(0.8))
                     
                     HStack(spacing: 2) {
                         Text("\(stats.pending)")
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
                         Image(systemName: "hourglass")
-                            .font(.system(size: 8, weight: .semibold))
+                            .font(.system(size: 10, weight: .semibold))
                     }
-                    .foregroundColor(.yellow.opacity(0.8))
+                    .foregroundColor(.yellow.opacity(0.9))
                 }
             }
             
-            // Glass Divider
+            Spacer()
+            
+            // Divider
             Rectangle()
                 .fill(.white.opacity(0.2))
-                .frame(width: 1, height: 14)
+                .frame(width: 1, height: 20)
             
-            // Yesterday Stats
-            HStack(spacing: 6) {
+            Spacer()
+            
+            // Yesterday's Stats
+            HStack(spacing: 8) {
                 Text(dayAbbreviation(yesterday))
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundColor(.gray.opacity(0.8))
                 
-                HStack(spacing: 4) {
-                    Text("\(yesterdayStats.done)✓")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundColor(.green.opacity(0.5))
+                HStack(spacing: 6) {
+                    HStack(spacing: 2) {
+                        Text("\(yesterdayStats.done)")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                    .foregroundColor(.green.opacity(0.5))
                     
-                    Text("\(yesterdayStats.failed)✗")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundColor(.red.opacity(0.4))
+                    HStack(spacing: 2) {
+                        Text("\(yesterdayStats.failed)")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                    .foregroundColor(.red.opacity(0.4))
                     
                     HStack(spacing: 2) {
                         Text("\(yesterdayStats.pending)")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
                         Image(systemName: "hourglass")
-                            .font(.system(size: 8, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                     }
                     .foregroundColor(.yellow.opacity(0.5))
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
         .background(
-            Capsule()
+            RoundedRectangle(cornerRadius: 16)
                 .fill(.ultraThinMaterial)
                 .overlay(
-                    Capsule()
-                        .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [.white.opacity(0.25), .white.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
-                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
         )
-    }
-    
-    // MARK: - Glass Date Selector
-    
-    private var dateSelector: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(-7...0, id: \.self) { offset in
-                    let date = Calendar.current.date(byAdding: .day, value: offset, to: Date()) ?? Date()
-                    dateCell(date)
-                }
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-        }
-    }
-    
-    private func dateCell(_ date: Date) -> some View {
-        let isSelected = Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate)
-        let day = Calendar.current.component(.day, from: date)
-        let weekday = dayAbbreviation(date)
-        
-        return Button {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                viewModel.selectedDate = date
-            }
-        } label: {
-            VStack(spacing: 6) {
-                Text(weekday)
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundColor(isSelected ? .white : .gray.opacity(0.7))
-                
-                Text("\(day)")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(isSelected ? .white : .gray.opacity(0.6))
-            }
-            .frame(width: 52, height: 66)
-            .background(
-                Group {
-                    if isSelected {
-                        // Glass Capsule for Selected Date
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                            .overlay(
-                                Capsule()
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.4), .white.opacity(0.2)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1.5
-                                    )
-                            )
-                            .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-                    } else {
-                        // Subtle background for unselected
-                        Capsule()
-                            .fill(.white.opacity(0.03))
-                            .overlay(
-                                Capsule()
-                                    .strokeBorder(.white.opacity(0.06), lineWidth: 1)
-                            )
-                    }
-                }
-            )
-        }
     }
     
     // MARK: - Habits List
     
     private var habitsList: some View {
         VStack(spacing: 14) {
-            if viewModel.isSortMode {
-                // Sort mode - simple list
-                ForEach(viewModel.visibleHabits) { habit in
+            ForEach(viewModel.visibleHabits) { habit in
+                NavigationLink(destination: HabitDetailView(habit: habit)) {
                     HabitCardView(
                         habit: habit,
                         log: viewModel.getLog(for: habit.id),
                         streak: viewModel.calculateStreak(for: habit),
-                        isSortMode: true,
-                        onToggle: { _, _ in },
-                        onDelete: {}
-                    )
-                }
-            } else {
-                // Normal mode - core + bonus sections
-                ForEach(viewModel.coreHabits) { habit in
-                    HabitCardView(
-                        habit: habit,
-                        log: viewModel.getLog(for: habit.id),
-                        streak: viewModel.calculateStreak(for: habit),
-                        isSortMode: false,
-                        onToggle: { value, status in
-                            viewModel.toggleHabit(id: habit.id, value: value, status: status)
+                        isSortMode: viewModel.isSortMode,
+                        onToggle: { count, status in
+                            handleHabitToggle(habit: habit, count: count, status: status)
                         },
                         onDelete: {
-                            viewModel.deleteLog(habitId: habit.id)
+                            if let log = viewModel.getLog(for: habit.id) {
+                                viewModel.deleteLog(log)
+                            }
+                        },
+                        onFail: {
+                            // For habits that require reason on fail
+                            activeHabitForReason = habit
+                            failReason = ""
+                            showingReasonSheet = true
                         }
                     )
-                    .transition(.scale.combined(with: .opacity))
                 }
-                
-                // Bonus Habits Divider
-                if !viewModel.bonusHabits.isEmpty {
-                    bonusDivider
-                    
-                    ForEach(viewModel.bonusHabits) { habit in
-                        HabitCardView(
-                            habit: habit,
-                            log: viewModel.getLog(for: habit.id),
-                            streak: viewModel.calculateStreak(for: habit),
-                            isSortMode: false,
-                            onToggle: { value, status in
-                                viewModel.toggleHabit(id: habit.id, value: value, status: status)
-                            },
-                            onDelete: {
-                                viewModel.deleteLog(habitId: habit.id)
-                            }
-                        )
-                        .transition(.scale.combined(with: .opacity))
-                    }
-                }
+                .buttonStyle(PlainButtonStyle())
+                .transition(.scale.combined(with: .opacity))
             }
         }
     }
     
-    private var bonusDivider: some View {
-        HStack(spacing: 14) {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, .white.opacity(0.15), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1)
-            
-            Text(viewModel.preferences.language == "ar" ? "عادات المكافأة" : "BONUS")
-                .font(.system(size: 10, weight: .black, design: .rounded))
-                .foregroundColor(.white.opacity(0.4))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(
-                    Capsule()
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(.white.opacity(0.15), lineWidth: 1)
-                        )
-                )
-            
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, .white.opacity(0.15), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1)
+    // MARK: - Handle Habit Toggle (with Reason Check)
+    
+    private func handleHabitToggle(habit: Habit, count: Int, status: LogStatus) {
+        // If FAIL status and habit requires reason, show the reason sheet
+        if status == .fail && habit.requireReason == true {
+            activeHabitForReason = habit
+            failReason = ""
+            showingReasonSheet = true
+        } else {
+            // Normal toggle
+            viewModel.logHabit(habit, count: count, status: status)
         }
-        .padding(.vertical, 18)
     }
     
-    // MARK: - Floating Add Button
+    // MARK: - Reason Sheet
     
-    private var addButton: some View {
-        Button {
-            showAddHabit = true
-        } label: {
+    private var reasonSheet: some View {
+        NavigationView {
             ZStack {
-                // Glow effect
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [.green.opacity(0.4), .clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 35
-                        )
-                    )
-                    .frame(width: 70, height: 70)
-                    .blur(radius: 8)
+                // Dark background
+                Color(hex: "0a0a0a")
+                    .ignoresSafeArea()
                 
-                // Main button
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [.green, .blue],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 60, height: 60)
-                    .overlay(
-                        Circle()
-                            .strokeBorder(.white.opacity(0.3), lineWidth: 2)
-                    )
-                    .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
-                
-                Image(systemName: "plus")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 8) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.red.opacity(0.8))
+                        
+                        Text("Why did you miss this?")
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                        
+                        if let habit = activeHabitForReason {
+                            Text(habit.displayName(language: "en"))
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.top, 20)
+                    
+                    // Text Input
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Reason")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        
+                        TextField("Enter your reason...", text: $failReason, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                                    )
+                            )
+                            .foregroundColor(.white)
+                            .lineLimit(3...6)
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    Spacer()
+                    
+                    // Save Button
+                    Button {
+                        if let habit = activeHabitForReason {
+                            viewModel.logHabitWithReason(habit, reason: failReason)
+                        }
+                        showingReasonSheet = false
+                        activeHabitForReason = nil
+                        failReason = ""
+                    } label: {
+                        Text("Save")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                Capsule()
+                                    .fill(Color.red.opacity(0.8))
+                            )
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 30)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        showingReasonSheet = false
+                        activeHabitForReason = nil
+                        failReason = ""
+                    }
+                    .foregroundColor(.gray)
+                }
             }
         }
-        .padding(.trailing, 20)
-        .padding(.bottom, 110)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
     
     // MARK: - Helpers

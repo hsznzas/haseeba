@@ -8,14 +8,12 @@
 import SwiftUI
 
 struct LoginView: View {
-    @Environment(\.dismiss) var dismiss
-    @ObservedObject private var authManager = AuthManager.shared
-    
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
+    @Binding var isLoggedIn: Bool
     
     var body: some View {
         ZStack {
@@ -391,38 +389,34 @@ struct LoginView: View {
         isLoading = true
         showError = false
         
-        print("🔐 Signing in with real Supabase Auth: \(email)")
+        print("🔐 Sign in tapped with email: \(email)")
         
-        // Call Real Auth
-        Task {
-            do {
-                try await AuthManager.shared.signIn(email: email, password: password)
-                
-                // Success! AuthManager.isLoggedIn is now true, AppRootView will switch to main app
-                await MainActor.run {
-                    isLoading = false
-                    dismiss() // Close the LoginView sheet
-                    print("✅ User logged in successfully")
-                }
-            } catch {
-                // Failure
-                await MainActor.run {
-                    isLoading = false
-                    showErrorMessage(error.localizedDescription)
-                    print("❌ Sign in failed: \(error.localizedDescription)")
-                }
+        // Simulate network delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            // Generate and save dummy token via AuthManager
+            let dummyToken = "dummy_token_\(UUID().uuidString)"
+            AuthManager.shared.login(token: dummyToken)
+            
+            // Update logged in state
+            isLoading = false
+            
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                isLoggedIn = true
             }
+            
+            print("✅ User logged in successfully")
         }
     }
     
     private func handleDemoMode() {
         print("🎨 Demo mode activated")
         
-        // Save demo token via AuthManager - this sets isLoggedIn = true
+        // Save demo token via AuthManager
         AuthManager.shared.login(token: "demo_token")
         
-        // Dismiss this sheet; AppRootView will now show the main app
-        dismiss()
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            isLoggedIn = true
+        }
         
         print("✅ Demo mode active")
     }
@@ -446,6 +440,6 @@ struct LoginView: View {
 
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
-        LoginView()
+        LoginView(isLoggedIn: .constant(false))
     }
 }

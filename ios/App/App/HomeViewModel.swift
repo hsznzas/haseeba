@@ -7,6 +7,12 @@
 
 import Foundation
 import SwiftUI
+import Combine
+
+// MARK: - Notification Names
+extension Notification.Name {
+    static let refreshHabits = Notification.Name("refreshHabits")
+}
 
 @MainActor
 class HomeViewModel: ObservableObject {
@@ -20,6 +26,8 @@ class HomeViewModel: ObservableObject {
     @Published var isSortMode: Bool = false
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Computed Properties
     
@@ -35,15 +43,6 @@ class HomeViewModel: ObservableObject {
             .sorted { $0.order < $1.order }
     }
     
-    // Separate core and bonus habits
-    var coreHabits: [Habit] {
-        visibleHabits.filter { $0.affectsScore != false }
-    }
-    
-    var bonusHabits: [Habit] {
-        visibleHabits.filter { $0.affectsScore == false }
-    }
-    
     // MARK: - Private Properties
     
     private let dateFormatter: DateFormatter = {
@@ -52,563 +51,291 @@ class HomeViewModel: ObservableObject {
         return formatter
     }()
     
-    private var userToken: String?
-    
     // MARK: - Initialization
     
     init() {
         print("🚀 HomeViewModel initializing...")
         
-        // Read auth token from UserDefaults (Capacitor Preferences saves here)
-        if let token = UserDefaults.standard.string(forKey: "user_session_token"), !token.isEmpty {
-            self.userToken = token
-            print("✅ Auth token found: \(token.prefix(20))...")
-            
-            // Fetch real data from backend
-            Task {
-                await fetchData()
+        // Listen for auth changes
+        AuthManager.shared.$isLoggedIn
+            .receive(on: RunLoop.main)
+            .sink { [weak self] isLoggedIn in
+                if isLoggedIn {
+                    Task { await self?.fetchData() }
+                } else {
+                    self?.loadGuestData()
+                }
             }
-        } else {
-            print("⚠️ No auth token found. Loading dummy data for UI preview.")
-            loadDummyData()
-        }
+            .store(in: &cancellables)
+        
+        // Listen for refresh notifications (e.g., after adding a habit)
+        NotificationCenter.default.publisher(for: .refreshHabits)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                Task { await self?.fetchData() }
+            }
+            .store(in: &cancellables)
     }
     
-    // MARK: - Public Methods - Data Fetching
+    // MARK: - Public Methods
     
-    /// Fetch habits and logs from backend
     func fetchData() async {
-        guard let token = userToken else {
-            print("❌ Cannot fetch data: No auth token")
-            loadDummyData()
-            return
-        }
-        
         isLoading = true
         errorMessage = nil
         
         do {
             print("📡 Fetching habits from backend...")
-            
-            // Call HabitService to fetch habits
-            let fetchedHabits = try await HabitService.shared.fetchHabits(userToken: token)
-            
+            let fetchedHabits = try await HabitService.shared.fetchHabits()
+            self.habits = fetchedHabits
             print("✅ Successfully fetched \(fetchedHabits.count) habits")
             
-            // Update published properties on main actor
-            await MainActor.run {
-                self.habits = fetchedHabits
-                self.isLoading = false
-            }
-            
-            // Fetch logs for the selected date range
             await fetchLogs()
             
         } catch {
             print("❌ Failed to fetch habits: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
-            isLoading = false
-            
-            // Fallback to dummy data so UI is still visible
-            print("🔄 Falling back to dummy data for UI testing")
-            loadDummyData()
+            if habits.isEmpty {
+                print("🔄 Falling back to dummy data")
+                loadDummyData()
+            }
         }
+        
+        isLoading = false
     }
     
-    /// Fetch logs from backend
     private func fetchLogs() async {
-        guard let token = userToken else { return }
-        
         do {
             print("📡 Fetching logs from backend...")
-            
-            // Fetch logs for last 30 days (for streak calculation)
             let startDate = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
             let endDate = Date()
             
             let fetchedLogs = try await HabitService.shared.fetchLogs(
-                userToken: token,
                 startDate: dateFormatter.string(from: startDate),
                 endDate: dateFormatter.string(from: endDate)
             )
             
+            self.logs = fetchedLogs
             print("✅ Successfully fetched \(fetchedLogs.count) logs")
-            
-            await MainActor.run {
-                self.logs = fetchedLogs
-            }
             
         } catch {
             print("⚠️ Failed to fetch logs: \(error.localizedDescription)")
-            // Continue with empty logs
         }
     }
     
-    /// Refresh data (pull-to-refresh)
     func refreshData() async {
         print("🔄 Refreshing data...")
         await fetchData()
     }
     
-    // MARK: - Public Methods - Habit Actions
+    // MARK: - Habit Actions
     
-    /// Toggle habit status (mark as done/fail/delete)
-    func toggleHabit(id: String, value: Int, status: LogStatus) {
-        let logId = "\(id)-\(selectedDateString)"
-        
-        // Check if log already exists
-        if let index = logs.firstIndex(where: { $0.id == logId }) {
-            // Remove existing log (optimistic update)
-            logs.remove(at: index)
-            
-            // If we have a token, sync to backend
-            if let token = userToken {
-                Task {
-                    do {
-                        try await HabitService.shared.deleteLog(
-                            userToken: token,
-                            logId: logId
-                        )
-                        print("✅ Log deleted from backend")
-                    } catch {
-                        print("❌ Failed to delete log: \(error.localizedDescription)")
-                        // Re-add log on failure
-                        await MainActor.run {
-                            self.logs.insert(HabitLog(
-                                id: logId,
-                                habitId: id,
-                                date: selectedDateString,
-                                value: value,
-                                status: status,
-                                notes: nil,
-                                timestamp: Date().timeIntervalSince1970,
-                                reason: nil
-                            ), at: index)
-                        }
-                    }
-                }
-            }
+    func toggleHabit(_ habit: Habit) {
+        if let existingLog = logs.first(where: { $0.habitId == habit.id && $0.date == selectedDateString }) {
+            deleteLog(existingLog)
         } else {
-            // Add new log (optimistic update)
-            let newLog = HabitLog(
-                id: logId,
-                habitId: id,
-                date: selectedDateString,
-                value: value,
-                status: status,
-                notes: nil,
-                timestamp: Date().timeIntervalSince1970,
-                reason: nil
-            )
-            logs.append(newLog)
-            
-            // If we have a token, sync to backend
-            if let token = userToken {
-                Task {
-                    do {
-                        try await HabitService.shared.saveLog(
-                            userToken: token,
-                            log: newLog
-                        )
-                        print("✅ Log saved to backend")
-                    } catch {
-                        print("❌ Failed to save log: \(error.localizedDescription)")
-                        // Remove log on failure
-                        await MainActor.run {
-                            self.logs.removeAll { $0.id == logId }
-                        }
-                    }
-                }
-            }
+            logHabit(habit)
         }
     }
     
-    /// Delete log for a habit on selected date
-    func deleteLog(habitId: String) {
-        let logId = "\(habitId)-\(selectedDateString)"
-        logs.removeAll { $0.habitId == habitId && $0.date == selectedDateString }
+    func logHabit(_ habit: Habit, count: Int? = nil, status: LogStatus = .done, reason: String? = nil) {
+        let logCount: Int
+        if let providedCount = count {
+            logCount = providedCount
+        } else {
+            logCount = (habit.type == .counter) ? (habit.targetCount ?? 1) : 1
+        }
         
-        // If we have a token, sync to backend
-        if let token = userToken {
-            Task {
-                do {
-                    try await HabitService.shared.deleteLog(
-                        userToken: token,
-                        logId: logId
-                    )
-                    print("✅ Log deleted from backend")
-                } catch {
-                    print("❌ Failed to delete log: \(error.localizedDescription)")
+        let newLog = HabitLog(
+            id: nil,
+            userId: nil,
+            habitId: habit.id,
+            count: logCount,
+            date: selectedDateString,
+            completedAt: ISO8601DateFormatter().string(from: Date()),
+            status: status,
+            notes: nil,
+            reason: reason
+        )
+        
+        logs.append(newLog)
+        
+        Task {
+            do {
+                try await HabitService.shared.saveLog(log: newLog)
+                print("✅ Log saved to backend")
+                await fetchLogs() // Refresh to get real ID
+            } catch {
+                print("❌ Failed to save log: \(error)")
+                if let index = logs.firstIndex(where: { $0.habitId == habit.id && $0.date == selectedDateString }) {
+                    logs.remove(at: index)
                 }
             }
         }
     }
     
-    /// Get log for specific habit on selected date
+    /// Log a habit as FAIL with a reason
+    func logHabitWithReason(_ habit: Habit, reason: String) {
+        logHabit(habit, count: 0, status: .fail, reason: reason.isEmpty ? nil : reason)
+    }
+    
+    func deleteLog(_ log: HabitLog) {
+        let targetHabitId = log.habitId
+        let targetDate = log.date
+        
+        // Remove ONLY the specific log for this habit and date
+        logs.removeAll { $0.habitId == targetHabitId && $0.date == targetDate }
+        
+        guard let logId = log.id else {
+            print("⚠️ Log has no ID, skipping backend delete")
+            return
+        }
+        
+        Task {
+            do {
+                try await HabitService.shared.deleteLog(logId: logId)
+                print("✅ Log deleted from backend for habit: \(targetHabitId)")
+            } catch {
+                print("❌ Failed to delete log: \(error)")
+                // Optionally re-fetch to restore consistency
+            }
+        }
+    }
+    
     func getLog(for habitId: String) -> HabitLog? {
+        // Return ONLY the log for this specific habit AND the selected date
         logs.first { $0.habitId == habitId && $0.date == selectedDateString }
     }
     
-    /// Calculate streak for a habit as of selected date
-    func calculateStreak(for habit: Habit) -> Int {
-        let habitLogs = logs.filter { $0.habitId == habit.id }
-            .sorted { $0.date < $1.date }
-        
-        var currentStreak = 0
-        var checkDate = selectedDate
-        
-        // Get log for selected date
-        let selectedLog = habitLogs.first { $0.date == selectedDateString }
-        
-        // Check if selected date has successful log or is excused
-        if let log = selectedLog {
-            if log.status == .excused {
-                // Excused day - continue checking backwards
-                checkDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
-            } else if log.isSuccessful(for: habit) {
-                currentStreak = 1
-                checkDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
-            } else {
-                return 0
-            }
-        } else {
-            return 0
-        }
-        
-        // Check backwards for consecutive days
-        while true {
-            let checkDateStr = dateFormatter.string(from: checkDate)
-            
-            // Check if before habit start date
-            if let startDateStr = habit.startDate,
-               let startDate = dateFormatter.date(from: startDateStr),
-               checkDate < startDate {
-                break
-            }
-            
-            if let log = habitLogs.first(where: { $0.date == checkDateStr }) {
-                if log.status == .excused {
-                    // Excused day - bridge, don't increment but continue
-                    if let newDate = Calendar.current.date(byAdding: .day, value: -1, to: checkDate) {
-                        checkDate = newDate
-                        continue
-                    } else {
-                        break
-                    }
-                } else if log.isSuccessful(for: habit) {
-                    currentStreak += 1
-                    if let newDate = Calendar.current.date(byAdding: .day, value: -1, to: checkDate) {
-                        checkDate = newDate
-                    } else {
-                        break
-                    }
-                } else {
-                    break
-                }
-            } else {
-                break
-            }
-        }
-        
-        return currentStreak
-    }
-    
-    /// Calculate stats for a specific date
     func calculateStats(for date: Date) -> DailyStats {
         let dateStr = dateFormatter.string(from: date)
         let dayLogs = logs.filter { $0.date == dateStr }
         let dayOfWeek = Calendar.current.component(.weekday, from: date)
         
         var stats = DailyStats()
-        
         let habitsForDate = habits.filter { $0.shouldShow(on: date, dayOfWeek: dayOfWeek) }
         
         for habit in habitsForDate {
             if let log = dayLogs.first(where: { $0.habitId == habit.id }) {
-                // Has log
                 if habit.type == .prayer {
-                    if log.value >= PrayerQuality.onTime.rawValue {
+                    // Prayer: Check if at least "on time" quality
+                    if log.count >= PrayerQuality.onTime.rawValue {
                         stats.done += 1
                     } else {
                         stats.failed += 1
                     }
-                } else if habit.type == .counter {
-                    let target = habit.dailyTarget ?? 1
-                    if log.value >= target || log.status == .done {
+                } else if let status = log.status {
+                    // Regular/Counter: Check status
+                    if status == .done {
                         stats.done += 1
-                    } else {
+                    } else if status == .fail {
                         stats.failed += 1
+                    } else {
+                        stats.pending += 1
                     }
                 } else {
-                    if log.status == .done {
-                        stats.done += 1
-                    } else {
-                        stats.failed += 1
-                    }
+                    stats.done += 1
                 }
             } else {
-                // No log - pending
                 stats.pending += 1
             }
         }
-        
         return stats
     }
     
-    /// Reorder habits
-    func reorderHabits(_ reorderedHabits: [Habit]) {
-        var updated = reorderedHabits
-        for (index, _) in updated.enumerated() {
-            updated[index].order = index
-        }
-        habits = updated
+    /// Calculate actual consecutive day streak for a specific habit
+    func calculateStreak(for habit: Habit) -> Int {
+        // Filter logs ONLY for this specific habit
+        let habitLogs = logs.filter { $0.habitId == habit.id }
+        if habitLogs.isEmpty { return 0 }
         
-        // If we have a token, sync to backend
-        if let token = userToken {
-            Task {
-                do {
-                    try await HabitService.shared.updateHabitsOrder(
-                        userToken: token,
-                        habits: updated
-                    )
-                    print("✅ Habit order synced to backend")
-                } catch {
-                    print("❌ Failed to sync habit order: \(error.localizedDescription)")
+        // Get unique dates with successful logs, sorted descending
+        let successfulDates = habitLogs
+            .filter { log in
+                // For prayers: count >= 1 means at least on time
+                // For others: any log counts
+                if habit.type == .prayer {
+                    return log.count >= PrayerQuality.onTime.rawValue
                 }
+                return log.status == .done || log.count > 0
             }
+            .compactMap { dateFormatter.date(from: $0.date) }
+            .sorted(by: >)
+        
+        if successfulDates.isEmpty { return 0 }
+        
+        // Count consecutive days starting from today
+        var streak = 0
+        let calendar = Calendar.current
+        var expectedDate = calendar.startOfDay(for: Date())
+        
+        for date in successfulDates {
+            let logDay = calendar.startOfDay(for: date)
+            
+            if logDay == expectedDate {
+                streak += 1
+                expectedDate = calendar.date(byAdding: .day, value: -1, to: expectedDate)!
+            } else if logDay < expectedDate {
+                // Gap in the streak
+                break
+            }
+            // If logDay > expectedDate, it's a future date (skip)
         }
+        
+        return streak
     }
     
-    // MARK: - Private Methods - Dummy Data Fallback
+    func loadGuestData() {
+        loadDummyData()
+    }
     
     private func loadDummyData() {
-        let today = dateFormatter.string(from: Date())
-        
-        print("🎨 Loading dummy data for UI preview...")
-        
-        // Create dummy habits
-        habits = [
-            Habit(
-                id: "fajr",
-                name: "Fajr",
-                nameAr: "الفجر",
-                type: .prayer,
-                emoji: "🌅",
-                icon: nil,
-                color: "#3b82f6",
-                dailyTarget: nil,
-                presetId: "fajr",
-                isActive: true,
-                order: 0,
-                startDate: today,
-                isArchived: false,
-                requireReason: true,
-                affectsScore: true,
-                createdAt: today,
-                updatedAt: today
-            ),
-            Habit(
-                id: "dhuhr",
-                name: "Dhuhr",
-                nameAr: "الظهر",
-                type: .prayer,
-                emoji: "☀️",
-                icon: nil,
-                color: "#3b82f6",
-                dailyTarget: nil,
-                presetId: "dhuhr",
-                isActive: true,
-                order: 1,
-                startDate: today,
-                isArchived: false,
-                requireReason: true,
-                affectsScore: true,
-                createdAt: today,
-                updatedAt: today
-            ),
-            Habit(
-                id: "asr",
-                name: "Asr",
-                nameAr: "العصر",
-                type: .prayer,
-                emoji: "🌤️",
-                icon: nil,
-                color: "#3b82f6",
-                dailyTarget: nil,
-                presetId: "asr",
-                isActive: true,
-                order: 2,
-                startDate: today,
-                isArchived: false,
-                requireReason: true,
-                affectsScore: true,
-                createdAt: today,
-                updatedAt: today
-            ),
-            Habit(
-                id: "maghrib",
-                name: "Maghrib",
-                nameAr: "المغرب",
-                type: .prayer,
-                emoji: "🌆",
-                icon: nil,
-                color: "#3b82f6",
-                dailyTarget: nil,
-                presetId: "maghrib",
-                isActive: true,
-                order: 3,
-                startDate: today,
-                isArchived: false,
-                requireReason: true,
-                affectsScore: true,
-                createdAt: today,
-                updatedAt: today
-            ),
-            Habit(
-                id: "isha",
-                name: "Isha",
-                nameAr: "العشاء",
-                type: .prayer,
-                emoji: "🌙",
-                icon: nil,
-                color: "#3b82f6",
-                dailyTarget: nil,
-                presetId: "isha",
-                isActive: true,
-                order: 4,
-                startDate: today,
-                isArchived: false,
-                requireReason: true,
-                affectsScore: true,
-                createdAt: today,
-                updatedAt: today
-            ),
-            Habit(
-                id: "quran",
-                name: "Quran Reading",
-                nameAr: "قراءة القرآن",
-                type: .regular,
-                emoji: "📖",
-                icon: nil,
-                color: "#10b981",
-                dailyTarget: nil,
-                presetId: nil,
-                isActive: true,
-                order: 5,
-                startDate: today,
-                isArchived: false,
-                requireReason: true,
-                affectsScore: true,
-                createdAt: today,
-                updatedAt: today
-            ),
-            Habit(
-                id: "dhikr",
-                name: "Morning Dhikr",
-                nameAr: "أذكار الصباح",
-                type: .regular,
-                emoji: "🤲",
-                icon: nil,
-                color: "#f59e0b",
-                dailyTarget: nil,
-                presetId: nil,
-                isActive: true,
-                order: 6,
-                startDate: today,
-                isArchived: false,
-                requireReason: true,
-                affectsScore: true,
-                createdAt: today,
-                updatedAt: today
-            ),
-            Habit(
-                id: "water",
-                name: "Drink Water",
-                nameAr: "شرب الماء",
-                type: .counter,
-                emoji: "💧",
-                icon: nil,
-                color: "#06b6d4",
-                dailyTarget: 8,
-                presetId: nil,
-                isActive: true,
-                order: 7,
-                startDate: today,
-                isArchived: false,
-                requireReason: false,
-                affectsScore: false, // Bonus habit
-                createdAt: today,
-                updatedAt: today
-            ),
-            Habit(
-                id: "exercise",
-                name: "Exercise",
-                nameAr: "التمارين",
-                type: .counter,
-                emoji: "💪",
-                icon: nil,
-                color: "#ef4444",
-                dailyTarget: 30,
-                presetId: nil,
-                isActive: true,
-                order: 8,
-                startDate: today,
-                isArchived: false,
-                requireReason: false,
-                affectsScore: false, // Bonus habit
-                createdAt: today,
-                updatedAt: today
-            )
-        ]
-        
-        // Create some dummy logs for yesterday to show streaks
-        if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) {
-            let yesterdayStr = dateFormatter.string(from: yesterday)
+            let today = dateFormatter.string(from: Date())
+            print("🎨 Loading dummy data for UI preview...")
             
-            logs = [
-                HabitLog(
-                    id: "fajr-\(yesterdayStr)",
-                    habitId: "fajr",
-                    date: yesterdayStr,
-                    value: PrayerQuality.takbirah.rawValue,
-                    status: .done,
-                    notes: nil,
-                    timestamp: yesterday.timeIntervalSince1970,
-                    reason: nil
+            // ✅ FIX: Swapped 'unit' and 'targetCount' to match Models.swift definition order
+            self.habits = [
+                Habit(
+                    id: "1",
+                    userId: "guest",
+                    nameEn: "Fajr",
+                    nameAr: "الفجر",
+                    type: .prayer,
+                    emoji: "🌅",
+                    color: "#3b82f6",
+                    unit: nil,          // ✅ Moved 'unit' before 'targetCount'
+                    targetCount: 1,
+                    presetId: nil,
+                    isActive: true,
+                    order: 1,
+                    startDate: today,
+                    requireReason: nil,
+                    affectsScore: nil,
+                    createdAt: nil
                 ),
-                HabitLog(
-                    id: "dhuhr-\(yesterdayStr)",
-                    habitId: "dhuhr",
-                    date: yesterdayStr,
-                    value: PrayerQuality.jamaa.rawValue,
-                    status: .done,
-                    notes: nil,
-                    timestamp: yesterday.timeIntervalSince1970,
-                    reason: nil
-                ),
-                HabitLog(
-                    id: "quran-\(yesterdayStr)",
-                    habitId: "quran",
-                    date: yesterdayStr,
-                    value: 1,
-                    status: .done,
-                    notes: nil,
-                    timestamp: yesterday.timeIntervalSince1970,
-                    reason: nil
-                ),
-                HabitLog(
-                    id: "water-\(yesterdayStr)",
-                    habitId: "water",
-                    date: yesterdayStr,
-                    value: 5,
-                    status: nil,
-                    notes: nil,
-                    timestamp: yesterday.timeIntervalSince1970,
-                    reason: nil
+                Habit(
+                    id: "2",
+                    userId: "guest",
+                    nameEn: "Drink Water",
+                    nameAr: "ماء",
+                    type: .counter,
+                    emoji: "💧",
+                    color: "#007AFF",
+                    unit: "cups",       // ✅ Moved 'unit' before 'targetCount'
+                    targetCount: 8,
+                    presetId: nil,
+                    isActive: true,
+                    order: 2,
+                    startDate: today,
+                    requireReason: nil,
+                    affectsScore: nil,
+                    createdAt: nil
                 )
             ]
+            
+            self.logs = [
+                HabitLog(id: "101", userId: "guest", habitId: "1", count: 1, date: today, completedAt: nil, status: .done, notes: nil, reason: nil)
+            ]
+            
+            print("✅ Dummy data loaded successfully")
         }
-        
-        print("✅ Dummy data loaded successfully")
-    }
 }

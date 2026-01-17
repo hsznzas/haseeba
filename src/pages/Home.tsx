@@ -485,14 +485,18 @@ const Home: React.FC = () => {
                   <span className="text-emerald-500 font-semibold">{headerStats.selectedDayName}</span>
                   <span className="text-emerald-500">{headerStats.selected.done}✓</span>
                   <span className="text-red-400">{headerStats.selected.failed}✗</span>
-                  <span className="text-yellow-400 inline-flex items-center gap-0.5">{headerStats.selected.pending}<Hourglass size={10} /></span>
+                  {headerStats.selected.pending > 0 && (
+                    <span className="text-yellow-400 inline-flex items-center gap-0.5">{headerStats.selected.pending}<Hourglass size={10} /></span>
+                  )}
                 </div>
                 <div className="w-px h-4 bg-slate-300 dark:bg-white/10" />
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-gray-500">{headerStats.dayBeforeName}</span>
                   <span className="text-emerald-500/60">{headerStats.dayBefore.done}✓</span>
                   <span className="text-red-400/60">{headerStats.dayBefore.failed}✗</span>
-                  <span className="text-yellow-400/60 inline-flex items-center gap-0.5">{headerStats.dayBefore.pending}<Hourglass size={10} /></span>
+                  {headerStats.dayBefore.pending > 0 && (
+                    <span className="text-yellow-400/60 inline-flex items-center gap-0.5">{headerStats.dayBefore.pending}<Hourglass size={10} /></span>
+                  )}
                 </div>
               </div>
             </div>

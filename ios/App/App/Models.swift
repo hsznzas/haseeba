@@ -1,15 +1,7 @@
-//
-//  Models.swift
-//  Haseeb
-//
-//  Data models matching the TypeScript interfaces
-//
-
 import Foundation
 import SwiftUI
 
 // MARK: - Enums
-
 enum HabitType: String, Codable {
     case regular = "REGULAR"
     case prayer = "PRAYER"
@@ -31,105 +23,162 @@ enum PrayerQuality: Int, Codable {
 }
 
 // MARK: - Habit Model
-
 struct Habit: Identifiable, Codable, Equatable {
+    // ✅ FIX: Changed ID to String to match 'id (text)' in DB Report
     let id: String
-    var name: String
-    var nameAr: String
-    var type: HabitType
+    let userId: String?
+    
+    var nameEn: String
+    var nameAr: String?
+    var type: HabitType?
+    
+    // ✅ FIX: Added 'emoji' from DB Report
     var emoji: String?
-    var icon: String?
-    var color: String?
-    var dailyTarget: Int?
+    
+    // Optional properties (Some might not be in DB, so we make them optional)
+    var color: String? // Not in DB Report, but needed for UI (will be nil if fetched)
+    var unit: String?  // Not in DB Report
+    
+    var targetCount: Int?
     var presetId: String?
     var isActive: Bool
     var order: Int
     var startDate: String?
-    var isArchived: Bool?
     var requireReason: Bool?
     var affectsScore: Bool?
     var createdAt: String?
-    var updatedAt: String?
     
-    // Computed property for display name based on language
-    func displayName(language: String) -> String {
-        return language == "ar" ? nameAr : name
+    // ✅ CRITICAL: Map Swift names to YOUR Database columns
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case nameEn = "name"       // Report says 'name'
+        case nameAr = "name_ar"
+        case type
+        case emoji                 // Report says 'emoji'
+        case color                 // Will be ignored if missing in DB
+        case unit                  // Will be ignored if missing in DB
+        case targetCount = "daily_target" // Report says 'daily_target'
+        case presetId = "preset_id"
+        case isActive = "is_active"
+        case order = "order_index" // Report says 'order_index'
+        case startDate = "start_date"
+        case requireReason = "require_reason"
+        case affectsScore = "affects_score"
+        case createdAt = "created_at"
     }
     
-    // Check if habit should be visible on a given date
+    func displayName(language: String) -> String {
+        if language == "ar", let arabic = nameAr, !arabic.isEmpty {
+            return arabic
+        }
+        return nameEn
+    }
+    
     func shouldShow(on date: Date, dayOfWeek: Int) -> Bool {
         guard isActive else { return false }
         
-        // Check start date
+        // Check start date if present
         if let startDateStr = startDate {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            if let startDate = formatter.date(from: startDateStr),
-               date < startDate {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withFullDate] // "yyyy-MM-dd"
+            if let start = formatter.date(from: startDateStr), date < start {
                 return false
             }
         }
         
-        // Special fasting habits
-        if id == "fasting_monday" {
-            return dayOfWeek == 2 // Monday (Swift Calendar uses 1=Sunday, 2=Monday)
+        if nameEn.lowercased().contains("monday") && type == .regular {
+             return dayOfWeek == 2
         }
-        
-        if id == "fasting_thursday" {
-            return dayOfWeek == 5 // Thursday
+        if nameEn.lowercased().contains("thursday") && type == .regular {
+             return dayOfWeek == 5
         }
-        
         return true
     }
 }
 
-// MARK: - HabitLog Model
-
-struct HabitLog: Identifiable, Codable, Equatable {
-    let id: String
-    var habitId: String
-    var date: String // Format: "yyyy-MM-dd"
-    var value: Int
-    var status: LogStatus?
-    var notes: String?
-    var timestamp: Double
-    var reason: String?
+// MARK: - Habit Log Model
+struct HabitLog: Identifiable, Codable {
+    // ✅ FIX: Changed ID to String to match DB
+    let id: String?
+    let userId: String?
+    let habitId: String
     
-    // Check if log represents success
+    let count: Int
+    let date: String
+    let completedAt: String?
+    let status: LogStatus?
+    let notes: String?
+    let reason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case habitId = "habit_id"
+        case count = "value"       // ✅ FIX: Report says 'value'
+        case date = "log_date"     // ✅ FIX: Report says 'log_date'
+        case completedAt = "completed_at"
+        case status
+        case notes
+        case reason
+    }
+    
+    // Custom Encoder
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(id, forKey: .id)
+        try container.encode(habitId, forKey: .habitId)
+        try container.encode(count, forKey: .count)
+        try container.encode(date, forKey: .date)
+        try container.encodeIfPresent(completedAt, forKey: .completedAt)
+        try container.encodeIfPresent(userId, forKey: .userId)
+        try container.encodeIfPresent(status, forKey: .status)
+        try container.encodeIfPresent(notes, forKey: .notes)
+        try container.encodeIfPresent(reason, forKey: .reason)
+    }
+    
     func isSuccessful(for habit: Habit) -> Bool {
-        switch habit.type {
+        guard let type = habit.type else { return count > 0 }
+        switch type {
         case .prayer:
-            return value == PrayerQuality.takbirah.rawValue
+            return count >= PrayerQuality.takbirah.rawValue
         case .counter:
-            let target = habit.dailyTarget ?? 1
-            return value >= target || status == .done
+            let target = habit.targetCount ?? 1
+            return count >= target
         case .regular:
-            return status == .done
+            if let s = status, s == .done { return true }
+            return count > 0
         }
     }
 }
 
-// MARK: - User Preferences
-
+// MARK: - User Preferences (Matches Report)
 struct UserPreferences: Codable {
     var language: String
     var gender: String
-    var isExcused: Bool
     var showHijri: Bool
     var dateOfBirth: String?
-    var theme: String
+    
+    // Not in DB report, but kept for UI state (won't be fetched if not in CodingKeys)
+    var isExcused: Bool = false
+    var theme: String = "dark"
+    
+    enum CodingKeys: String, CodingKey {
+        case language
+        case gender
+        case showHijri = "show_hijri"
+        case dateOfBirth = "date_of_birth"
+    }
     
     static let defaultPreferences = UserPreferences(
         language: "en",
         gender: "male",
-        isExcused: false,
         showHijri: true,
         dateOfBirth: nil,
+        isExcused: false,
         theme: "dark"
     )
 }
-
-// MARK: - Daily Stats
 
 struct DailyStats {
     var done: Int = 0
@@ -138,7 +187,6 @@ struct DailyStats {
 }
 
 // MARK: - Color Extension
-
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -165,4 +213,3 @@ extension Color {
         )
     }
 }
-

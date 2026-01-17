@@ -8,8 +8,7 @@
 import SwiftUI
 
 struct AppRootView: View {
-    @ObservedObject private var authManager = AuthManager.shared
-    @ObservedObject private var languageManager = LanguageManager.shared
+    @State private var isLoggedIn: Bool = false
     @State private var isCheckingAuth: Bool = true
     
     var body: some View {
@@ -17,20 +16,16 @@ struct AppRootView: View {
             if isCheckingAuth {
                 // Splash screen while checking auth
                 splashScreen
-            } else if authManager.isLoggedIn {
+            } else if isLoggedIn {
                 // Show main app
-                FloatingNavigationContainer()
+                MainTabView()
                     .transition(.opacity.combined(with: .scale))
             } else {
-                // Show welcome/onboarding (Pre-Login)
-                WelcomeView()
+                // Show login
+                LoginView(isLoggedIn: $isLoggedIn)
                     .transition(.opacity.combined(with: .scale))
             }
         }
-        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: authManager.isLoggedIn)
-        .environment(\.layoutDirection, languageManager.layoutDirection)
-        .environment(\.locale, languageManager.locale)
-        .environmentObject(languageManager)
         .onAppear {
             checkAuthStatus()
         }
@@ -92,8 +87,8 @@ struct AppRootView: View {
                         )
                 }
                 
-                // App name - localized
-                Text(languageManager.t(.title))
+                // App name
+                Text("Haseeb")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                 
@@ -112,16 +107,24 @@ struct AppRootView: View {
     private func checkAuthStatus() {
         print("🔍 Checking authentication status...")
         
-        // Brief delay for splash screen visibility, then check auth via AuthManager
+        // Simulate checking auth (e.g., validating token)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            // AuthManager.checkAuthStatus() will set isLoggedIn appropriately
-            authManager.checkAuthStatus()
-            
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                isCheckingAuth = false
+            // Check if token exists in UserDefaults
+            if let token = UserDefaults.standard.string(forKey: "user_session_token"), !token.isEmpty {
+                print("✅ Auth token found: \(token.prefix(20))...")
+                
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    isLoggedIn = true
+                    isCheckingAuth = false
+                }
+            } else {
+                print("⚠️ No auth token found. Showing login screen.")
+                
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    isLoggedIn = false
+                    isCheckingAuth = false
+                }
             }
-            
-            print("🔍 Auth check complete. Logged in: \(authManager.isLoggedIn)")
         }
     }
 }
@@ -132,5 +135,4 @@ struct AppRootView_Previews: PreviewProvider {
     static var previews: some View {
         AppRootView()
     }
-    
 }

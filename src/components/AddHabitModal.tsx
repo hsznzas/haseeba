@@ -3,8 +3,8 @@ import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { HabitType, Habit } from '../../types';
 import { useData } from '../context/DataContext';
-import { X, Activity, Trash2, Info } from 'lucide-react';
-import { format } from 'date-fns';
+import { X, Activity, Trash2, Info, Calendar, ChevronDown } from 'lucide-react';
+import { format, isAfter, startOfDay } from 'date-fns';
 import { suggestIcon } from '../services/geminiService';
 import { ICON_MAP, IconName, AVAILABLE_ICONS } from '../utils/iconMap';
 
@@ -30,6 +30,10 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
   const [affectsScore, setAffectsScore] = useState(true);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [isTwiceDaily, setIsTwiceDaily] = useState(false);
+  
+  // Backdated start date
+  const [useCustomStartDate, setUseCustomStartDate] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
 
   useEffect(() => {
     if (isOpen) {
@@ -41,6 +45,14 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
         setAffectsScore(habitToEdit.affectsScore !== undefined ? habitToEdit.affectsScore : true);
         // Check if this is a twice-daily habit (COUNTER with target 2)
         setIsTwiceDaily(habitToEdit.type === HabitType.COUNTER && habitToEdit.dailyTarget === 2);
+        // For editing, show the existing start date if different from today
+        if (habitToEdit.startDate && habitToEdit.startDate !== format(new Date(), 'yyyy-MM-dd')) {
+          setUseCustomStartDate(true);
+          setCustomStartDate(habitToEdit.startDate);
+        } else {
+          setUseCustomStartDate(false);
+          setCustomStartDate(format(new Date(), 'yyyy-MM-dd'));
+        }
       } else {
         setName('');
         setType(HabitType.REGULAR);
@@ -48,6 +60,8 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
         setSelectedIcon('Activity');
         setAffectsScore(true);
         setIsTwiceDaily(false);
+        setUseCustomStartDate(false);
+        setCustomStartDate(format(new Date(), 'yyyy-MM-dd'));
       }
       setShowIconPicker(false);
       setShowDeleteConfirm(false);
@@ -88,13 +102,19 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
     const nameEn = currentLang === 'en' ? name : (habitToEdit?.name || name);
     const nameAr = currentLang === 'ar' ? name : (habitToEdit?.nameAr || name);
 
-    // For new habits, use the selected date from navbar (or today if not available)
-    // For existing habits being edited, preserve their original startDate
-    const habitStartDate = habitToEdit?.startDate 
-      ? habitToEdit.startDate 
-      : format(selectedDate || new Date(), 'yyyy-MM-dd');
+    // Determine start date:
+    // - If editing, allow changing start date via custom date picker
+    // - If creating new, use custom date picker if enabled, otherwise today
+    let habitStartDate: string;
+    if (useCustomStartDate) {
+      habitStartDate = customStartDate;
+    } else if (habitToEdit?.startDate) {
+      habitStartDate = habitToEdit.startDate;
+    } else {
+      habitStartDate = format(new Date(), 'yyyy-MM-dd');
+    }
     
-    console.log('📅 Creating/editing habit with startDate:', habitStartDate, 'selectedDate:', selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'none');
+    console.log('📅 Creating/editing habit with startDate:', habitStartDate, 'useCustomStartDate:', useCustomStartDate);
 
     const updatedHabit: Habit = {
       id: habitToEdit ? habitToEdit.id : `custom_${Date.now()}`,
@@ -339,6 +359,67 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit,
                   ? 'الصلوات الخمس يجب أن تؤثر على النتيجة' 
                   : '5 Key Prayers must affect score'}
               </p>
+            )}
+          </div>
+
+          {/* Start Date - Backdated Habit Support */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  {preferences.language === 'ar' ? 'تاريخ بدء مخصص' : 'Custom Start Date'}
+                </label>
+                <span className="text-[10px] text-gray-500">
+                  {preferences.language === 'ar' ? 'البدء من تاريخ في الماضي' : 'Start tracking from a past date'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const newVal = !useCustomStartDate;
+                  setUseCustomStartDate(newVal);
+                  if (!newVal) {
+                    setCustomStartDate(format(new Date(), 'yyyy-MM-dd'));
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  useCustomStartDate ? 'bg-cyan-500' : 'bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    useCustomStartDate ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            
+            {useCustomStartDate && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    max={format(new Date(), 'yyyy-MM-dd')}
+                    onChange={(e) => {
+                      const selectedDate = e.target.value;
+                      const today = format(new Date(), 'yyyy-MM-dd');
+                      // Prevent future dates
+                      if (selectedDate <= today) {
+                        setCustomStartDate(selectedDate);
+                      }
+                    }}
+                    className="w-full bg-slate-950 border border-cyan-500/30 rounded-xl p-3 text-white focus:border-cyan-500 focus:outline-none transition-all pr-10 appearance-none cursor-pointer"
+                  />
+                  <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" />
+                </div>
+                <p className="text-[10px] text-cyan-400/70 flex items-center gap-1.5">
+                  <Calendar size={12} />
+                  {preferences.language === 'ar' 
+                    ? `التتبع يبدأ من: ${customStartDate}` 
+                    : `Tracking starts from: ${customStartDate}`}
+                </p>
+              </div>
             )}
           </div>
 

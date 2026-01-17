@@ -1,7 +1,7 @@
 import { Habit } from './types';
 import { HabitType } from './types';
 
-export const LATEST_UPDATE = "🚀 Welcome to Haseeb v1.0 - Tracking Deen & Dunya";
+export const LATEST_UPDATE = "📅 New: Backdate habits to start tracking from any past date!";
 
 export const TRANSLATIONS = {
   en: {
