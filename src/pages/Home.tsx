@@ -673,7 +673,6 @@ const Home: React.FC = () => {
             onClose={handleCloseModal} 
             onAdded={handleAdded}
             habitToEdit={editingHabit}
-            selectedDate={selectedDate}
         />
 
         <ReasonModal 

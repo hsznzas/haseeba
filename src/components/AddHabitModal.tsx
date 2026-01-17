@@ -3,8 +3,8 @@ import { usePreferences } from '../App';
 import { TRANSLATIONS } from '../../constants';
 import { HabitType, Habit } from '../../types';
 import { useData } from '../context/DataContext';
-import { X, Activity, Trash2, Info, Calendar, ChevronDown } from 'lucide-react';
-import { format, isAfter, startOfDay } from 'date-fns';
+import { X, Activity, Trash2, Info, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
 import { suggestIcon } from '../services/geminiService';
 import { ICON_MAP, IconName, AVAILABLE_ICONS } from '../utils/iconMap';
 
@@ -13,10 +13,9 @@ interface Props {
   onClose: () => void;
   onAdded: () => void;
   habitToEdit?: Habit | null;
-  selectedDate?: Date;
 }
 
-const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit, selectedDate }) => {
+const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onAdded, habitToEdit }) => {
   const { preferences } = usePreferences();
   const { handleSaveHabit, handleDeleteHabit } = useData();
   const t = TRANSLATIONS[preferences.language];
