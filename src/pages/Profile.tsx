@@ -1182,81 +1182,20 @@ const Profile: React.FC = () => {
              "space-y-1 transition-all duration-300 overflow-hidden",
              habitsExpanded ? "max-h-none" : "max-h-[200px]"
            )}>
-             {/* Rawatib Master Toggle */}
-             <div className="flex items-center gap-2 p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-               <div className="flex-1 min-w-0 flex items-center gap-2">
-                 {(() => {
-                   const IconComp = ICON_MAP.Star;
-                   return <IconComp size={18} style={{ color: '#38bdf8' }} className="shrink-0" />;
-                 })()}
-                 <div>
-                   <h4 className="text-sm font-bold text-white">Rawatib</h4>
-                   <p className="text-[10px] text-gray-500">{preferences.language === 'ar' ? '٦ سنن مؤكدة' : '6 confirmed Sunnahs'}</p>
-                 </div>
-               </div>
-               {/* Activity Toggle */}
-               <div className="w-14 flex justify-center">
-                 <button 
-                   onClick={() => toggleHabit('rawatib_master')} 
-                   className={clsx("w-9 h-5 rounded-full transition-colors relative", isRawatibActive ? "bg-emerald-500" : "bg-slate-700")}
-                 >
-                   <div className={clsx("w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all", isRawatibActive ? "right-[3px]" : "left-[3px]")} />
-                 </button>
-               </div>
-               {/* Reason Toggle - affects all rawatib */}
-               <div className="w-14 flex justify-center">
-                 <button 
-                   onClick={() => {
-                     const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
-                     const allRequireReason = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.requireReason !== false);
-                     habits.filter(h => rawatibIds.includes(h.id)).forEach(h => {
-                       handleSaveHabit({ ...h, requireReason: !allRequireReason });
-                     });
-                   }}
-                   className={clsx(
-                     "w-9 h-5 rounded-full transition-colors relative",
-                     habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "bg-cyan-500" : "bg-slate-700"
-                   )}
-                 >
-                   <div className={clsx(
-                     "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all",
-                     habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "right-[3px]" : "left-[3px]"
-                   )} />
-                 </button>
-               </div>
-               {/* Affects Score Toggle - affects all rawatib */}
-               <div className="w-14 flex justify-center">
-                 <button 
-                   onClick={() => {
-                     const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
-                     const allAffectScore = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.affectsScore !== false);
-                     habits.filter(h => rawatibIds.includes(h.id)).forEach(h => {
-                       handleSaveHabit({ ...h, affectsScore: !allAffectScore });
-                     });
-                   }}
-                   className={clsx(
-                     "w-9 h-5 rounded-full transition-colors relative",
-                     habits.filter(h => h.presetId === 'rawatib').every(h => h.affectsScore !== false) ? "bg-purple-500" : "bg-slate-700"
-                   )}
-                 >
-                   <div className={clsx(
-                     "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all",
-                     habits.filter(h => h.presetId === 'rawatib').every(h => h.affectsScore !== false) ? "right-[3px]" : "left-[3px]"
-                   )} />
-                 </button>
-               </div>
-             </div>
+             {(() => {
+               const presetHabits = habits
+                 .filter(h => h.type !== HabitType.PRAYER && h.presetId && h.presetId !== 'rawatib')
+                 .sort((a, b) => a.order - b.order);
+               const customHabits = habits
+                 .filter(h => h.type !== HabitType.PRAYER && !h.presetId)
+                 .sort((a, b) => a.order - b.order);
 
-             {/* All Non-Prayer Habits (excluding rawatib which are handled above) */}
-             {habits
-               .filter(h => h.type !== HabitType.PRAYER && h.presetId !== 'rawatib')
-               .sort((a, b) => a.order - b.order)
-               .map(habit => {
+               const renderHabitRow = (habit: typeof habits[number]) => {
                  const displayName = preferences.language === 'ar' ? (habit.nameAr || habit.name) : habit.name;
                  const IconComp = getHabitIcon(habit);
                  const iconColor = getHabitColor(habit);
                  const is5KP = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(habit.id);
-                 
+
                  return (
                    <div 
                      key={habit.id} 
@@ -1328,7 +1267,103 @@ const Profile: React.FC = () => {
                      </div>
                    </div>
                  );
-               })}
+               };
+
+               return (
+                 <>
+                   {/* Rawatib Master Toggle */}
+                   <div className="flex items-center gap-2 p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                     <div className="flex-1 min-w-0 flex items-center gap-2">
+                       {(() => {
+                         const IconComp = ICON_MAP.Star;
+                         return <IconComp size={18} style={{ color: '#38bdf8' }} className="shrink-0" />;
+                       })()}
+                       <div>
+                         <h4 className="text-sm font-bold text-white">Rawatib</h4>
+                         <p className="text-[10px] text-gray-500">{preferences.language === 'ar' ? '٦ سنن مؤكدة' : '6 confirmed Sunnahs'}</p>
+                       </div>
+                     </div>
+                     {/* Activity Toggle */}
+                     <div className="w-14 flex justify-center">
+                       <button 
+                         onClick={() => toggleHabit('rawatib_master')} 
+                         className={clsx("w-9 h-5 rounded-full transition-colors relative", isRawatibActive ? "bg-emerald-500" : "bg-slate-700")}
+                       >
+                         <div className={clsx("w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all", isRawatibActive ? "right-[3px]" : "left-[3px]")} />
+                       </button>
+                     </div>
+                     {/* Reason Toggle - affects all rawatib */}
+                     <div className="w-14 flex justify-center">
+                       <button 
+                         onClick={() => {
+                           const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
+                           const allRequireReason = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.requireReason !== false);
+                           habits.filter(h => rawatibIds.includes(h.id)).forEach(h => {
+                             handleSaveHabit({ ...h, requireReason: !allRequireReason });
+                           });
+                         }}
+                         className={clsx(
+                           "w-9 h-5 rounded-full transition-colors relative",
+                           habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "bg-cyan-500" : "bg-slate-700"
+                         )}
+                       >
+                         <div className={clsx(
+                           "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all",
+                           habits.filter(h => h.presetId === 'rawatib').every(h => h.requireReason !== false) ? "right-[3px]" : "left-[3px]"
+                         )} />
+                       </button>
+                     </div>
+                     {/* Affects Score Toggle - affects all rawatib */}
+                     <div className="w-14 flex justify-center">
+                       <button 
+                         onClick={() => {
+                           const rawatibIds = ['fajr_sunnah', 'dhuhr_sunnah_before_1', 'dhuhr_sunnah_before_2', 'dhuhr_sunnah_after', 'maghrib_sunnah', 'isha_sunnah'];
+                           const allAffectScore = habits.filter(h => rawatibIds.includes(h.id)).every(h => h.affectsScore !== false);
+                           habits.filter(h => rawatibIds.includes(h.id)).forEach(h => {
+                             handleSaveHabit({ ...h, affectsScore: !allAffectScore });
+                           });
+                         }}
+                         className={clsx(
+                           "w-9 h-5 rounded-full transition-colors relative",
+                           habits.filter(h => h.presetId === 'rawatib').every(h => h.affectsScore !== false) ? "bg-purple-500" : "bg-slate-700"
+                         )}
+                       >
+                         <div className={clsx(
+                           "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-all",
+                           habits.filter(h => h.presetId === 'rawatib').every(h => h.affectsScore !== false) ? "right-[3px]" : "left-[3px]"
+                         )} />
+                       </button>
+                     </div>
+                   </div>
+
+                   {presetHabits.length > 0 && (
+                     <div className="pt-3">
+                       <div className="flex items-center gap-3 px-2 pb-2">
+                         <div className="flex-1 h-px bg-slate-800" />
+                         <span className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">
+                           {preferences.language === 'ar' ? 'عادات جاهزة' : 'Preset Habits'}
+                         </span>
+                         <div className="flex-1 h-px bg-slate-800" />
+                       </div>
+                       {presetHabits.map(renderHabitRow)}
+                     </div>
+                   )}
+
+                   {customHabits.length > 0 && (
+                     <div className="pt-3">
+                       <div className="flex items-center gap-3 px-2 pb-2">
+                         <div className="flex-1 h-px bg-slate-800" />
+                         <span className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">
+                           {preferences.language === 'ar' ? 'عاداتك' : 'Your Habits'}
+                         </span>
+                         <div className="flex-1 h-px bg-slate-800" />
+                       </div>
+                       {customHabits.map(renderHabitRow)}
+                     </div>
+                   )}
+                 </>
+               );
+             })()}
            </div>
            
            {/* Fade overlay when collapsed */}

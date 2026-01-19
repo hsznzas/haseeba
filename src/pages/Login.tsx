@@ -5,6 +5,7 @@ import { Globe, ArrowLeft, Mail, CheckCircle2, Sparkles, Users, Zap, Share, More
 import { DemoPersona } from "../services/storage";
 import { getGlobalStats, GlobalStats } from "../services/api";
 import { motion, AnimatePresence, useInView } from "framer-motion";
+import { isSupabaseConfigured } from "../services/supabaseClient";
 
 type FormMode = "signin" | "signup" | "recovery";
 
@@ -1379,6 +1380,13 @@ const Login: React.FC = () => {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
+                {!isSupabaseConfigured && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs rounded-xl px-4 py-3 text-center">
+                    {isArabic
+                      ? "لم يتم إعداد Supabase بعد. استخدم وضع التجربة في الأسفل."
+                      : "Supabase is not configured yet. Use demo mode below."}
+                  </div>
+                )}
                 {/* Auth Card */}
                 <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-2xl p-6">
                   {/* Tab Switcher */}

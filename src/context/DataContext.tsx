@@ -24,7 +24,7 @@ const enrichHabitsWithIcons = (loadedHabits: Habit[]): Habit[] => {
         ...habit,
         icon: habit.icon || presetHabit.icon,
         color: habit.color || presetHabit.color,
-        presetId: habit.presetId || presetHabit.presetId,
+        presetId: habit.presetId || presetHabit.presetId || presetHabit.id,
       };
     }
     return habit;

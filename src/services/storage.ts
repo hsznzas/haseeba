@@ -61,6 +61,120 @@ function safeSetItem<T>(key: StorageKey, value: T): boolean {
   }
 }
 
+const ATHKAR_MIGRATION_KEY = "haseeb_migrated_athkar_twice_daily";
+
+const migrateAthkarTwiceDaily = (): void => {
+  if (localStorage.getItem(ATHKAR_MIGRATION_KEY) === "true") return;
+
+  const habits = safeGetItem<Habit[]>(STORAGE_KEYS.HABITS, []);
+  const completions = safeGetItem<HabitCompletion[]>(STORAGE_KEYS.COMPLETIONS, []);
+  const hasOldHabits = habits.some((h) => h.id === "morning_athkar" || h.id === "evening_athkar");
+  const hasOldLogs = completions.some(
+    (c) => c.habitId === "morning_athkar" || c.habitId === "evening_athkar"
+  );
+
+  if (!hasOldHabits && !hasOldLogs) {
+    localStorage.setItem(ATHKAR_MIGRATION_KEY, "true");
+    return;
+  }
+
+  const morningHabit = habits.find((h) => h.id === "morning_athkar");
+  const eveningHabit = habits.find((h) => h.id === "evening_athkar");
+  const combinedHabitExists = habits.some((h) => h.id === "athkar_twice_daily");
+  const fallbackOrder = [morningHabit?.order, eveningHabit?.order]
+    .filter((val): val is number => typeof val === "number")
+    .reduce((min, val) => Math.min(min, val), 120);
+  const startDate = [morningHabit?.startDate, eveningHabit?.startDate]
+    .filter((val): val is string => Boolean(val))
+    .sort()[0];
+
+  const updatedHabits = habits.filter(
+    (h) => h.id !== "morning_athkar" && h.id !== "evening_athkar"
+  );
+
+  if (!combinedHabitExists) {
+    updatedHabits.push({
+      id: "athkar_twice_daily",
+      name: "Athkar (AM/PM)",
+      nameAr: "أذكار الصباح والمساء",
+      type: HabitType.COUNTER,
+      dailyTarget: 2,
+      icon: "Sun",
+      color: "#fbbf24",
+      presetId: "athkar_twice_daily",
+      isActive: Boolean(morningHabit?.isActive || eveningHabit?.isActive),
+      affectsScore: morningHabit?.affectsScore ?? eveningHabit?.affectsScore ?? true,
+      requireReason: morningHabit?.requireReason ?? eveningHabit?.requireReason ?? false,
+      order: fallbackOrder,
+      startDate,
+      createdAt: morningHabit?.createdAt || eveningHabit?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  const getState = (completion?: HabitCompletion) => {
+    if (!completion) return 0;
+    if (completion.status === LogStatus.DONE) return 1;
+    if (completion.status === LogStatus.FAIL) return 2;
+    return 0;
+  };
+
+  const existingCombined = completions.filter((c) => c.habitId === "athkar_twice_daily");
+  const combinedByDate: Record<string, HabitCompletion> = {};
+  existingCombined.forEach((c) => {
+    combinedByDate[c.date] = c;
+  });
+
+  const morningCompletions = completions.filter((c) => c.habitId === "morning_athkar");
+  const eveningCompletions = completions.filter((c) => c.habitId === "evening_athkar");
+  const dates = new Set<string>([
+    ...morningCompletions.map((c) => c.date),
+    ...eveningCompletions.map((c) => c.date),
+  ]);
+
+  dates.forEach((date) => {
+    const morning = morningCompletions.find((c) => c.date === date);
+    const evening = eveningCompletions.find((c) => c.date === date);
+    const amState = getState(morning);
+    const pmState = getState(evening);
+    if (amState === 0 && pmState === 0) return;
+
+    const value = amState * 10 + pmState;
+    const status =
+      amState === 1 && pmState === 1
+        ? LogStatus.DONE
+        : amState === 2 || pmState === 2
+        ? LogStatus.FAIL
+        : undefined;
+
+    const existing = combinedByDate[date];
+    combinedByDate[date] = {
+      id: existing?.id || `athkar_twice_daily-${date}`,
+      habitId: "athkar_twice_daily",
+      userId: existing?.userId || morning?.userId || evening?.userId || "local-user",
+      date,
+      count: value,
+      note: morning?.note || evening?.note || existing?.note,
+      status: status ?? existing?.status,
+      completedAt: existing?.completedAt || new Date().toISOString(),
+    } as HabitCompletion;
+  });
+
+  const updatedCompletions = completions.filter(
+    (c) =>
+      c.habitId !== "morning_athkar" &&
+      c.habitId !== "evening_athkar" &&
+      c.habitId !== "athkar_twice_daily"
+  );
+
+  safeSetItem(STORAGE_KEYS.HABITS, updatedHabits);
+  safeSetItem(STORAGE_KEYS.COMPLETIONS, [
+    ...updatedCompletions,
+    ...Object.values(combinedByDate),
+  ]);
+  localStorage.setItem(ATHKAR_MIGRATION_KEY, "true");
+};
+
 /**
  * Remove item from localStorage
  */
@@ -184,6 +298,7 @@ export function clearUser(): void {
  * Get all habits
  */
 export function getHabits(): Habit[] {
+  migrateAthkarTwiceDaily();
   return safeGetItem<Habit[]>(STORAGE_KEYS.HABITS, []);
 }
 
@@ -358,6 +473,7 @@ export function reorderHabits(orderedIds: string[]): boolean {
  * Get all habit completions
  */
 export function getHabitCompletions(): HabitCompletion[] {
+  migrateAthkarTwiceDaily();
   return safeGetItem<HabitCompletion[]>(STORAGE_KEYS.COMPLETIONS, []);
 }
 
@@ -1041,13 +1157,15 @@ export const seedDemoData = (persona: DemoPersona = 'struggler') => {
       // Determine DONE or FAIL based on persona success rate
       const succeeded = didHabitSucceed(persona);
       
+      const isTwiceDaily = habit.type === HabitType.COUNTER && habit.dailyTarget === 2;
+      
       if (succeeded) {
         status = LogStatus.DONE;
-        value = habit.dailyTarget || 1;
+        value = isTwiceDaily ? 11 : habit.dailyTarget || 1;
         winsCount++;
       } else {
         status = LogStatus.FAIL;
-        value = 0;
+        value = isTwiceDaily ? 20 : 0;
         lossCount++;
         // MANDATORY REASONING for failed habits
         reason = getReasonForPersona(persona);

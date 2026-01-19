@@ -1,7 +1,7 @@
 import { Habit } from './types';
 import { HabitType } from './types';
 
-export const LATEST_UPDATE = "📅 New: Backdate habits to start tracking from any past date!";
+export const LATEST_UPDATE = "✨ New: Athkar twice‑daily, Home prayer breakdown, smarter streaks.";
 
 export const TRANSLATIONS = {
   en: {
@@ -223,8 +223,8 @@ export const INITIAL_HABITS: Habit[] = [
   { id: 'fajr', name: 'Fajr', nameAr: 'الفجر', type: HabitType.PRAYER, isActive: true, order: 100 },
   { id: 'fajr_sunnah', name: 'Fajr Sunnah', nameAr: 'سنة الفجر', type: HabitType.REGULAR, icon: 'Sun', color: '#f59e0b', isActive: true, order: 110, presetId: 'rawatib', requireReason: true },
   
-  // Morning
-  { id: 'morning_athkar', name: 'Morning Athkar', nameAr: 'أذكار الصباح', type: HabitType.REGULAR, icon: 'Sun', color: '#fbbf24', isActive: false, order: 120 },
+  // Morning & Evening (Twice Daily)
+  { id: 'athkar_twice_daily', name: 'Athkar (AM/PM)', nameAr: 'أذكار الصباح والمساء', type: HabitType.COUNTER, dailyTarget: 2, icon: 'Sun', color: '#fbbf24', isActive: false, order: 120 },
   { id: 'dhuha', name: 'Dhuha Prayer', nameAr: 'صلاة الضحى', type: HabitType.REGULAR, icon: 'Sparkles', color: '#fcd34d', isActive: false, order: 130 },
 
   // Dhuhr Block
@@ -239,7 +239,6 @@ export const INITIAL_HABITS: Habit[] = [
   // Maghrib Block
   { id: 'maghrib', name: 'Maghrib', nameAr: 'المغرب', type: HabitType.PRAYER, isActive: true, order: 400 },
   { id: 'maghrib_sunnah', name: 'Maghrib Sunnah', nameAr: 'سنة المغرب', type: HabitType.REGULAR, icon: 'Star', color: '#fb923c', isActive: true, order: 410, presetId: 'rawatib', requireReason: true },
-  { id: 'evening_athkar', name: 'Evening Athkar', nameAr: 'أذكار المساء', type: HabitType.REGULAR, icon: 'Moon', color: '#a78bfa', isActive: false, order: 420 },
 
   // Isha Block
   { id: 'isha', name: 'Isha', nameAr: 'العشاء', type: HabitType.PRAYER, isActive: true, order: 500 },

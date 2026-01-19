@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sunrise, Sun, CloudSun, Sunset, Moon, Users, Clock, XCircle, RotateCcw, GripVertical, Pause } from 'lucide-react';
 import AnimatedFlame from './AnimatedFlame';
+import { getStreakOpacity, shouldShowStreak } from '../utils/streak';
 import RaisedHandsIcon from './icons/RaisedHandsIcon';
 // import { getDailyHadith } from '../utils/hadithRotator'; // Hadith feature disabled
 
@@ -278,8 +279,11 @@ const PrayerCard: React.FC<PrayerCardProps> = ({ habit, log, streak, onUpdate, o
             </div> */}
           </div>
 
-          {streak > 0 && (
-            <div className="relative z-10 flex items-center gap-1 text-[9px] font-semibold text-orange-400 ms-2 shrink-0">
+          {shouldShowStreak(streak) && (
+            <div
+              className="relative z-10 flex items-center gap-1 text-[9px] font-semibold text-orange-400 ms-2 shrink-0 transition-opacity"
+              style={{ opacity: getStreakOpacity(streak) }}
+            >
               <AnimatedFlame size={9} streak={streak} /> 
               <motion.span
                 key={streak}

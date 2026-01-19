@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from './supabaseClient';
+import { supabase, supabaseAdmin, isSupabaseConfigured } from './supabaseClient';
 import { Habit, HabitLog, UserPreferences, DEFAULT_PREFERENCES } from '../../types';
 import { INITIAL_HABITS } from '../../constants';
 
@@ -120,6 +120,9 @@ export interface EnhancedStats extends AdminStats {
 }
 
 export const getGlobalStats = async (): Promise<GlobalStats> => {
+  if (!isSupabaseConfigured) {
+    return { totalHabitsLogged: 0, totalAiInsights: 0 };
+  }
   try {
     // Get total habit logs count (real number from database)
     const { count: logsCount, error: logsError } = await supabase

@@ -4,6 +4,7 @@ import { usePreferences } from '../App';
 import PrayerCard from './PrayerCard';
 import { Check, X, Minus, RotateCcw, Plus, CheckCircle2, Activity, Pause, Sun, Moon } from 'lucide-react';
 import AnimatedFlame from './AnimatedFlame';
+import { getStreakOpacity, shouldShowStreak } from '../utils/streak';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { ICON_MAP, IconName } from '../utils/iconMap';
@@ -346,8 +347,11 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
               )}>
                 {displayTitle}
               </h3>
-              {streak > 0 && (
-                <div className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20">
+              {shouldShowStreak(streak) && (
+                <div
+                  className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20 transition-opacity"
+                  style={{ opacity: getStreakOpacity(streak) }}
+                >
                   <AnimatedFlame size={10} streak={streak} /> {streak}
                 </div>
               )}
@@ -451,8 +455,11 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
                     <h3 className={clsx("font-bold text-white truncate", titleSizeClass)}>{displayTitle}</h3>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-gray-400 font-mono">{count} / {target}</span>
-                        {streak > 0 && (
-                            <div className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20">
+                        {shouldShowStreak(streak) && (
+                            <div
+                              className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20 transition-opacity"
+                              style={{ opacity: getStreakOpacity(streak) }}
+                            >
                                 <AnimatedFlame size={10} streak={streak} /> {streak}
                             </div>
                         )}
@@ -533,8 +540,11 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, log, streak, onUpdate, onD
             </h3>
             {/* Status indicator icon after title */}
             {getStatusIcon()}
-            {streak > 0 && (
-                <div className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20">
+            {shouldShowStreak(streak) && (
+                <div
+                  className="flex items-center gap-0.5 text-[10px] text-orange-500 font-bold relative z-20 transition-opacity"
+                  style={{ opacity: getStreakOpacity(streak) }}
+                >
                     <AnimatedFlame size={10} streak={streak} /> {streak}
                 </div>
             )}

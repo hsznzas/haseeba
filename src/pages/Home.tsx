@@ -15,6 +15,8 @@ import AddHabitModal from '../components/AddHabitModal';
 import ReasonModal from '../components/ReasonModal';
 import ActionButtonsKeyCard from '../components/ActionButtonsKeyCard';
 import HadithDisplay from '../components/HadithDisplay';
+import AllPrayersInsightCard from '../components/AllPrayersInsightCard';
+import DobModal from '../components/DobModal';
 import { generateDailyBriefing, getCachedBriefing } from '../services/aiEngine';
 import { isOnboardingComplete, setOnboardingComplete, createExcusedLogsForToday as createExcusedLogsLocal } from '../services/storage';
 import { createExcusedLogsForCurrentUser } from '../services/api';
@@ -30,6 +32,7 @@ const Home: React.FC = () => {
   const [reasoningState, setReasoningState] = useState<{ id: string, val: number, status: LogStatus } | null>(null);
   const [isSortMode, setIsSortMode] = useState(false);
   const [showKeyCard, setShowKeyCard] = useState(false);
+  const [isDobModalOpen, setIsDobModalOpen] = useState(false);
   
   // AI Daily Briefing state
   const [dailyBriefing, setDailyBriefing] = useState<DailyBriefing | null>(null);
@@ -646,6 +649,16 @@ const Home: React.FC = () => {
             )}
         </div>
 
+        <div className="px-4 mt-6">
+          <AllPrayersInsightCard
+            habits={habits}
+            logs={logs}
+            language={preferences.language}
+            dateOfBirth={preferences.dateOfBirth}
+            onDobClick={() => setIsDobModalOpen(true)}
+          />
+        </div>
+
         <div className="fixed right-4 bottom-24 z-40">
              <button 
                 onClick={() => { setEditingHabit(null); setIsModalOpen(true); }}
@@ -680,6 +693,8 @@ const Home: React.FC = () => {
           onClose={() => setReasoningState(null)} 
           onConfirm={handleReasonConfirm} 
         />
+
+        <DobModal isOpen={isDobModalOpen} onClose={() => setIsDobModalOpen(false)} />
 
         <ActionButtonsKeyCard 
           isOpen={showKeyCard} 
