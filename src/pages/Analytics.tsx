@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { generateDailyBriefing, getCachedBriefing, regenerateBriefing } from '../services/aiEngine';
 import { logAiInsightGeneration } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Sparkles, ChevronLeft, ChevronRight, Hourglass, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, Brain, Zap, RefreshCw, Info, X } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle, Loader2, Brain, Zap, RefreshCw, Info, X } from 'lucide-react';
 import { HabitType, PrayerQuality, LogStatus, HabitLog, DailyBriefing } from '../../types';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, addDays,
@@ -731,7 +731,6 @@ const Analytics: React.FC = () => {
         {/* Enhanced All Prayers Insight Card */}
         <div className="w-full">
           <AllPrayersInsightCard
-            habits={habits}
             logs={logs}
             language={preferences.language}
             dateOfBirth={preferences.dateOfBirth}

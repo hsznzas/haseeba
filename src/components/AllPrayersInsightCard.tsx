@@ -3,12 +3,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { AlertTriangle, Hourglass, Trophy } from 'lucide-react';
 import { clsx } from 'clsx';
 import { TRANSLATIONS } from '../../constants';
-import { Habit, HabitLog, LogStatus, PrayerQuality } from '../../types';
-import { addDays, addYears, differenceInDays, format } from 'date-fns';
+import { HabitLog, LogStatus, PrayerQuality } from '../../types';
+import { addYears, differenceInDays } from 'date-fns';
 import Tooltip from './Tooltip';
 
 interface AllPrayersInsightCardProps {
-  habits: Habit[];
   logs: HabitLog[];
   language: 'en' | 'ar';
   dateOfBirth?: string | null;
@@ -32,7 +31,6 @@ const getRateColorStyle = (percentage: number) => {
 };
 
 const AllPrayersInsightCard: React.FC<AllPrayersInsightCardProps> = ({
-  habits,
   logs,
   language,
   dateOfBirth,

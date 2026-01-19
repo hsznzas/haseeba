@@ -651,7 +651,6 @@ const Home: React.FC = () => {
 
         <div className="px-4 mt-6">
           <AllPrayersInsightCard
-            habits={habits}
             logs={logs}
             language={preferences.language}
             dateOfBirth={preferences.dateOfBirth}
