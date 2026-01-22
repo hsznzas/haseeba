@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { clsx } from 'clsx';
-import { usePrayerTrends, PrayerTrendDataPoint, PrayerFilter, PRAYER_IDS } from '../hooks/usePrayerTrends';
+import { usePrayerTrends, PrayerTrendDataPoint, PrayerFilter } from '../hooks/usePrayerTrends';
 import { HabitLog } from '../../types';
 
 interface PrayerTrendChartProps {
