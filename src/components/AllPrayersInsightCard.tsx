@@ -6,7 +6,6 @@ import { TRANSLATIONS } from '../../constants';
 import { HabitLog, LogStatus, PrayerQuality } from '../../types';
 import { addYears, differenceInDays } from 'date-fns';
 import Tooltip from './Tooltip';
-import { usePrayerTrends } from '../hooks/usePrayerTrends';
 import PrayerTrendChart from './PrayerTrendChart';
 
 interface AllPrayersInsightCardProps {
@@ -40,9 +39,6 @@ const AllPrayersInsightCard: React.FC<AllPrayersInsightCardProps> = ({
 }) => {
   const t = TRANSLATIONS[language];
   const prayerIds = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
-  
-  // Get 90-day trend data for the chart
-  const trendData = usePrayerTrends(logs, 90);
 
   const remainingChances = useMemo(() => {
     if (!dateOfBirth) return null;
@@ -281,7 +277,7 @@ const AllPrayersInsightCard: React.FC<AllPrayersInsightCardProps> = ({
             {language === 'ar' ? 'اتجاه آخر 90 يوم' : '90-Day Trend'}
           </h4>
         </div>
-        <PrayerTrendChart data={trendData} language={language} />
+        <PrayerTrendChart logs={logs} language={language} />
       </div>
     </div>
   );

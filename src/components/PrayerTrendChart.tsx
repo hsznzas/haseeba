@@ -8,10 +8,11 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { clsx } from 'clsx';
-import { PrayerTrendDataPoint } from '../hooks/usePrayerTrends';
+import { usePrayerTrends, PrayerTrendDataPoint, PrayerFilter, PRAYER_IDS } from '../hooks/usePrayerTrends';
+import { HabitLog } from '../../types';
 
 interface PrayerTrendChartProps {
-  data: PrayerTrendDataPoint[];
+  logs: HabitLog[];
   language: 'en' | 'ar';
 }
 
@@ -23,6 +24,21 @@ interface LineConfig {
   color: string;
 }
 
+interface FilterOption {
+  id: PrayerFilter;
+  label: string;
+  labelAr: string;
+}
+
+const FILTER_OPTIONS: FilterOption[] = [
+  { id: 'all', label: 'All', labelAr: 'الكل' },
+  { id: 'fajr', label: 'Fajr', labelAr: 'الفجر' },
+  { id: 'dhuhr', label: 'Dhuhr', labelAr: 'الظهر' },
+  { id: 'asr', label: 'Asr', labelAr: 'العصر' },
+  { id: 'maghrib', label: 'Maghrib', labelAr: 'المغرب' },
+  { id: 'isha', label: 'Isha', labelAr: 'العشاء' },
+];
+
 // Colors matching the quality breakdown in AllPrayersInsightCard
 const LINE_CONFIGS: LineConfig[] = [
   { key: 'takbirah', rawKey: 'rawTakbirah', label: 'Takbirah', labelAr: 'تكبيرة الإحرام', color: '#3b82f6' },
@@ -31,10 +47,9 @@ const LINE_CONFIGS: LineConfig[] = [
   { key: 'missed', rawKey: 'rawMissed', label: 'Missed', labelAr: 'فائتة', color: '#ef4444' },
 ];
 
-const CustomTooltip = ({ active, payload, label, language }: any) => {
+const CustomTooltip = ({ active, payload, label, language, isSpecificPrayer }: any) => {
   if (!active || !payload || !payload.length) return null;
 
-  // Get the full data point from payload
   const dataPoint = payload[0]?.payload as PrayerTrendDataPoint | undefined;
 
   return (
@@ -48,6 +63,10 @@ const CustomTooltip = ({ active, payload, label, language }: any) => {
           const config = LINE_CONFIGS.find(c => c.key === entry.dataKey);
           if (!config) return null;
           const rawValue = dataPoint ? dataPoint[config.rawKey] : 0;
+          // For specific prayer, show as percentage
+          const displayValue = isSpecificPrayer 
+            ? `${Math.round(entry.value * 100)}%`
+            : entry.value;
           return (
             <div key={entry.dataKey} className="flex items-center gap-2 text-xs">
               <span
@@ -58,7 +77,7 @@ const CustomTooltip = ({ active, payload, label, language }: any) => {
                 {language === 'ar' ? config.labelAr : config.label}
               </span>
               <span className="font-bold tabular-nums" style={{ color: entry.color }}>
-                {entry.value}
+                {displayValue}
               </span>
               <span className="text-gray-500 text-[10px] tabular-nums">
                 ({rawValue})
@@ -71,9 +90,16 @@ const CustomTooltip = ({ active, payload, label, language }: any) => {
   );
 };
 
-const PrayerTrendChart: React.FC<PrayerTrendChartProps> = ({ data, language }) => {
-  // Only Takbirah visible by default
+const PrayerTrendChart: React.FC<PrayerTrendChartProps> = ({ logs, language }) => {
+  const [selectedPrayer, setSelectedPrayer] = useState<PrayerFilter>('all');
   const [visibleLines, setVisibleLines] = useState<Set<string>>(new Set(['takbirah']));
+
+  // Get trend data based on selected prayer filter
+  const data = usePrayerTrends(logs, selectedPrayer, 90);
+
+  const isSpecificPrayer = selectedPrayer !== 'all';
+  const yAxisDomain: [number, number] = isSpecificPrayer ? [0, 1] : [0, 5];
+  const yAxisTicks = isSpecificPrayer ? [0, 0.5, 1] : [0, 5];
 
   const toggleLine = (key: string) => {
     setVisibleLines(prev => {
@@ -87,12 +113,32 @@ const PrayerTrendChart: React.FC<PrayerTrendChartProps> = ({ data, language }) =
     });
   };
 
-  // Sample data to show every ~7th point on x-axis for cleaner look
   const tickInterval = Math.floor(data.length / 12);
 
   return (
     <div className="w-full">
-      {/* Legend / Toggle Controls */}
+      {/* Prayer Filter */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {FILTER_OPTIONS.map(option => {
+          const isActive = selectedPrayer === option.id;
+          return (
+            <button
+              key={option.id}
+              onClick={() => setSelectedPrayer(option.id)}
+              className={clsx(
+                'px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all border',
+                isActive
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                  : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/50'
+              )}
+            >
+              {language === 'ar' ? option.labelAr : option.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Quality Toggle Controls */}
       <div className="flex flex-wrap gap-2 mb-3 px-1">
         {LINE_CONFIGS.map(config => {
           const isActive = visibleLines.has(config.key);
@@ -134,14 +180,15 @@ const PrayerTrendChart: React.FC<PrayerTrendChartProps> = ({ data, language }) =
               interval={tickInterval}
             />
             <YAxis
-              domain={[0, 5]}
+              domain={yAxisDomain}
               tick={{ fontSize: 9, fill: '#6b7280' }}
               tickLine={false}
               axisLine={false}
-              width={20}
-              ticks={[0, 5]}
+              width={25}
+              ticks={yAxisTicks}
+              tickFormatter={isSpecificPrayer ? (v) => `${Math.round(v * 100)}%` : undefined}
             />
-            <Tooltip content={<CustomTooltip language={language} />} />
+            <Tooltip content={<CustomTooltip language={language} isSpecificPrayer={isSpecificPrayer} />} />
             
             {LINE_CONFIGS.map(config => (
               <Line

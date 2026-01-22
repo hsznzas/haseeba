@@ -23,7 +23,9 @@ interface RawDayData {
   missed: number;
 }
 
-const PRAYER_IDS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+export type PrayerFilter = 'all' | 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha';
+
+export const PRAYER_IDS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
 const ROLLING_WINDOW = 7;
 
 /**
@@ -52,23 +54,35 @@ const calculateRollingAverage = (
   }
   
   return {
-    takbirah: Math.round((sumTakbirah / windowSize) * 10) / 10,
-    jamaa: Math.round((sumJamaa / windowSize) * 10) / 10,
-    onTime: Math.round((sumOnTime / windowSize) * 10) / 10,
-    missed: Math.round((sumMissed / windowSize) * 10) / 10,
+    takbirah: Math.round((sumTakbirah / windowSize) * 100) / 100,
+    jamaa: Math.round((sumJamaa / windowSize) * 100) / 100,
+    onTime: Math.round((sumOnTime / windowSize) * 100) / 100,
+    missed: Math.round((sumMissed / windowSize) * 100) / 100,
   };
 };
 
 /**
  * Hook to process prayer logs for the last 90 days into trend data
  * with 7-day rolling averages for smooth visualization.
+ * 
+ * @param logs - All habit logs
+ * @param selectedPrayer - 'all' for aggregate (max 5), or specific prayer (max 1)
+ * @param days - Number of days to analyze (default 90)
  */
-export const usePrayerTrends = (logs: HabitLog[], days: number = 90): PrayerTrendDataPoint[] => {
+export const usePrayerTrends = (
+  logs: HabitLog[],
+  selectedPrayer: PrayerFilter = 'all',
+  days: number = 90
+): PrayerTrendDataPoint[] => {
   return useMemo(() => {
     const today = new Date();
     
-    // Filter to only prayer logs
-    const prayerLogs = logs.filter(l => PRAYER_IDS.includes(l.habitId));
+    // Filter logs based on selection
+    const targetIds = selectedPrayer === 'all' 
+      ? PRAYER_IDS 
+      : [selectedPrayer];
+    
+    const prayerLogs = logs.filter(l => targetIds.includes(l.habitId as typeof PRAYER_IDS[number]));
     
     // Group logs by date
     const logsByDate: Record<string, HabitLog[]> = {};
@@ -118,7 +132,7 @@ export const usePrayerTrends = (logs: HabitLog[], days: number = 90): PrayerTren
     });
     
     return dataPoints;
-  }, [logs, days]);
+  }, [logs, selectedPrayer, days]);
 };
 
 export default usePrayerTrends;
