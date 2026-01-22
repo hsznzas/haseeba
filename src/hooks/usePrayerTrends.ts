@@ -43,10 +43,12 @@ const calculateRollingAverage = (
   let sumMissed = 0;
   
   for (let i = startIdx; i <= currentIndex; i++) {
-    sumTakbirah += rawData[i].takbirah;
-    sumJamaa += rawData[i].jamaa;
-    sumOnTime += rawData[i].onTime;
-    sumMissed += rawData[i].missed;
+    const day = rawData[i];
+    if (!day) continue;
+    sumTakbirah += day.takbirah;
+    sumJamaa += day.jamaa;
+    sumOnTime += day.onTime;
+    sumMissed += day.missed;
   }
   
   return {
@@ -74,7 +76,7 @@ export const usePrayerTrends = (logs: HabitLog[], days: number = 90): PrayerTren
       if (!logsByDate[log.date]) {
         logsByDate[log.date] = [];
       }
-      logsByDate[log.date].push(log);
+      logsByDate[log.date]!.push(log);
     });
     
     // First pass: collect raw daily counts
