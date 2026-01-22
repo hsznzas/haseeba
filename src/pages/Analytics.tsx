@@ -451,7 +451,7 @@ const Analytics: React.FC = () => {
     const chartData = data.length > 0 ? data : emptyData;
 
     return (
-      <div key={prayerId} className="bg-card rounded-lg border border-slate-800 shadow-sm flex flex-col relative overflow-hidden">
+      <div key={prayerId} className="bg-card rounded-lg shadow-sm flex flex-col relative overflow-hidden">
         <div className="p-3 flex flex-col h-full justify-between">
             <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-1">
@@ -461,7 +461,7 @@ const Analytics: React.FC = () => {
                     <Tooltip text={`Analytics for ${name} based on log quality.`} />
                 </div>
                 {bestStreak > 0 && (
-                    <div className="flex items-center gap-1 text-[10px] bg-orange-500/10 px-1.5 py-0.5 rounded text-orange-400 border border-orange-500/20">
+                    <div className="flex items-center gap-1 text-[10px] bg-orange-500/10 px-1.5 py-0.5 rounded text-orange-400">
                         <Trophy size={10} />
                         <span className="font-bold">{bestStreak}</span>
                     </div>

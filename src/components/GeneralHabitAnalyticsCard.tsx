@@ -231,7 +231,7 @@ const GeneralHabitAnalyticsCard: React.FC<GeneralHabitAnalyticsCardProps> = ({ h
       {/* Metrics Grid */}
       <div className="grid grid-cols-4 gap-2 mb-4">
         {/* Best Streak */}
-        <div className="bg-slate-900/50 rounded-xl p-2.5 border border-slate-800 text-center">
+        <div className="bg-slate-900/50 rounded-xl p-2.5 text-center">
           <div className="flex items-center justify-center gap-1 text-orange-400 mb-1">
             <Flame size={12} />
           </div>
@@ -240,7 +240,7 @@ const GeneralHabitAnalyticsCard: React.FC<GeneralHabitAnalyticsCardProps> = ({ h
         </div>
         
         {/* Worst Fail Streak */}
-        <div className="bg-slate-900/50 rounded-xl p-2.5 border border-slate-800 text-center">
+        <div className="bg-slate-900/50 rounded-xl p-2.5 text-center">
           <div className="flex items-center justify-center gap-1 text-red-400 mb-1">
             <TrendingDown size={12} />
           </div>
@@ -249,7 +249,7 @@ const GeneralHabitAnalyticsCard: React.FC<GeneralHabitAnalyticsCardProps> = ({ h
         </div>
         
         {/* Total Done */}
-        <div className="bg-slate-900/50 rounded-xl p-2.5 border border-slate-800 text-center">
+        <div className="bg-slate-900/50 rounded-xl p-2.5 text-center">
           <div className="flex items-center justify-center gap-1 text-emerald-400 mb-1">
             <CheckCircle2 size={12} />
           </div>
@@ -258,7 +258,7 @@ const GeneralHabitAnalyticsCard: React.FC<GeneralHabitAnalyticsCardProps> = ({ h
         </div>
         
         {/* Total Fails */}
-        <div className="bg-slate-900/50 rounded-xl p-2.5 border border-slate-800 text-center">
+        <div className="bg-slate-900/50 rounded-xl p-2.5 text-center">
           <div className="flex items-center justify-center gap-1 text-red-400 mb-1">
             <XCircle size={12} />
           </div>
@@ -269,7 +269,7 @@ const GeneralHabitAnalyticsCard: React.FC<GeneralHabitAnalyticsCardProps> = ({ h
 
       {/* Top Reasons for Failures */}
       {metrics.topReasons.length > 0 && (
-        <div className="bg-slate-900/30 rounded-xl p-3 border border-slate-800">
+        <div className="bg-slate-900/30 rounded-xl p-3">
           <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mb-2">
             <AlertTriangle size={10} />
             <span className="uppercase font-semibold tracking-wider">

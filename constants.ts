@@ -1,7 +1,7 @@
 import { Habit } from './types';
 import { HabitType } from './types';
 
-export const LATEST_UPDATE = "✨ New: Athkar twice‑daily, Home prayer breakdown, smarter streaks.";
+export const LATEST_UPDATE = "📈 New: Prayer trend chart (90 days), cleaner UI with fewer borders.";
 
 export const TRANSLATIONS = {
   en: {

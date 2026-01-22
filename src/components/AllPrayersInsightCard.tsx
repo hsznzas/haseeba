@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { AlertTriangle, Hourglass, Trophy } from 'lucide-react';
+import { AlertTriangle, Hourglass, Trophy, TrendingUp } from 'lucide-react';
 import { clsx } from 'clsx';
 import { TRANSLATIONS } from '../../constants';
 import { HabitLog, LogStatus, PrayerQuality } from '../../types';
 import { addYears, differenceInDays } from 'date-fns';
 import Tooltip from './Tooltip';
+import { usePrayerTrends } from '../hooks/usePrayerTrends';
+import PrayerTrendChart from './PrayerTrendChart';
 
 interface AllPrayersInsightCardProps {
   logs: HabitLog[];
@@ -38,6 +40,9 @@ const AllPrayersInsightCard: React.FC<AllPrayersInsightCardProps> = ({
 }) => {
   const t = TRANSLATIONS[language];
   const prayerIds = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+  
+  // Get 90-day trend data for the chart
+  const trendData = usePrayerTrends(logs, 90);
 
   const remainingChances = useMemo(() => {
     if (!dateOfBirth) return null;
@@ -168,7 +173,7 @@ const AllPrayersInsightCard: React.FC<AllPrayersInsightCardProps> = ({
       {/* Chances Left Header */}
       <button
         onClick={onDobClick}
-        className="w-full bg-slate-900/50 border-b border-slate-800 py-2 px-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+        className="w-full bg-slate-900/50 py-2 px-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
       >
         <div className="flex items-center gap-2">
           <Hourglass size={12} className="text-gray-400" />
@@ -187,7 +192,7 @@ const AllPrayersInsightCard: React.FC<AllPrayersInsightCardProps> = ({
             <Tooltip text={language === 'ar' ? 'تحليل شامل لجميع الصلوات الخمس' : 'Comprehensive analysis of all 5 daily prayers'} />
           </div>
           {bestStreak > 0 && (
-            <div className="flex items-center gap-1 text-xs bg-orange-500/10 px-2 py-1 rounded-lg text-orange-400 border border-orange-500/20">
+            <div className="flex items-center gap-1 text-xs bg-orange-500/10 px-2 py-1 rounded-lg text-orange-400">
               <Trophy size={12} />
               <span className="font-bold">{bestStreak}</span>
             </div>
@@ -238,8 +243,7 @@ const AllPrayersInsightCard: React.FC<AllPrayersInsightCardProps> = ({
               </div>
             </div>
 
-            {/* Divider */}
-            <div className="h-px bg-slate-700/50" />
+            {/* Spacer */}
 
             {/* Top Obstacles */}
             <div className="space-y-1.5">
@@ -267,6 +271,17 @@ const AllPrayersInsightCard: React.FC<AllPrayersInsightCardProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 90-Day Trend Chart */}
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-1.5 mb-2">
+          <TrendingUp size={12} className="text-gray-400" />
+          <h4 className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+            {language === 'ar' ? 'اتجاه آخر 90 يوم' : '90-Day Trend'}
+          </h4>
+        </div>
+        <PrayerTrendChart data={trendData} language={language} />
       </div>
     </div>
   );
