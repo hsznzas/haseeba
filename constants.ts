@@ -1,7 +1,7 @@
 import { Habit } from './types';
 import { HabitType } from './types';
 
-export const LATEST_UPDATE = "📈 New: Prayer trend chart (90 days), cleaner UI with fewer borders.";
+export const LATEST_UPDATE = "📈 New: Smooth 7-day rolling average prayer trends.";
 
 export const TRANSLATIONS = {
   en: {

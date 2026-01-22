@@ -17,39 +17,51 @@ interface PrayerTrendChartProps {
 
 interface LineConfig {
   key: keyof Pick<PrayerTrendDataPoint, 'takbirah' | 'jamaa' | 'onTime' | 'missed'>;
+  rawKey: keyof Pick<PrayerTrendDataPoint, 'rawTakbirah' | 'rawJamaa' | 'rawOnTime' | 'rawMissed'>;
   label: string;
   labelAr: string;
   color: string;
 }
 
+// Colors matching the quality breakdown in AllPrayersInsightCard
 const LINE_CONFIGS: LineConfig[] = [
-  { key: 'takbirah', label: 'Takbirah', labelAr: 'تكبيرة الإحرام', color: '#f59e0b' },
-  { key: 'jamaa', label: 'In Group', labelAr: 'جماعة', color: '#10b981' },
-  { key: 'onTime', label: 'On Time', labelAr: 'في الوقت', color: '#3b82f6' },
-  { key: 'missed', label: 'Missed', labelAr: 'فائتة', color: '#ef4444' },
+  { key: 'takbirah', rawKey: 'rawTakbirah', label: 'Takbirah', labelAr: 'تكبيرة الإحرام', color: '#3b82f6' },
+  { key: 'jamaa', rawKey: 'rawJamaa', label: 'In Group', labelAr: 'جماعة', color: '#eab308' },
+  { key: 'onTime', rawKey: 'rawOnTime', label: 'On Time', labelAr: 'في الوقت', color: '#f97316' },
+  { key: 'missed', rawKey: 'rawMissed', label: 'Missed', labelAr: 'فائتة', color: '#ef4444' },
 ];
 
 const CustomTooltip = ({ active, payload, label, language }: any) => {
   if (!active || !payload || !payload.length) return null;
 
+  // Get the full data point from payload
+  const dataPoint = payload[0]?.payload as PrayerTrendDataPoint | undefined;
+
   return (
     <div className="bg-slate-900/95 backdrop-blur-sm rounded-lg p-3 shadow-xl border border-slate-700/50">
       <p className="text-xs text-gray-400 mb-2 font-medium">{label}</p>
-      <div className="space-y-1">
+      <p className="text-[10px] text-gray-500 mb-2 uppercase tracking-wider">
+        {language === 'ar' ? 'متوسط 7 أيام' : '7-Day Average'}
+      </p>
+      <div className="space-y-1.5">
         {payload.map((entry: any) => {
           const config = LINE_CONFIGS.find(c => c.key === entry.dataKey);
           if (!config) return null;
+          const rawValue = dataPoint ? dataPoint[config.rawKey] : 0;
           return (
             <div key={entry.dataKey} className="flex items-center gap-2 text-xs">
               <span
                 className="w-2 h-2 rounded-full"
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-gray-300">
+              <span className="text-gray-300 flex-1">
                 {language === 'ar' ? config.labelAr : config.label}
               </span>
-              <span className="font-bold ml-auto" style={{ color: entry.color }}>
+              <span className="font-bold tabular-nums" style={{ color: entry.color }}>
                 {entry.value}
+              </span>
+              <span className="text-gray-500 text-[10px] tabular-nums">
+                ({rawValue})
               </span>
             </div>
           );
