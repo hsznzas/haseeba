@@ -18,8 +18,8 @@ const DateSelector: React.FC<DateSelectorProps> = ({ selectedDate, onSelectDate,
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
 
-  // Generate +/- 14 days
-  const dates = Array.from({ length: 30 }, (_, i) => addDays(addDays(new Date(), 14), -i)).reverse();
+  // Generate 30 days past / 14 days future
+  const dates = Array.from({ length: 45 }, (_, i) => addDays(addDays(new Date(), 14), -i)).reverse();
 
   useEffect(() => {
     if (selectedRef.current) {

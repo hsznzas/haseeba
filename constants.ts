@@ -1,7 +1,7 @@
 import { Habit } from './types';
 import { HabitType } from './types';
 
-export const LATEST_UPDATE = "📈 New: Filter prayer trends by individual prayer (Fajr, Dhuhr, etc.)";
+export const LATEST_UPDATE = "📅 Expanded: Date selector now shows 30 days in the past!";
 
 export const TRANSLATIONS = {
   en: {
